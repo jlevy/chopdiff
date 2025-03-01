@@ -7,4 +7,4 @@ package_description: Simple tools for parsing/diffing/processing text to support
     applications
 package_github_org: jlevy
 package_name: lite-text-tools
-package_slug: lite-text-tools
+package_slug: lite_text_tools
