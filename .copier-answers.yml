@@ -1,0 +1,10 @@
+# Changes here will be overwritten by Copier. Do not edit manually.
+_commit: ba10822
+_src_path: gh:jlevy/simple-modern-poetry
+package_author_email: joshua@cal.berkeley.edu
+package_author_name: Joshua Levy
+package_description: Simple tools for parsing/diffing/processing text to support LLM
+    applications
+package_github_org: jlevy
+package_name: lite-text-tools
+package_slug: lite-text-tools
