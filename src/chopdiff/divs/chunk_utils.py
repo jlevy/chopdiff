@@ -1,7 +1,6 @@
 from typing import Callable, Generator, TypeVar
 
 from chopdiff.divs.text_node import TextNode
-
 from chopdiff.docs.text_doc import TextDoc, TextUnit
 
 

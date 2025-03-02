@@ -1,6 +1,6 @@
 [project]
 name = "chopdiff"
-description = "Simple tools for parsing/diffing/processing text to support LLM applications"
+description = "Parsing, chunking, diffing, and diff filtering of text to support LLM applications"
 authors = [
     { name="Joshua Levy", email="joshua@cal.berkeley.edu" },
 ]

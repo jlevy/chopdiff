@@ -8,7 +8,6 @@ from prettyfmt import fmt_lines
 
 from chopdiff.docs.sizes import TextUnit
 from chopdiff.docs.text_doc import default_sentence_splitter, Splitter, TextDoc
-
 from chopdiff.html.html_in_md import div_wrapper
 
 

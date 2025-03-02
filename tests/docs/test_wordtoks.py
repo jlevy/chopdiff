@@ -1,8 +1,3 @@
-"""
-Support for treating text as a sequence of word, punctuation, or whitespace
-word tokens ("wordtoks").
-"""
-
 from textwrap import dedent
 
 from chopdiff.docs.search_tokens import search_tokens
