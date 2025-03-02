@@ -1,8 +1,8 @@
 from typing import Callable, Generator, TypeVar
 
-from ..docs.text_doc import TextDoc, TextUnit
+from lite_text_tools.divs.text_node import TextNode
 
-from .text_node import TextNode
+from lite_text_tools.docs.text_doc import TextDoc, TextUnit
 
 
 T = TypeVar("T")

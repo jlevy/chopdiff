@@ -6,10 +6,10 @@ from typing import List, Optional
 
 from prettyfmt import fmt_lines
 
-from ..docs.sizes import TextUnit
-from ..docs.text_doc import default_sentence_splitter, Splitter, TextDoc
+from lite_text_tools.docs.sizes import TextUnit
+from lite_text_tools.docs.text_doc import default_sentence_splitter, Splitter, TextDoc
 
-from ..html.html_in_md import div_wrapper
+from lite_text_tools.html.html_in_md import div_wrapper
 
 
 @dataclass
