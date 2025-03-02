@@ -89,9 +89,7 @@ class DiffStats:
         return self.added + self.removed
 
     def __str__(self):
-        return (
-            f"add/remove +{self.added}/-{self.removed} out of {self.input_size} total"
-        )
+        return f"add/remove +{self.added}/-{self.removed} out of {self.input_size} total"
 
 
 DiffFilter: TypeAlias = Callable[[DiffOp], bool]
@@ -120,12 +118,8 @@ class TokenDiff:
         return [op for op in self.ops if op.action != OpType.EQUAL]
 
     def stats(self) -> DiffStats:
-        wordtoks_added = sum(
-            len(op.right) for op in self.ops if op.action != OpType.EQUAL
-        )
-        wordtoks_removed = sum(
-            len(op.left) for op in self.ops if op.action != OpType.EQUAL
-        )
+        wordtoks_added = sum(len(op.right) for op in self.ops if op.action != OpType.EQUAL)
+        wordtoks_removed = sum(len(op.left) for op in self.ops if op.action != OpType.EQUAL)
         return DiffStats(wordtoks_added, wordtoks_removed, self.left_size())
 
     def apply_to(self, original_wordtoks: List[str]) -> List[str]:
@@ -287,9 +281,7 @@ def find_best_alignment(
     best_offset = -1
     best_score = float("inf")
     best_diff = None
-    max_overlap = (
-        min(len1, len2, max_overlap) if max_overlap is not None else min(len1, len2)
-    )
+    max_overlap = min(len1, len2, max_overlap) if max_overlap is not None else min(len1, len2)
 
     if min_overlap > len1 or min_overlap > len2:
         raise ValueError(
@@ -438,9 +430,7 @@ def test_apply_to():
 
 def test_find_best_alignment():
     wordtoks1 = list(TextDoc.from_text(_short_text1).as_wordtoks())
-    wordtoks2 = list(
-        TextDoc.from_text(_short_text1).sub_doc(SentIndex(1, 1)).as_wordtoks()
-    )
+    wordtoks2 = list(TextDoc.from_text(_short_text1).sub_doc(SentIndex(1, 1)).as_wordtoks())
     wordtoks3 = wordtoks2 + ["Extra", "wordtoks", "at", "the", "end"]
     wordtoks4 = list(wordtoks3)
     wordtoks4[0] = "X"

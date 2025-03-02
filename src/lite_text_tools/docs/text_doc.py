@@ -96,9 +96,7 @@ class Sentence:
         Is this sentence all markup, e.g. a <span> or <div> tag or some other content with no words?
         """
         wordtoks = self.as_wordtoks()
-        is_all_markup = all(
-            is_tag(wordtok) or is_break_or_space(wordtok) for wordtok in wordtoks
-        )
+        is_all_markup = all(is_tag(wordtok) or is_break_or_space(wordtok) for wordtok in wordtoks)
         if is_all_markup:
             return True
         is_markup_no_words = (
@@ -195,9 +193,7 @@ class Paragraph:
         Is this paragraph a Markdown or HTML header tag?
         """
         first_wordtok = next(self.as_wordtoks(), None)
-        is_html_header = (
-            first_wordtok and is_tag(first_wordtok) and is_header_tag(first_wordtok)
-        )
+        is_html_header = first_wordtok and is_tag(first_wordtok) and is_header_tag(first_wordtok)
         return is_html_header or is_markdown_header(self.original_text)
 
 
@@ -237,9 +233,7 @@ class TextDoc:
         return SentIndex(0, 0)
 
     def last_index(self) -> SentIndex:
-        return SentIndex(
-            len(self.paragraphs) - 1, len(self.paragraphs[-1].sentences) - 1
-        )
+        return SentIndex(len(self.paragraphs) - 1, len(self.paragraphs[-1].sentences) - 1)
 
     def para_iter(self, reverse: bool = False) -> Iterable[Tuple[int, Paragraph]]:
         enum_paras = list(enumerate(self.paragraphs))
@@ -311,9 +305,7 @@ class TextDoc:
         if last > self.last_index():
             raise ValueError(f"End index out of range: {last} > {self.last_index()}")
         if first < self.first_index():
-            raise ValueError(
-                f"Start index out of range: {first} < {self.first_index()}"
-            )
+            raise ValueError(f"Start index out of range: {first} < {self.first_index()}")
 
         sub_paras = []
         for i in range(first.para_index, last.para_index + 1):
@@ -322,9 +314,7 @@ class TextDoc:
                 sub_paras.append(
                     Paragraph(
                         original_text=para.original_text,
-                        sentences=para.sentences[
-                            first.sent_index : last.sent_index + 1
-                        ],
+                        sentences=para.sentences[first.sent_index : last.sent_index + 1],
                         char_offset=para.char_offset,
                     )
                 )
@@ -416,9 +406,7 @@ class TextDoc:
         else:
             return f"{nbytes} bytes"
 
-    def as_wordtok_to_sent(
-        self, bof_eof=False
-    ) -> Generator[Tuple[str, SentIndex], None, None]:
+    def as_wordtok_to_sent(self, bof_eof=False) -> Generator[Tuple[str, SentIndex], None, None]:
         if bof_eof:
             yield BOF_TOK, self.first_index()
 
@@ -440,9 +428,7 @@ class TextDoc:
         """
         Get mappings between wordtok indexes and sentence indexes.
         """
-        sent_indexes = [
-            sent_index for _wordtok, sent_index in self.as_wordtok_to_sent()
-        ]
+        sent_indexes = [sent_index for _wordtok, sent_index in self.as_wordtok_to_sent()]
 
         wordtok_mapping = {i: sent_index for i, sent_index in enumerate(sent_indexes)}
 
@@ -627,8 +613,7 @@ def test_doc_sizes():
     print(size_summary)
 
     assert (
-        size_summary
-        == "726 bytes (37 lines, 16 paragraphs, 20 sentences, 82 words, 215 tiktokens)"
+        size_summary == "726 bytes (37 lines, 16 paragraphs, 20 sentences, 82 words, 215 tiktokens)"
     )
 
 
@@ -659,9 +644,7 @@ def test_seek_doc():
     sent_index, sent_offset = doc.seek_to_sent(offset, TextUnit.bytes)
     print(f"Seeked to {sent_index} offset {sent_offset} for offset {offset} bytes")
     assert sent_index == SentIndex(para_index=1, sent_index=0)
-    assert sent_offset == len(
-        "This is the first paragraph. It has multiple sentences.\n\n"
-    )
+    assert sent_offset == len("This is the first paragraph. It has multiple sentences.\n\n")
 
     offset = len(_simple_test_doc) + 10
     sent_index, sent_offset = doc.seek_to_sent(offset, TextUnit.bytes)
@@ -764,9 +747,7 @@ def test_wordtokization():
         reassembled_sentence = "".join(wordtoks)
         assert reassembled_sentence == sentence
 
-    assert raw_text_to_wordtoks(
-        "Multiple     spaces and tabs\tand\nnewlines in between."
-    ) == [
+    assert raw_text_to_wordtoks("Multiple     spaces and tabs\tand\nnewlines in between.") == [
         "Multiple",
         " ",
         "spaces",

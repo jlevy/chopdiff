@@ -36,19 +36,13 @@ class TextNode:
     @property
     def end_offset(self) -> int:
         assert self.content_end >= 0
-        return (
-            self.content_end + len(self.end_marker)
-            if self.end_marker
-            else self.content_end
-        )
+        return self.content_end + len(self.end_marker) if self.end_marker else self.content_end
 
     @property
     def contents(self) -> str:
         return self.original_text[self.content_start : self.content_end]
 
-    def text_doc(
-        self, sentence_splitter: Splitter = default_sentence_splitter
-    ) -> TextDoc:
+    def text_doc(self, sentence_splitter: Splitter = default_sentence_splitter) -> TextDoc:
         return TextDoc.from_text(self.contents, sentence_splitter=sentence_splitter)
 
     def slice_children(self, start: int, end: int) -> "TextNode":
@@ -109,10 +103,7 @@ class TextNode:
             return None
         else:
             return "HTML structure:\n" + fmt_lines(
-                [
-                    f"{count:6d}  {path}"
-                    for path, count in self.structure_summary().items()
-                ],
+                [f"{count:6d}  {path}" for path, count in self.structure_summary().items()],
                 prefix="",
             )
 

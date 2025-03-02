@@ -46,9 +46,7 @@ def parse_divs_single(text: str, skip_whitespace: bool = True) -> TextNode:
 def _skip_whitespace_nodes(node: TextNode) -> TextNode:
     filtered_node = copy.copy(node)
     filtered_node.children = [
-        _skip_whitespace_nodes(child)
-        for child in node.children
-        if not child.is_whitespace()
+        _skip_whitespace_nodes(child) for child in node.children if not child.is_whitespace()
     ]
     return filtered_node
 
@@ -301,9 +299,6 @@ def test_parse_chunk_divs():
         print(chunk_div.reassemble())
         print("---")
 
-    assert (
-        chunk_divs[0].reassemble()
-        == """<div class="chunk">\n\nChunk 1 text.\n\n</div>"""
-    )
+    assert chunk_divs[0].reassemble() == """<div class="chunk">\n\nChunk 1 text.\n\n</div>"""
     assert chunk_divs[0].contents.strip() == "Chunk 1 text."
     assert len(chunk_divs) == 3

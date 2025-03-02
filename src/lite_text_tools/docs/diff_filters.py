@@ -3,13 +3,7 @@ from typing import Callable, List, Optional, TypeAlias
 from .lemmatize import lemmatize, lemmatized_equal
 from .text_doc import TextDoc
 from .token_diffs import DiffFilter, DiffOp, OpType
-from .wordtoks import (
-    is_break_or_space,
-    is_tag_close,
-    is_tag_open,
-    is_whitespace_or_punct,
-    is_word,
-)
+from .wordtoks import is_break_or_space, is_tag_close, is_tag_open, is_whitespace_or_punct, is_word
 
 
 class WildcardToken:
@@ -132,10 +126,7 @@ def removes_words(diff_op: DiffOp) -> bool:
     if diff_op.action == OpType.DELETE or diff_op.action == OpType.EQUAL:
         return True
     elif diff_op.action == OpType.REPLACE or diff_op.action == OpType.INSERT:
-        return all(
-            is_whitespace_or_punct(tok)
-            for tok in set(diff_op.right) - set(diff_op.left)
-        )
+        return all(is_whitespace_or_punct(tok) for tok in set(diff_op.right) - set(diff_op.left))
     else:
         return False
 
@@ -213,12 +204,8 @@ def test_filter_br_and_space():
 def test_token_sequence_filter_with_predicate():
     from .wordtoks import is_break_or_space, PARA_BR_TOK, SENT_BR_TOK
 
-    insert_op = DiffOp(
-        OpType.INSERT, [], [SENT_BR_TOK, "<h1>", "Title", "</h1>", PARA_BR_TOK]
-    )
-    delete_op = DiffOp(
-        OpType.DELETE, [SENT_BR_TOK, "<h1>", "Old Title", "</h1>", PARA_BR_TOK], []
-    )
+    insert_op = DiffOp(OpType.INSERT, [], [SENT_BR_TOK, "<h1>", "Title", "</h1>", PARA_BR_TOK])
+    delete_op = DiffOp(OpType.DELETE, [SENT_BR_TOK, "<h1>", "Old Title", "</h1>", PARA_BR_TOK], [])
     replace_op = DiffOp(OpType.REPLACE, ["Some", "text"], ["New", "text"])
     equal_op = DiffOp(OpType.EQUAL, ["Unchanged"], ["Unchanged"])
 
@@ -278,23 +265,12 @@ def test_no_word_changes_lemmatized():
 def test_removes_words():
 
     assert removes_words(DiffOp(OpType.DELETE, ["Hello", " "], [])) == True
-    assert (
-        removes_words(DiffOp(OpType.REPLACE, ["Hello", " ", "world"], ["world"]))
-        == True
-    )
-    assert (
-        removes_words(DiffOp(OpType.REPLACE, ["Hello", " ", "world"], ["World"]))
-        == False
-    )
-    assert (
-        removes_word_lemmas(DiffOp(OpType.REPLACE, ["Hello", " ", "world"], ["World"]))
-        == True
-    )
+    assert removes_words(DiffOp(OpType.REPLACE, ["Hello", " ", "world"], ["world"])) == True
+    assert removes_words(DiffOp(OpType.REPLACE, ["Hello", " ", "world"], ["World"])) == False
+    assert removes_word_lemmas(DiffOp(OpType.REPLACE, ["Hello", " ", "world"], ["World"])) == True
 
     assert (
-        removes_words(
-            DiffOp(OpType.REPLACE, ["Hello", "*", "world"], ["hello", "*", "world"])
-        )
+        removes_words(DiffOp(OpType.REPLACE, ["Hello", "*", "world"], ["hello", "*", "world"]))
         == False
     )
     assert (

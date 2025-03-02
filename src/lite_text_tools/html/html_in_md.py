@@ -52,9 +52,7 @@ def tag_with_attrs(
         elif isinstance(class_name, list):
             class_value = " ".join(class_name)
         else:
-            raise ValueError(
-                f"Expected a string or list of class names but got: {class_name}"
-            )
+            raise ValueError(f"Expected a string or list of class names but got: {class_name}")
     attr_str = f' class="{escape_attribute(class_value)}"' if class_value else ""
     if attrs:
         attr_str += "".join(f' {k}="{escape_attribute(v)}"' for k, v in attrs.items())
@@ -196,10 +194,7 @@ def test_html():
 
 def test_div_wrapper():
     safe_wrapper = div_wrapper(class_name="foo")
-    assert (
-        safe_wrapper("<div>text</div>")
-        == '<div class="foo">\n\n<div>text</div>\n\n</div>'
-    )
+    assert safe_wrapper("<div>text</div>") == '<div class="foo">\n\n<div>text</div>\n\n</div>'
 
     unsafe_wrapper = div_wrapper(class_name="foo", safe=False)
     assert (

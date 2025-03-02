@@ -107,9 +107,7 @@ def filtered_transform(
                     "filtered_transform",
                     normalize_markdown(input_doc.reassemble()),
                 )
-                debug_save(
-                    "Output doc raw", "filtered_transform", transformed_doc.reassemble()
-                )
+                debug_save("Output doc raw", "filtered_transform", transformed_doc.reassemble())
                 # log_save(
                 #     "Output doc normalized",
                 #     "filtered_transform",

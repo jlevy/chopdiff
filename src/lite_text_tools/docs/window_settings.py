@@ -26,9 +26,7 @@ class WindowSettings:
         return f"windowing size={self.size}, shift={self.shift}, min_overlap={self.min_overlap} {self.unit.value}"
 
 
-WINDOW_NONE = WindowSettings(
-    unit=TextUnit.wordtoks, size=0, shift=0, min_overlap=0, separator=""
-)
+WINDOW_NONE = WindowSettings(unit=TextUnit.wordtoks, size=0, shift=0, min_overlap=0, separator="")
 """
 Do not use a sliding window.
 """

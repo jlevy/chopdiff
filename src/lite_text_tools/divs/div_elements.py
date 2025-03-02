@@ -66,9 +66,7 @@ def div_insert_wrapped(
     return div(container_class, html_join_blocks(*blocks))
 
 
-def chunk_text_as_divs(
-    text: str, min_size: int, unit: TextUnit, class_name: str = CHUNK
-) -> str:
+def chunk_text_as_divs(text: str, min_size: int, unit: TextUnit, class_name: str = CHUNK) -> str:
     """
     Add HTML divs around "chunks" of text paragraphs or top-level divs, where each chunk
     is at least the specified minimum size.
@@ -213,8 +211,7 @@ _med_test_doc = dedent(
 def test_chunk_text_into_divs():
     assert chunk_text_as_divs("", 7, TextUnit.words) == ""
     assert (
-        chunk_text_as_divs("hello", 100, TextUnit.words)
-        == '<div class="chunk">\n\nhello\n\n</div>'
+        chunk_text_as_divs("hello", 100, TextUnit.words) == '<div class="chunk">\n\nhello\n\n</div>'
     )
 
     chunked = chunk_text_as_divs(_med_test_doc, 7, TextUnit.words)

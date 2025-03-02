@@ -82,9 +82,7 @@ def normalize_wordtok(wordtok: str) -> str:
     return normalized
 
 
-def raw_text_to_wordtok_offsets(
-    text: str, bof_eof=False
-) -> Tuple[List[str], List[int]]:
+def raw_text_to_wordtok_offsets(text: str, bof_eof=False) -> Tuple[List[str], List[int]]:
     """
     Same as `raw_text_to_wordtoks`, but returns a list of tuples `(wordtok, offset)`.
     """
@@ -167,9 +165,7 @@ def is_word(wordtok: str) -> bool:
     """
     Is this wordtok a word, not punctuation or whitespace or a number?
     """
-    return bool(
-        len(wordtok) > 0 and _word_pat.match(wordtok) and not _number_pat.match(wordtok)
-    )
+    return bool(len(wordtok) > 0 and _word_pat.match(wordtok) and not _number_pat.match(wordtok))
 
 
 def is_number(wordtok: str) -> bool:
@@ -211,9 +207,7 @@ def parse_tag(wordtok: Optional[str] = None) -> Optional[Tag]:
         match = _comment_pattern.match(wordtok)
         if not match:
             return None
-        return Tag(
-            name="", is_open=False, is_close=False, attrs={}, comment=match.group(1)
-        )
+        return Tag(name="", is_open=False, is_close=False, attrs={}, comment=match.group(1))
 
     is_open = not bool(match.group(1))
     is_close = bool(match.group(1) or match.group(4))
@@ -230,16 +224,12 @@ def parse_tag(wordtok: Optional[str] = None) -> Optional[Tag]:
     return Tag(name=tag_name, is_open=is_open, is_close=is_close, attrs=attrs)
 
 
-def is_tag(
-    wordtok: Optional[str] = None, tag_names: Optional[List[str]] = None
-) -> bool:
+def is_tag(wordtok: Optional[str] = None, tag_names: Optional[List[str]] = None) -> bool:
     """
     Check if a wordtok is an HTML tag and optionally if it's in the specified tag names.
     """
     tag = parse_tag(wordtok)
-    return bool(
-        tag and (not tag_names or tag.name in [name.lower() for name in tag_names])
-    )
+    return bool(tag and (not tag_names or tag.name in [name.lower() for name in tag_names]))
 
 
 def is_tag_close(wordtok: str, tag_names: Optional[List[str]] = None) -> bool:
@@ -248,9 +238,7 @@ def is_tag_close(wordtok: str, tag_names: Optional[List[str]] = None) -> bool:
     """
     tag = parse_tag(wordtok)
     return bool(
-        tag
-        and tag.is_close
-        and (not tag_names or tag.name in [name.lower() for name in tag_names])
+        tag and tag.is_close and (not tag_names or tag.name in [name.lower() for name in tag_names])
     )
 
 
@@ -260,9 +248,7 @@ def is_tag_open(wordtok: str, tag_names: Optional[List[str]] = None) -> bool:
     """
     tag = parse_tag(wordtok)
     return bool(
-        tag
-        and tag.is_open
-        and (not tag_names or tag.name in [name.lower() for name in tag_names])
+        tag and tag.is_open and (not tag_names or tag.name in [name.lower() for name in tag_names])
     )
 
 
@@ -311,9 +297,7 @@ def test_html_doc():
     print(visualize_wordtoks(wordtoks))
 
     print("\n---Wordtoks with para br:")
-    wordtoks_with_para = raw_text_to_wordtoks(
-        insert_para_wordtoks(_test_doc), bof_eof=True
-    )
+    wordtoks_with_para = raw_text_to_wordtoks(insert_para_wordtoks(_test_doc), bof_eof=True)
     print(visualize_wordtoks(wordtoks_with_para))
 
     assert (
@@ -330,13 +314,7 @@ def test_html_doc():
 
     print(search_tokens(wordtoks).at(0).seek_forward(["example"]).get_token())
     print(search_tokens(wordtoks).at(-1).seek_back(["follow"]).get_token())
-    print(
-        search_tokens(wordtoks)
-        .at(-1)
-        .seek_back(["Special"])
-        .seek_forward(is_tag)
-        .get_token()
-    )
+    print(search_tokens(wordtoks).at(-1).seek_back(["Special"]).seek_forward(is_tag).get_token())
 
     assert search_tokens(wordtoks).at(0).seek_forward(["example"]).get_token() == (
         14,
@@ -353,9 +331,7 @@ def test_html_doc():
 
 def test_tag_functions():
     assert parse_tag("<div>") == Tag(name="div", is_open=True, is_close=False, attrs={})
-    assert parse_tag("</div>") == Tag(
-        name="div", is_open=False, is_close=True, attrs={}
-    )
+    assert parse_tag("</div>") == Tag(name="div", is_open=False, is_close=True, attrs={})
     assert parse_tag("<div/>") == Tag(name="div", is_open=True, is_close=True, attrs={})
     assert parse_tag("<!-- Comment -->") == Tag(
         name="", is_open=False, is_close=False, attrs={}, comment=" Comment "

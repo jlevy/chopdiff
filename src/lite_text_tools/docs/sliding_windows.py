@@ -85,8 +85,7 @@ def test_sliding_window():
     pprint(windows)
 
     sentence_windows = [
-        [[sent.text for sent in para.sentences] for para in doc.paragraphs]
-        for doc in windows
+        [[sent.text for sent in para.sentences] for para in doc.paragraphs] for doc in windows
     ]
 
     assert sentence_windows == [

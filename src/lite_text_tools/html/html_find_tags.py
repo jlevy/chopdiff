@@ -55,9 +55,7 @@ def html_find_tag(
 
         # Extract attribute value if attr_name is provided and attr_value is not specified.
         if attr_name and not attr_value:
-            attr_match = regex.search(
-                rf'\b{attr_name}=["\']([^"\']+)["\']', match.group(0)
-            )
+            attr_match = regex.search(rf'\b{attr_name}=["\']([^"\']+)["\']', match.group(0))
             attribute_value = attr_match.group(1) if attr_match else None
         else:
             attribute_value = attr_value
@@ -81,9 +79,7 @@ def html_extract_attribute_value(attr_name: str):
 
     Simple regex parsing, avoiding full HTML parsing and dependencies.
     """
-    attribute_re = regex.compile(
-        rf'(?:<\w+[^>]*\s)?{attr_name}=[\'"]([^\'"]+)[\'"][^>]*>'
-    )
+    attribute_re = regex.compile(rf'(?:<\w+[^>]*\s)?{attr_name}=[\'"]([^\'"]+)[\'"][^>]*>')
 
     def extractor(html_string: str):
         match = attribute_re.search(html_string)

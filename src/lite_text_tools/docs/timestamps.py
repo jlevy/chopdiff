@@ -1,7 +1,8 @@
 from textwrap import dedent
-from typing import Iterable, override
+from typing import Iterable
 
 import regex
+from typing_extensions import override
 
 from .extractor import Extractor, Match
 from .search_tokens import search_tokens
@@ -13,9 +14,7 @@ class ContentError(ValueError):
 
 
 # Match any span or div with a data-timestamp attribute.
-_TIMESTAMP_RE = regex.compile(
-    r'(?:<\w+[^>]*\s)?data-timestamp=[\'"](\d+(\.\d+)?)[\'"][^>]*>'
-)
+_TIMESTAMP_RE = regex.compile(r'(?:<\w+[^>]*\s)?data-timestamp=[\'"](\d+(\.\d+)?)[\'"][^>]*>')
 
 
 def extract_timestamp(wordtok: str):
@@ -34,9 +33,7 @@ class TimestampExtractor(Extractor):
 
     def __init__(self, doc_str: str):
         self.doc_str = doc_str
-        self.wordtoks, self.offsets = raw_text_to_wordtok_offsets(
-            self.doc_str, bof_eof=True
-        )
+        self.wordtoks, self.offsets = raw_text_to_wordtok_offsets(self.doc_str, bof_eof=True)
 
     @override
     def extract_all(self) -> Iterable[Match[float]]:
@@ -52,22 +49,15 @@ class TimestampExtractor(Extractor):
     def extract_preceding(self, wordtok_offset: int) -> Match[float]:
         try:
             index, wordtok = (
-                search_tokens(self.wordtoks)
-                .at(wordtok_offset)
-                .seek_back(has_timestamp)
-                .get_token()
+                search_tokens(self.wordtoks).at(wordtok_offset).seek_back(has_timestamp).get_token()
             )
             if wordtok:
                 timestamp = extract_timestamp(wordtok)
                 if timestamp is not None:
                     return timestamp, index, self.offsets[index]
-            raise ContentError(
-                f"No timestamp found seeking back from {wordtok_offset}: {wordtok}"
-            )
+            raise ContentError(f"No timestamp found seeking back from {wordtok_offset}: {wordtok}")
         except KeyError as e:
-            raise ContentError(
-                f"No timestamp found searching back from {wordtok_offset}: {e}"
-            )
+            raise ContentError(f"No timestamp found searching back from {wordtok_offset}: {e}")
 
 
 ## Tests

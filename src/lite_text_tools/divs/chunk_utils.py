@@ -36,9 +36,7 @@ def chunk_generator(
         yield slicer(doc, start_index, total_size)
 
 
-def chunk_paras(
-    doc: TextDoc, min_size: int, unit: TextUnit
-) -> Generator[TextDoc, None, None]:
+def chunk_paras(doc: TextDoc, min_size: int, unit: TextUnit) -> Generator[TextDoc, None, None]:
     """
     Generate TextDoc chunks where each chunk is at least the specified minimum size.
     """

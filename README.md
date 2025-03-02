@@ -1,47 +1,40 @@
-
 # lite-text-tools
 
-\[ 
-**☞☞☞ This is the readme for a project from the
-[simple-modern-poetry](https://github.com/jlevy/simple-modern-poetry)
-template.**
-Fill it in and delete this message!
-Below are brief instructions on setup and development workflows that you may
-use or modify for your project.
-\]
+`lite-text-tools` is a small library of tools I've developed for use especially with
+LLMs that let you handle Markdown and text document edits.
 
-## Installing Python, pipx, and Poetry
+It aims to have minimal dependencies and be useful for various LLM applications where
+you want to manipulate text, Markdown, and lightweight (not fully parsed) HTML
+documents.
 
-Sadly, there are many, many ways to install and set up your Python environment, each
-with its own pitfalls.
+It offers support for:
 
-This is a quick cheat sheet for one of the simplest and most reliable ways to set up
-**Python 3.11+** and **Poetry 2.0+** (what you should use as of 2025) using
-[**pyenv**](https://github.com/pyenv/pyenv) and
-[**pipx**](https://github.com/pypa/pipx).
+- Parsing of documents into sentences and paragraphs (by default using regex heuristics
+  or using a sentence splitter of your choice, like Spacy).
 
-For macOS:
+- Measure size and extract pieces of documents, using arbitrary units of paragraphs,
+  sentences and indexing of these documents at the paragraph
 
-```shell
-brew update
-brew install pyenv pipx
-```
+- Support for lightweight "chunking" of documents by wrappign paragraphs in named
+  `<div>`s to indicate chunks.
 
-For Ubuntu:
+- Text-based diffing at the word level.
 
-```shell
-curl https://pyenv.run | bash
-apt install pipx
-```
+- Filtering of text-based diffs based on specific criteria.
 
-Now you can install a current Python and Poetry:
+- Transformation of documents via windows, then re-stitching the result.
 
-```shell
-pyenv install 3.13.2  # Pick the version you want.
-pipx install poetry  # Or use `pipx upgrade poetry` if you've done this before.
-```
+All this is done very simply in memory, and with only regex or basic Markdown parsing to
+keep things simple and with few dependencies.
+This doesn't depend on anything
 
-For Windows or other platforms, see the pyenv and poetry instructions. 
+Example use cases:
+
+- Walk through a document N paragraphs, N sentences, or N chunks at a time, processing
+  the results with an LLM call and recombining the result.
+
+- Ask an LLM to edit a transcript, only inserting paragraph breaks but enforcing that
+  the LLM can't do anything except insert whitespace.
 
 ## Development
 
