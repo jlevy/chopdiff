@@ -1,6 +1,6 @@
 [project]
 name = "chopdiff"
-description = "Parsing, chunking, diffing, and diff filtering of text to support LLM applications"
+description = "Chunking, diff filtering, and windowed transforms of text to support LLM applications"
 authors = [
     { name="Joshua Levy", email="joshua@cal.berkeley.edu" },
 ]
@@ -36,7 +36,7 @@ poetry-plugin-up = "^0.9.0"
 [tool.poetry.dependencies]
 python = "^3.11"
 prettyfmt = "^0.1.7"
-flowmark = "^0.1.0"
+flowmark = "^0.2.0"
 strif = "^2.0.0"
 funlog = "^0.1.1"
 cydifflib = "^1.1.0"
@@ -47,7 +47,7 @@ typing-extensions = "^4.12.2"
 
 [tool.poetry.group.dev.dependencies]
 black = "^24.10.0"
-pytest = "^8.3.4"
+pytest = "^8.3.5"
 ruff = "^0.4.10"
 usort = "^1.0.8.post1"
 mypy = "^1.15.0"

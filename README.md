@@ -10,10 +10,11 @@ documents.
 It offers support for:
 
 - Parsing of documents into sentences and paragraphs (by default using regex heuristics
-  or using a sentence splitter of your choice, like Spacy).
+  for speed and simplicity, but optionally with a sentence splitter of your choice,
+  like Spacy).
 
-- Measure size and extract pieces of documents, using arbitrary units of paragraphs,
-  sentences and indexing of these documents at the paragraph
+- Parse and extract pieces of documents, using arbitrary units of paragraphs,
+  sentences, words, chars, or tokens
 
 - Support for lightweight "chunking" of documents by wrappign paragraphs in named
   `<div>`s to indicate chunks.
@@ -32,8 +33,8 @@ though you can use these if you like.
 
 Example use cases:
 
-- Walk through a document N paragraphs, N sentences, or N chunks at a time, processing
-  the results with an LLM call and recombining the result.
+- Walk through a document N paragraphs, N sentences, or N tokens at a time, processing
+  the results with an LLM call, then recombining the results.
 
 - Ask an LLM to edit a transcript, only inserting paragraph breaks but enforcing that
   the LLM can't do anything except insert whitespace.

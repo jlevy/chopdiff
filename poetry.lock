@@ -327,19 +327,20 @@ files = [
 
 [[package]]
 name = "flowmark"
-version = "0.1.0"
+version = "0.2.0"
 description = "Better line wrapping and formatting for plaintext and Markdown"
 optional = false
 python-versions = "<4.0,>=3.10"
 groups = ["main"]
 files = [
-    {file = "flowmark-0.1.0-py3-none-any.whl", hash = "sha256:c0c03aa63fa1beb79123ccffdef3b8681ba72fa14653715cd15269d03bf76836"},
-    {file = "flowmark-0.1.0.tar.gz", hash = "sha256:068322aa288d6b279d42a47a2f6f020269bf391544d1ad9ecb9f5c410f673f6e"},
+    {file = "flowmark-0.2.0-py3-none-any.whl", hash = "sha256:9db8b19e245a1ad03faf034394b929540b01a854005bdb512e9ced6ad871c590"},
+    {file = "flowmark-0.2.0.tar.gz", hash = "sha256:fb2ea094cd1bd47cd4014be271e5dcf8476919b349110715c46abdf953470bad"},
 ]
 
 [package.dependencies]
 marko = ">=2.1.2,<3.0.0"
 regex = ">=2024.11.6,<2025.0.0"
+strif = ">=2.0.0,<3.0.0"
 
 [[package]]
 name = "funlog"
@@ -674,14 +675,14 @@ windows-terminal = ["colorama (>=0.4.6)"]
 
 [[package]]
 name = "pytest"
-version = "8.3.4"
+version = "8.3.5"
 description = "pytest: simple powerful testing with Python"
 optional = false
 python-versions = ">=3.8"
 groups = ["dev"]
 files = [
-    {file = "pytest-8.3.4-py3-none-any.whl", hash = "sha256:50e16d954148559c9a74109af1eaf0c945ba2d8f30f0a3d3335edde19788b6f6"},
-    {file = "pytest-8.3.4.tar.gz", hash = "sha256:965370d062bce11e73868e0335abac31b4d3de0e82f4007408d242b4f8610761"},
+    {file = "pytest-8.3.5-py3-none-any.whl", hash = "sha256:c69214aa47deac29fad6c2a4f590b9c4a9fdb16a403176fe154b79c0b4d4d820"},
+    {file = "pytest-8.3.5.tar.gz", hash = "sha256:f4efe70cc14e511565ac476b57c279e12a855b11f48f212af1080ef2263d3845"},
 ]
 
 [package.dependencies]
@@ -1107,4 +1108,4 @@ trailrunner = ">=1.0"
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.11"
-content-hash = "9b97614e9e084f9899738d7223b1e5fbfe0f300cd040e758ebbca152eb773b92"
+content-hash = "d1b82e9e1bd25b82892eab87c78f3b252dc1f0280c920a78996428acf27a3181"

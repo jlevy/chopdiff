@@ -5,7 +5,7 @@ Sliding windows of text on a text doc.
 import logging
 from typing import Callable, Generator
 
-from flowmark import normalize_markdown
+from flowmark import fill_markdown
 
 from chopdiff.docs.text_doc import SentIndex, TextDoc, TextUnit
 
@@ -45,7 +45,7 @@ def sliding_word_window(
 
 
 def sliding_para_window(
-    doc: TextDoc, nparas: int, normalizer: Callable[[str], str] = normalize_markdown
+    doc: TextDoc, nparas: int, normalizer: Callable[[str], str] = fill_markdown
 ) -> Generator[TextDoc, None, None]:
     """
     Generate TextDoc sub-documents taking `nparas` paragraphs at a time.

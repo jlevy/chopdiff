@@ -7,7 +7,7 @@ import logging
 from math import ceil
 from typing import Any, Callable, List, Optional, TypeAlias
 
-from flowmark import normalize_markdown
+from flowmark import fill_markdown
 from prettyfmt import fmt_lines
 
 from chopdiff.docs.diff_filters import accept_all
@@ -104,7 +104,7 @@ def filtered_transform(
                 debug_save(
                     "Input doc normalized",
                     "filtered_transform",
-                    normalize_markdown(input_doc.reassemble()),
+                    fill_markdown(input_doc.reassemble()),
                 )
                 debug_save("Output doc raw", "filtered_transform", transformed_doc.reassemble())
                 # log_save(
@@ -232,7 +232,7 @@ def sliding_para_window_transform(
     doc: TextDoc,
     transform_func: TextDocTransform,
     settings: WindowSettings,
-    normalizer: Callable[[str], str] = normalize_markdown,
+    normalizer: Callable[[str], str] = fill_markdown,
 ) -> TextDoc:
     """
     Apply a transformation function to each TextDoc, stepping through paragraphs `settings.size`
