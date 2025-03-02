@@ -6,5 +6,5 @@ package_author_name: Joshua Levy
 package_description: Simple tools for parsing/diffing/processing text to support LLM
     applications
 package_github_org: jlevy
-package_name: lite-text-tools
-package_slug: lite_text_tools
+package_name: chopdiff
+package_slug: chopdiff

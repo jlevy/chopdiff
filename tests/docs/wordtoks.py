@@ -5,8 +5,8 @@ word tokens ("wordtoks").
 
 from textwrap import dedent
 
-from lite_text_tools.docs.search_tokens import search_tokens
-from lite_text_tools.docs.wordtoks import (
+from chopdiff.docs.search_tokens import search_tokens
+from chopdiff.docs.wordtoks import (
     insert_para_wordtoks,
     is_entity,
     is_tag,

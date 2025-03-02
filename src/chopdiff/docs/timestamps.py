@@ -3,9 +3,9 @@ from typing import Iterable
 import regex
 from typing_extensions import override
 
-from lite_text_tools.docs.extractor import Extractor, Match
-from lite_text_tools.docs.search_tokens import search_tokens
-from lite_text_tools.docs.wordtoks import raw_text_to_wordtok_offsets
+from chopdiff.docs.extractor import Extractor, Match
+from chopdiff.docs.search_tokens import search_tokens
+from chopdiff.docs.wordtoks import raw_text_to_wordtok_offsets
 
 
 class ContentError(ValueError):

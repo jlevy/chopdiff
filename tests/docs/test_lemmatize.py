@@ -1,4 +1,4 @@
-from lite_text_tools.docs.lemmatize import lemmatize, lemmatized_equal
+from chopdiff.docs.lemmatize import lemmatize, lemmatized_equal
 
 
 def test_lemmatize():

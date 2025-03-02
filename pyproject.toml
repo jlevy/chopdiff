@@ -1,5 +1,5 @@
 [project]
-name = "lite-text-tools"
+name = "chopdiff"
 description = "Simple tools for parsing/diffing/processing text to support LLM applications"
 authors = [
     { name="Joshua Levy", email="joshua@cal.berkeley.edu" },
@@ -12,7 +12,7 @@ dynamic = [ "dependencies", "version" ]
 [tool.poetry]
 requires-poetry = ">=2.0"
 packages = [
-    { include = "lite_text_tools", from = "src" },
+    { include = "chopdiff", from = "src" },
 ]
 # Keep this a dev version, as the dynamic versioning plugin is used for actual release versions:
 
@@ -24,7 +24,7 @@ build-backend = "poetry_dynamic_versioning.backend"
 
 [project.scripts]
 # Add script entry points here.
-# lite_text_tools = "lite_text_tools:main"
+# chopdiff = "chopdiff:main"
 
 # See:
 # https://github.com/python-poetry/poetry-plugin-shell

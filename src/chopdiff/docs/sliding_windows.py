@@ -7,7 +7,7 @@ from typing import Callable, Generator
 
 from flowmark import normalize_markdown
 
-from lite_text_tools.docs.text_doc import SentIndex, TextDoc, TextUnit
+from chopdiff.docs.text_doc import SentIndex, TextDoc, TextUnit
 
 
 log = logging.getLogger(__name__)

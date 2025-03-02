@@ -8,9 +8,9 @@ import regex
 from flowmark.sentence_split_regex import split_sentences_regex
 from funlog import tally_calls
 
-from lite_text_tools.docs.sizes import size, size_in_bytes, TextUnit
-from lite_text_tools.docs.tiktoken_utils import tiktoken_len
-from lite_text_tools.docs.wordtoks import (
+from chopdiff.docs.sizes import size, size_in_bytes, TextUnit
+from chopdiff.docs.tiktoken_utils import tiktoken_len
+from chopdiff.docs.wordtoks import (
     BOF_TOK,
     EOF_TOK,
     is_break_or_space,

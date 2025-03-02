@@ -1,6 +1,6 @@
 from typing import Dict, List, Optional
 
-from lite_text_tools.docs.token_diffs import diff_wordtoks, OpType, SYMBOL_SEP, TokenDiff
+from chopdiff.docs.token_diffs import diff_wordtoks, OpType, SYMBOL_SEP, TokenDiff
 
 
 class TokenMapping:

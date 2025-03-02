@@ -1,7 +1,7 @@
 from textwrap import dedent
 
-from lite_text_tools.divs.parse_divs import parse_divs, parse_divs_by_class
-from lite_text_tools.divs.text_node import TextNode
+from chopdiff.divs.parse_divs import parse_divs, parse_divs_by_class
+from chopdiff.divs.text_node import TextNode
 
 
 _test_text = dedent(

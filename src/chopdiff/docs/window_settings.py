@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from lite_text_tools.docs.sizes import TextUnit
+from chopdiff.docs.sizes import TextUnit
 
 
 WINDOW_BR = "<!--window-br-->"

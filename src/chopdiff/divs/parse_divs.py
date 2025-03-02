@@ -2,7 +2,7 @@ import copy
 import re
 from typing import List
 
-from lite_text_tools.divs.text_node import TextNode
+from chopdiff.divs.text_node import TextNode
 
 
 DIV_TAGS = re.compile(r"(<div\b[^>]*>|</div>)", re.IGNORECASE)

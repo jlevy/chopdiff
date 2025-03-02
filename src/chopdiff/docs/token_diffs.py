@@ -6,7 +6,7 @@ from typing import Callable, List, Optional, Tuple, TypeAlias
 import cydifflib as difflib
 from funlog import log_calls, tally_calls
 
-from lite_text_tools.docs.text_doc import TextDoc
+from chopdiff.docs.text_doc import TextDoc
 
 
 log = logging.getLogger(__name__)

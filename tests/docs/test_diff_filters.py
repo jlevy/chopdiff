@@ -1,4 +1,4 @@
-from lite_text_tools.docs.diff_filters import (
+from chopdiff.docs.diff_filters import (
     changes_whitespace,
     make_token_sequence_filter,
     no_word_lemma_changes,
@@ -6,9 +6,9 @@ from lite_text_tools.docs.diff_filters import (
     removes_words,
     WILDCARD_TOK,
 )
-from lite_text_tools.docs.text_doc import TextDoc
-from lite_text_tools.docs.token_diffs import diff_wordtoks, DiffOp, OpType
-from lite_text_tools.docs.wordtoks import is_break_or_space, PARA_BR_TOK, SENT_BR_TOK
+from chopdiff.docs.text_doc import TextDoc
+from chopdiff.docs.token_diffs import diff_wordtoks, DiffOp, OpType
+from chopdiff.docs.wordtoks import is_break_or_space, PARA_BR_TOK, SENT_BR_TOK
 
 
 def test_filter_br_and_space():

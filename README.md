@@ -1,6 +1,6 @@
-# lite-text-tools
+# chopdiff
 
-`lite-text-tools` is a small library of tools I've developed for use especially with
+`chopdiff` is a small library of tools I've developed for use especially with
 LLMs that let you handle Markdown and text document edits.
 
 It aims to have minimal dependencies and be useful for various LLM applications where

@@ -3,8 +3,8 @@ from textwrap import dedent
 
 import regex
 
-from lite_text_tools.docs.text_doc import SentIndex, TextDoc, TextUnit
-from lite_text_tools.docs.wordtoks import (
+from chopdiff.docs.text_doc import SentIndex, TextDoc, TextUnit
+from chopdiff.docs.wordtoks import (
     is_break_or_space,
     is_entity,
     is_header_tag,

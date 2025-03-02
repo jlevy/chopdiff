@@ -1,9 +1,9 @@
 from enum import Enum
 
-from lite_text_tools.docs.tiktoken_utils import tiktoken_len
-from lite_text_tools.docs.wordtoks import raw_text_to_wordtoks
+from chopdiff.docs.tiktoken_utils import tiktoken_len
+from chopdiff.docs.wordtoks import raw_text_to_wordtoks
 
-from lite_text_tools.html.html_plaintext import html_to_plaintext
+from chopdiff.html.html_plaintext import html_to_plaintext
 
 
 def size_in_bytes(text: str) -> int:

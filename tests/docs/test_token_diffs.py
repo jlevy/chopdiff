@@ -1,7 +1,7 @@
 from textwrap import dedent
 
-from lite_text_tools.docs.text_doc import SentIndex, TextDoc
-from lite_text_tools.docs.token_diffs import diff_wordtoks, DiffStats, find_best_alignment
+from chopdiff.docs.text_doc import SentIndex, TextDoc
+from chopdiff.docs.token_diffs import diff_wordtoks, DiffStats, find_best_alignment
 
 
 _short_text1 = dedent(

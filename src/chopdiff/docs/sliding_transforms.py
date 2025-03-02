@@ -10,12 +10,12 @@ from typing import Any, Callable, List, Optional, TypeAlias
 from flowmark import normalize_markdown
 from prettyfmt import fmt_lines
 
-from lite_text_tools.docs.diff_filters import accept_all
-from lite_text_tools.docs.sliding_windows import sliding_para_window, sliding_word_window
-from lite_text_tools.docs.text_doc import Paragraph, TextDoc, TextUnit
-from lite_text_tools.docs.token_diffs import diff_docs, DiffFilter, find_best_alignment
-from lite_text_tools.docs.window_settings import WINDOW_BR, WindowSettings
-from lite_text_tools.docs.wordtoks import join_wordtoks
+from chopdiff.docs.diff_filters import accept_all
+from chopdiff.docs.sliding_windows import sliding_para_window, sliding_word_window
+from chopdiff.docs.text_doc import Paragraph, TextDoc, TextUnit
+from chopdiff.docs.token_diffs import diff_docs, DiffFilter, find_best_alignment
+from chopdiff.docs.window_settings import WINDOW_BR, WindowSettings
+from chopdiff.docs.wordtoks import join_wordtoks
 
 
 log = logging.getLogger(__name__)

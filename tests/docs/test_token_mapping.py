@@ -1,8 +1,8 @@
 from textwrap import dedent
 
-from lite_text_tools.docs.text_doc import TextDoc
-from lite_text_tools.docs.token_mapping import TokenMapping
-from lite_text_tools.docs.wordtoks import raw_text_to_wordtoks
+from chopdiff.docs.text_doc import TextDoc
+from chopdiff.docs.token_mapping import TokenMapping
+from chopdiff.docs.wordtoks import raw_text_to_wordtoks
 
 
 def test_offset_mapping():

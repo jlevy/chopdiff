@@ -1,8 +1,8 @@
 from typing import Callable, List, Optional, TypeAlias
 
-from lite_text_tools.docs.lemmatize import lemmatize, lemmatized_equal
-from lite_text_tools.docs.token_diffs import DiffFilter, DiffOp, OpType
-from lite_text_tools.docs.wordtoks import (
+from chopdiff.docs.lemmatize import lemmatize, lemmatized_equal
+from chopdiff.docs.token_diffs import DiffFilter, DiffOp, OpType
+from chopdiff.docs.wordtoks import (
     is_break_or_space,
     is_tag_close,
     is_tag_open,

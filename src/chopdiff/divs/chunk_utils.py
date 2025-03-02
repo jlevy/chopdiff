@@ -1,8 +1,8 @@
 from typing import Callable, Generator, TypeVar
 
-from lite_text_tools.divs.text_node import TextNode
+from chopdiff.divs.text_node import TextNode
 
-from lite_text_tools.docs.text_doc import TextDoc, TextUnit
+from chopdiff.docs.text_doc import TextDoc, TextUnit
 
 
 T = TypeVar("T")

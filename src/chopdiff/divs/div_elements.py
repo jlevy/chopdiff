@@ -1,12 +1,12 @@
 import logging
 from typing import List, Optional
 
-from lite_text_tools.divs.chunk_utils import chunk_children, chunk_paras
-from lite_text_tools.divs.parse_divs import parse_divs
-from lite_text_tools.divs.text_node import TextNode
-from lite_text_tools.docs.text_doc import TextDoc, TextUnit
-from lite_text_tools.docs.wordtoks import first_wordtok, is_div
-from lite_text_tools.html.html_in_md import div_wrapper, html_join_blocks
+from chopdiff.divs.chunk_utils import chunk_children, chunk_paras
+from chopdiff.divs.parse_divs import parse_divs
+from chopdiff.divs.text_node import TextNode
+from chopdiff.docs.text_doc import TextDoc, TextUnit
+from chopdiff.docs.wordtoks import first_wordtok, is_div
+from chopdiff.html.html_in_md import div_wrapper, html_join_blocks
 
 log = logging.getLogger(__name__)
 
