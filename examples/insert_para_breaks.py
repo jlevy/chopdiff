@@ -3,51 +3,18 @@ import logging
 from textwrap import dedent
 
 import openai
-from chopdiff.transforms.diff_filters import changes_whitespace
-from chopdiff.transforms.sliding_transforms import filtered_transform
-from chopdiff.docs.text_doc import TextDoc
-from chopdiff.transforms.window_settings import WINDOW_2K_WORDTOKS
 from flowmark import fill_text
 
-
-def llm_insert_para_breaks(input_text: str) -> str:
-    """
-    Call OpenAI to insert paragraph breaks on a chunk of text.
-    This works best on a smaller chunk of text and might make
-    other non-whitespace changes.
-    """
-    client = openai.OpenAI()
-
-    response = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[
-            {"role": "system", "content": "You are a careful and precise editor."},
-            {
-                "role": "user",
-                "content": dedent(
-                    f"""
-                    Break the following text into paragraphs.
-                    
-
-                    Original text:
-
-                    {input_text}
-
-                    Formatted text:
-                    """
-                ),
-            },
-        ],
-        temperature=0.0,
-    )
-
-    return response.choices[0].message.content or ""
+from chopdiff.docs import TextDoc
+from chopdiff.transforms import changes_whitespace, filtered_transform, WINDOW_2K_WORDTOKS
 
 
 def insert_paragraph_breaks(text: str) -> str:
     # Create a TextDoc from the input text
     doc = TextDoc.from_text(text)
-    print(f"Input document: {doc.size_summary()}")
+
+    # Handy calculations of document size in paragraphs, sentences, etc.
+    print(f"\nInput document: {doc.size_summary()}")
 
     # Define the transformation function.
     # Note in this case we run the LLM on strings, but you could also work directly
@@ -73,14 +40,49 @@ def insert_paragraph_breaks(text: str) -> str:
         doc, transform, windowing=WINDOW_2K_WORDTOKS, diff_filter=changes_whitespace
     )
 
-    print(f"Output document: {result_doc.size_summary()}")
+    print(f"\nOutput document: {result_doc.size_summary()}")
 
     # Return the transformed text
     return result_doc.reassemble()
 
 
+def llm_insert_para_breaks(input_text: str) -> str:
+    """
+    Call OpenAI to insert paragraph breaks on a chunk of text.
+    This works best on a smaller chunk of text and might make
+    other non-whitespace changes.
+    """
+    client = openai.OpenAI()
+
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[
+            {"role": "system", "content": "You are a careful and precise editor."},
+            {
+                "role": "user",
+                "content": dedent(
+                    f"""
+                    Break the following text into paragraphs.
+
+                    Original text:
+
+                    {input_text}
+
+                    Formatted text:
+                    """
+                ),
+            },
+        ],
+        temperature=0.0,
+    )
+
+    return response.choices[0].message.content or ""
+
+
 def main():
-    parser = argparse.ArgumentParser(description="Insert paragraph breaks in text files.")
+    parser = argparse.ArgumentParser(
+        description="Insert paragraph breaks in text files, making no other changes of any kind to a document."
+    )
     parser.add_argument("input_file", help="Path to the input text file")
     parser.add_argument("-o", "--output", help="Path to the output file (default: stdout)")
     args = parser.parse_args()
