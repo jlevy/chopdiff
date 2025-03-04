@@ -5,35 +5,42 @@ from chopdiff.docs.token_diffs import diff_wordtoks, OpType, SYMBOL_SEP, TokenDi
 
 class TokenMapping:
     """
-    Given two sequences of word tokens, create a mapping from offsets
+    Given two sequences of tokens, create a best-estimate mapping of how the tokens
+    in the second sequence map to the tokens in the first sequence, based on an
+    LCS-style diff.
     """
 
     def __init__(
         self,
-        wordtoks1: List[str],
-        wordtoks2: List[str],
+        tokens1: List[str],
+        tokens2: List[str],
         diff: Optional[TokenDiff] = None,
-        min_wordtoks: int = 10,
+        min_tokens: int = 10,
         max_diff_frac: float = 0.4,
     ):
-        self.wordtoks1 = wordtoks1
-        self.wordtoks2 = wordtoks2
-        self.diff = diff or diff_wordtoks(self.wordtoks1, self.wordtoks2)
-        self._validate(min_wordtoks, max_diff_frac)
+        self.tokens1 = tokens1
+        self.tokens2 = tokens2
+        self.diff = diff or diff_wordtoks(self.tokens1, self.tokens2)
+        self._validate(min_tokens, max_diff_frac)
         self.backmap: Dict[int, int] = {}
         self._create_mapping()
 
     def map_back(self, offset2: int) -> int:
+        """
+        Map an offset in the second sequence back to the offset that most closely corresponds to it
+        in the first sequence. This might be an exact match (e.g. the same word) or the closest token
+        (e.g. the last word before a deleted or changed word).
+        """
         return self.backmap[offset2]
 
     def _validate(self, min_wordtoks: int, max_diff_frac: float):
-        if len(self.wordtoks1) < min_wordtoks or len(self.wordtoks2) < min_wordtoks:
+        if len(self.tokens1) < min_wordtoks or len(self.tokens2) < min_wordtoks:
             raise ValueError(f"Documents should have at least {min_wordtoks} wordtoks")
 
         nchanges = len(self.diff.changes())
-        if float(nchanges) / len(self.wordtoks1) > max_diff_frac:
+        if float(nchanges) / len(self.tokens1) > max_diff_frac:
             raise ValueError(
-                f"Documents have too many changes: {nchanges}/{len(self.wordtoks1)} ({float(nchanges) / len(self.wordtoks1):.2f} > {max_diff_frac})"
+                f"Documents have too many changes: {nchanges}/{len(self.tokens1)} ({float(nchanges) / len(self.tokens1):.2f} > {max_diff_frac})"
             )
 
     def _create_mapping(self):
@@ -65,10 +72,14 @@ class TokenMapping:
                     offset2 += 1
 
     def full_mapping_str(self):
+        """
+        For debugging or logging, return a verbose, readable table of the mapping of each
+        token in the second sequence to the first sequence.
+        """
         return "\n".join(
-            f"{i} {SYMBOL_SEP}{self.wordtoks2[i]}{SYMBOL_SEP} -> {self.map_back(i)} {SYMBOL_SEP}{self.wordtoks1[self.map_back(i)]}{SYMBOL_SEP}"
-            for i in range(len(self.wordtoks2))
+            f"{i} {SYMBOL_SEP}{self.tokens2[i]}{SYMBOL_SEP} -> {self.map_back(i)} {SYMBOL_SEP}{self.tokens1[self.map_back(i)]}{SYMBOL_SEP}"
+            for i in range(len(self.tokens2))
         )
 
     def __str__(self):
-        return f"OffsetMapping(doc1 len {len(self.wordtoks1)}, doc2 len {len(self.wordtoks2)}, mapping len {len(self.backmap)})"
+        return f"OffsetMapping(doc1 len {len(self.tokens1)}, doc2 len {len(self.tokens2)}, mapping len {len(self.backmap)})"

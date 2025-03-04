@@ -107,12 +107,19 @@ class TextNode:
             )
 
     def size_summary(self) -> str:
+        """
+        Return a summary of the size of the doc as well as a summary of its
+        div/HTML structure.
+        """
         summary = self.text_doc().size_summary()
         if structure_summary_str := self.structure_summary_str():
             summary += "\n" + structure_summary_str
         return summary
 
     def is_whitespace(self) -> bool:
+        """
+        Is this node whitespace only?
+        """
         return not self.children and self.contents.strip() == ""
 
     def children_by_class_names(
@@ -164,6 +171,9 @@ class TextNode:
                 return wrap(padded_children)
 
     def __str__(self):
+        """
+        Return a recursive, formatted string representation of the node and its children.
+        """
         return self._str_recursive()
 
     def _str_recursive(self, level: int = 0, max_len: int = 40) -> str:

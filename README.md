@@ -1,7 +1,7 @@
 # chopdiff
 
-`chopdiff` is a small library of tools I've developed for use especially with
-LLMs that let you handle Markdown and text document edits.
+`chopdiff` is a small library of tools I've developed for use especially with LLMs that
+let you handle Markdown and text document edits.
 
 It aims to have minimal dependencies and be useful for various LLM applications where
 you want to manipulate text, Markdown, and lightweight (not fully parsed) HTML
@@ -9,27 +9,46 @@ documents.
 
 It offers support for:
 
-- Parsing of documents into sentences and paragraphs (by default using regex heuristics
-  for speed and simplicity, but optionally with a sentence splitter of your choice,
-  like Spacy).
+- The `TextDoc` class allows parsing of documents into sentences and paragraphs (by
+  default using regex heuristics for speed and simplicity, but optionally with a
+  sentence splitter of your choice, like Spacy).
 
-- Parse and extract pieces of documents, using arbitrary units of paragraphs,
-  sentences, words, chars, or tokens
+- You can measure size and extract subdocs via arbitrary units of paragraphs, sentences,
+  words, chars, or tokens, with mappings between each, e.g. mapping sentence 3 of
+  paragraph 2 to its corresponding character or token offset.
+  The tokenization is simple but HTML-aware so words, punctuation, and HTML are all
+  single tokens.
 
-- Support for lightweight "chunking" of documents by wrappign paragraphs in named
-  `<div>`s to indicate chunks.
+- Lightweight "chunking" of documents by wrapping paragraphs in named `<div>`s to
+  indicate chunks. The `TextNode` class offers simple recursive parsing using specific,
+  known HTML tags like `<div>s`. Unlike more complex parsers, the `TextNode` parser
+  operates on character offsets, so maintains the original document exactly and allows
+  exact reassembly if desired.
 
-- Text-based diffing at the word level.
+- Text-based diffing at the word level, treating whitespace, sentence, and paragraph
+  breaks as indidivdual tokens.
+  Performs LCS-style token-based difs with
+  [cydifflib](https://pypi.org/project/cydifflib/), which is quite fast—significantly
+  faster than Python's built-in
+  [difflib](https://docs.python.org/3.10/library/difflib.html).
 
-- Filtering of text-based diffs based on specific criteria.
+- Filtering of these text-based diffs based on specific criteria.
+  For example, only adding or removing words, only changing whitespace, only changing
+  word lemmas, etc.
 
-- Transformation of documents via windows, then re-stitching the result.
+- The `TokenMapping` class offers word-based mappings between docs, allowing you to find
+  what part of a doc corresponds with another doc as a token index mappings.
+
+- The word-based token mapping allows transformation of documents via sliding windows,
+  transforming text (e.g. via an LLM call one window at a time, with overlapping
+  windows), then re-stitching the results back together with best alignments.
 
 All this is done very simply in memory, and with only regex or basic Markdown parsing to
 keep things simple and with few dependencies.
 
-It doesn't depend on heavier dependencies like Spacy or nltk for sentence splitting,
-though you can use these if you like.
+`chopdiff` has no heavier dependencies like full XML or BeautifulSoup parsing or Spacy
+or nltk for sentence splitting (though you can use these as custom sentence parsers if
+you like).
 
 Example use cases:
 
@@ -79,7 +98,6 @@ def llm_insert_para_breaks(input_text: str) -> str:
                 "content": dedent(
                     f"""
                     Break the following text into paragraphs.
-                    
 
                     Original text:
 
@@ -131,9 +149,9 @@ def insert_paragraph_breaks(text: str) -> str:
     return result_doc.reassemble()
 ```
 
-Running this shows how it works. Note GPT-4o-mini makes a typo correction, even
-though it wasn't requested. But the diff filter enforces that the output exactly
-contains only paragraph breaks:
+Running this shows how it works.
+Note GPT-4o-mini makes a typo correction, even though it wasn't requested.
+But the diff filter enforces that the output exactly contains only paragraph breaks:
 
 ```
 $ python examples/insert_para_breaks.py examples/gettysberg.txt 
