@@ -10,12 +10,13 @@ from typing import Any, Callable, List, Optional, TypeAlias
 from flowmark import fill_markdown
 from prettyfmt import fmt_lines
 
-from chopdiff.docs.diff_filters import accept_all
-from chopdiff.docs.sliding_windows import sliding_para_window, sliding_word_window
 from chopdiff.docs.text_doc import Paragraph, TextDoc, TextUnit
 from chopdiff.docs.token_diffs import diff_docs, DiffFilter, find_best_alignment
-from chopdiff.docs.window_settings import WINDOW_BR, WindowSettings
 from chopdiff.docs.wordtoks import join_wordtoks
+
+from chopdiff.transforms.diff_filters import accept_all
+from chopdiff.transforms.sliding_windows import sliding_para_window, sliding_word_window
+from chopdiff.transforms.window_settings import WINDOW_BR, WindowSettings
 
 
 log = logging.getLogger(__name__)

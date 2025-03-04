@@ -1,6 +1,11 @@
 """
-Support for treating text as a sequence of word, punctuation, or whitespace
-word tokens ("wordtoks").
+Support for treating text as a sequence of word, punctuation, whitespace
+(word, setnence, and paragraph breaks), or HTML tags as tokens, which we call
+"wordtoks".
+
+Also works well with Markdown. Wordtoks make it possible to do word-oriented
+parsing, diffs, and transforms, while also preserving HTML tags and significant
+whitespace.
 """
 
 from dataclasses import dataclass
@@ -9,6 +14,7 @@ from typing import Dict, List, Optional, Tuple
 import regex
 
 
+# Special tokens to represent sentence, paragraph, and document boundaries.
 # Note these parse as tokens and like HTML tags, so they can safely be mixed into inputs if desired.
 SENT_BR_TOK = "<-SENT-BR->"
 PARA_BR_TOK = "<-PARA-BR->"
@@ -47,7 +53,8 @@ _comment_pattern = regex.compile(r"<!--(.*?)-->", regex.DOTALL)
 
 def wordtok_to_str(wordtok: str) -> str:
     """
-    Convert a wordtok to a string.
+    Convert a wordtok to a string, mapping any special wordtoks to their usual
+    representations.
     """
     if wordtok == SENT_BR_TOK:
         return SENT_BR_STR
@@ -80,9 +87,9 @@ def normalize_wordtok(wordtok: str) -> str:
     return normalized
 
 
-def raw_text_to_wordtok_offsets(text: str, bof_eof=False) -> Tuple[List[str], List[int]]:
+def wordtokenize_with_offsets(text: str, bof_eof=False) -> Tuple[List[str], List[int]]:
     """
-    Same as `raw_text_to_wordtoks`, but returns a list of tuples `(wordtok, offset)`.
+    Same as `wordtokenize`, but returns a list of tuples `(wordtok, offset)`.
     """
     wordtoks = []
     offsets = []
@@ -100,13 +107,13 @@ def raw_text_to_wordtok_offsets(text: str, bof_eof=False) -> Tuple[List[str], Li
     return wordtoks, offsets
 
 
-def raw_text_to_wordtoks(text: str, bof_eof=False) -> List[str]:
+def wordtokenize(text: str, bof_eof=False) -> List[str]:
     """
     Convert text to word tokens, including words, whitespace, punctuation, and
     HTML tags. Does not parse paragraph or sentence breaks. Normalizes all
     whitespace to a single space character.
     """
-    wordtoks, _offsets = raw_text_to_wordtok_offsets(text, bof_eof)
+    wordtoks, _offsets = wordtokenize_with_offsets(text, bof_eof)
     return wordtoks
 
 
@@ -119,7 +126,7 @@ def insert_para_wordtoks(text: str) -> str:
 
 def _initial_wordtoks(text: str, max_chars: int) -> List[str]:
     sub_text = text[:max_chars]
-    wordtoks = raw_text_to_wordtoks(sub_text)
+    wordtoks = wordtokenize(sub_text)
     if wordtoks:
         wordtoks.pop()  # Drop any cut off token.
     return wordtoks
@@ -140,7 +147,7 @@ def join_wordtoks(wordtoks: List[str]) -> str:
 
 def visualize_wordtoks(wordtoks: List[str]) -> str:
     """
-    Visualize wordtoks for debugging.
+    Visualize wordtoks with a separator for debugging.
     """
     return SYMBOL_SEP + SYMBOL_SEP.join(wordtoks) + SYMBOL_SEP
 

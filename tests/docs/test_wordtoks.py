@@ -8,9 +8,9 @@ from chopdiff.docs.wordtoks import (
     is_tag_close,
     is_tag_open,
     parse_tag,
-    raw_text_to_wordtoks,
     Tag,
     visualize_wordtoks,
+    wordtokenize,
 )
 
 
@@ -30,13 +30,13 @@ _test_doc = dedent(
 
 
 def test_html_doc():
-    wordtoks = raw_text_to_wordtoks(_test_doc, bof_eof=True)
+    wordtoks = wordtokenize(_test_doc, bof_eof=True)
 
     print("\n---Wordtoks test:")
     print(visualize_wordtoks(wordtoks))
 
     print("\n---Wordtoks with para br:")
-    wordtoks_with_para = raw_text_to_wordtoks(insert_para_wordtoks(_test_doc), bof_eof=True)
+    wordtoks_with_para = wordtokenize(insert_para_wordtoks(_test_doc), bof_eof=True)
     print(visualize_wordtoks(wordtoks_with_para))
 
     assert (

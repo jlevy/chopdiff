@@ -3,9 +3,10 @@ from typing import Iterable
 import regex
 from typing_extensions import override
 
-from chopdiff.docs.extractor import Extractor, Match
 from chopdiff.docs.search_tokens import search_tokens
-from chopdiff.docs.wordtoks import raw_text_to_wordtok_offsets
+from chopdiff.docs.wordtoks import wordtokenize_with_offsets
+
+from chopdiff.html.extractor import Extractor, Match
 
 
 class ContentError(ValueError):
@@ -32,7 +33,7 @@ class TimestampExtractor(Extractor):
 
     def __init__(self, doc_str: str):
         self.doc_str = doc_str
-        self.wordtoks, self.offsets = raw_text_to_wordtok_offsets(self.doc_str, bof_eof=True)
+        self.wordtoks, self.offsets = wordtokenize_with_offsets(self.doc_str, bof_eof=True)
 
     @override
     def extract_all(self) -> Iterable[Match[float]]:

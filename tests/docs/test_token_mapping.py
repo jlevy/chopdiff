@@ -2,7 +2,7 @@ from textwrap import dedent
 
 from chopdiff.docs.text_doc import TextDoc
 from chopdiff.docs.token_mapping import TokenMapping
-from chopdiff.docs.wordtoks import raw_text_to_wordtoks
+from chopdiff.docs.wordtoks import wordtokenize
 
 
 def test_offset_mapping():
@@ -67,7 +67,7 @@ def test_offset_mapping_longer():
         """
     )
 
-    doc1_wordtoks = raw_text_to_wordtoks(doc1)
+    doc1_wordtoks = wordtokenize(doc1)
     doc2_wordtoks = list(TextDoc.from_text(doc2).as_wordtoks())
 
     mapping = TokenMapping(doc1_wordtoks, doc2_wordtoks)

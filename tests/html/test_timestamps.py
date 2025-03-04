@@ -1,6 +1,6 @@
 from textwrap import dedent
 
-from chopdiff.docs.timestamps import ContentError, TimestampExtractor
+from chopdiff.html.timestamps import ContentError, TimestampExtractor
 
 
 def test_timestamp_extractor():

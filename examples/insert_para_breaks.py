@@ -3,10 +3,10 @@ import logging
 from textwrap import dedent
 
 import openai
-from chopdiff.docs.diff_filters import changes_whitespace
-from chopdiff.docs.sliding_transforms import filtered_transform
+from chopdiff.transforms.diff_filters import changes_whitespace
+from chopdiff.transforms.sliding_transforms import filtered_transform
 from chopdiff.docs.text_doc import TextDoc
-from chopdiff.docs.window_settings import WINDOW_2K_WORDTOKS
+from chopdiff.transforms.window_settings import WINDOW_2K_WORDTOKS
 from flowmark import fill_text
 
 

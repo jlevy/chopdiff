@@ -12,10 +12,10 @@ CLASS_NAME_PATTERN = re.compile(r"\bclass=\"([^\"]+)\"", re.IGNORECASE)
 
 def parse_divs(text: str, skip_whitespace: bool = True) -> TextNode:
     """
-    Parse a string recursively into TextNodes based on `<div>` tags.
+    Parse a string recursively into `TextNode`s based on `<div>` tags.
 
-    All offsets are relative to the original text. Text outside of a div is included
-    as a TextNode with None markers.
+    All offsets are relative to the original text. Text outside of a div tag is
+    included as a `TextNode` with None markers.
 
     We do our own parsing to keep this simple and exactly preserve formatting.
     """

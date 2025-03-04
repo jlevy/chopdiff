@@ -9,7 +9,6 @@ from flowmark.sentence_split_regex import split_sentences_regex
 from funlog import tally_calls
 
 from chopdiff.docs.sizes import size, size_in_bytes, TextUnit
-from chopdiff.docs.tiktoken_utils import tiktoken_len
 from chopdiff.docs.wordtoks import (
     BOF_TOK,
     EOF_TOK,
@@ -20,10 +19,11 @@ from chopdiff.docs.wordtoks import (
     join_wordtoks,
     PARA_BR_STR,
     PARA_BR_TOK,
-    raw_text_to_wordtoks,
     SENT_BR_STR,
     SENT_BR_TOK,
+    wordtokenize,
 )
+from chopdiff.util.tiktoken_utils import tiktoken_len
 
 
 SYMBOL_PARA = "¶"
@@ -50,7 +50,7 @@ def is_markdown_header(markdown: str) -> bool:
 @dataclass(frozen=True, order=True)
 class SentIndex:
     """
-    Point to a sentence in a TextDoc.
+    Point to a sentence in a `TextDoc`.
     """
 
     para_index: int
@@ -69,6 +69,10 @@ SentenceMapping: TypeAlias = Dict[SentIndex, List[int]]
 
 @dataclass
 class Sentence:
+    """
+    A sentence in a `TextDoc`.
+    """
+
     text: str
     char_offset: int  # Offset of the sentence in the original text.
 
@@ -76,7 +80,7 @@ class Sentence:
         return size(self.text, unit)
 
     def as_wordtoks(self) -> List[str]:
-        return raw_text_to_wordtoks(self.text)
+        return wordtokenize(self.text)
 
     def is_markup(self) -> bool:
         """
@@ -102,6 +106,10 @@ class Sentence:
 
 @dataclass
 class Paragraph:
+    """
+    A paragraph in a `TextDoc`.
+    """
+
     original_text: str
     sentences: List[Sentence]
     char_offset: int  # Offset of the paragraph in the original text.
@@ -188,7 +196,8 @@ class Paragraph:
 class TextDoc:
     """
     A class for parsing and handling documents consisting of sentences and paragraphs
-    of text. Compatible with Markdown.
+    of text. Preserves original text, tracking offsets of each sentence and paragraph.
+    Compatible with Markdown and Markown with HTML tags.
     """
 
     paragraphs: List[Paragraph]
@@ -197,7 +206,10 @@ class TextDoc:
     @tally_calls(level="warning", min_total_runtime=5)
     def from_text(
         cls, text: str, sentence_splitter: Splitter = default_sentence_splitter
-    ) -> "TextDoc":
+    ) -> TextDoc:
+        """
+        Parse a document from a string.
+        """
         text = text.strip()
         paragraphs = []
         char_offset = 0
@@ -211,10 +223,16 @@ class TextDoc:
         return cls(paragraphs=paragraphs)
 
     @classmethod
-    def from_wordtoks(cls, wordtoks: List[str]) -> "TextDoc":
+    def from_wordtoks(cls, wordtoks: List[str]) -> TextDoc:
+        """
+        Parse a document from a list of wordtoks.
+        """
         return TextDoc.from_text(join_wordtoks(wordtoks))
 
     def reassemble(self) -> str:
+        """
+        Reassemble the document from its paragraphs.
+        """
         return PARA_BR_STR.join(paragraph.reassemble() for paragraph in self.paragraphs)
 
     def replace_str(self, old: str, new: str):
@@ -331,7 +349,7 @@ class TextDoc:
 
         return TextDoc(sub_paras)
 
-    def sub_paras(self, start: int, end: Optional[int] = None) -> "TextDoc":
+    def sub_paras(self, start: int, end: Optional[int] = None) -> TextDoc:
         """
         Get a sub-document containing a range of paragraphs.
         """

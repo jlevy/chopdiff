@@ -1,6 +1,5 @@
 from typing import Callable, List, Optional, TypeAlias
 
-from chopdiff.docs.lemmatize import lemmatize, lemmatized_equal
 from chopdiff.docs.token_diffs import DiffFilter, DiffOp, OpType
 from chopdiff.docs.wordtoks import (
     is_break_or_space,
@@ -9,6 +8,8 @@ from chopdiff.docs.wordtoks import (
     is_whitespace_or_punct,
     is_word,
 )
+
+from chopdiff.util.lemmatize import lemmatize, lemmatized_equal
 
 
 class WildcardToken:
@@ -71,11 +72,11 @@ def make_token_sequence_filter(
     ignore: Optional[TokenMatcher] = None,
 ) -> DiffFilter:
     """
-    Returns a DiffFilter that accepts DiffOps where the tokens match the given pattern.
+    Returns a `DiffFilter` that accepts `DiffOps` where the tokens match the given pattern.
     The pattern is a list where each element can be a string or a predicate function that
     takes a token and returns a bool (True if the token matches).
     The '*' in the pattern list matches any number of tokens (including zero).
-    If `action` is specified, only DiffOps with that action are considered.
+    If `action` is specified, only `DiffOps` with that action are considered.
     """
 
     def filter_fn(diff_op: DiffOp) -> bool:

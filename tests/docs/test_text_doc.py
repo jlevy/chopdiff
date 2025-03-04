@@ -13,9 +13,9 @@ from chopdiff.docs.wordtoks import (
     is_word,
     join_wordtoks,
     PARA_BR_TOK,
-    raw_text_to_wordtoks,
     visualize_wordtoks,
     wordtok_len,
+    wordtokenize,
 )
 from prettyfmt import fmt_words
 from strif import abbrev_str
@@ -320,11 +320,11 @@ _sentence_test_html = 'This is <span data-timestamp="1.234">a test</span>.'
 
 def test_wordtokization():
     for sentence in _sentence_tests:
-        wordtoks = raw_text_to_wordtoks(sentence)
+        wordtoks = wordtokenize(sentence)
         reassembled_sentence = "".join(wordtoks)
         assert reassembled_sentence == sentence
 
-    assert raw_text_to_wordtoks("Multiple     spaces and tabs\tand\nnewlines in between.") == [
+    assert wordtokenize("Multiple     spaces and tabs\tand\nnewlines in between.") == [
         "Multiple",
         " ",
         "spaces",
@@ -342,10 +342,10 @@ def test_wordtokization():
         "between",
         ".",
     ]
-    assert raw_text_to_wordtoks("") == []
-    assert raw_text_to_wordtoks("   ") == [" "]
+    assert wordtokenize("") == []
+    assert wordtokenize("   ") == [" "]
 
-    assert raw_text_to_wordtoks(_sentence_test_html) == [
+    assert wordtokenize(_sentence_test_html) == [
         "This",
         " ",
         "is",
@@ -359,7 +359,7 @@ def test_wordtokization():
     ]
 
     assert len(_sentence_test_html) == sum(
-        wordtok_len(wordtok) for wordtok in raw_text_to_wordtoks(_sentence_test_html)
+        wordtok_len(wordtok) for wordtok in wordtokenize(_sentence_test_html)
     )
 
 

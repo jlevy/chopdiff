@@ -1,8 +1,9 @@
 from enum import Enum
 
-from chopdiff.docs.tiktoken_utils import tiktoken_len
-from chopdiff.docs.wordtoks import raw_text_to_wordtoks
+from chopdiff.docs.wordtoks import wordtokenize
 from chopdiff.html.html_plaintext import html_to_plaintext
+
+from chopdiff.util.tiktoken_utils import tiktoken_len
 
 
 def size_in_bytes(text: str) -> int:
@@ -10,7 +11,7 @@ def size_in_bytes(text: str) -> int:
 
 
 def size_in_wordtoks(text: str) -> int:
-    return len(raw_text_to_wordtoks(text))
+    return len(wordtokenize(text))
 
 
 class TextUnit(Enum):
