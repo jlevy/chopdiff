@@ -2,7 +2,7 @@ from textwrap import dedent
 
 from chopdiff.docs.search_tokens import search_tokens
 from chopdiff.docs.wordtoks import (
-    insert_para_wordtoks,
+    _insert_para_wordtoks,
     is_entity,
     is_tag,
     is_tag_close,
@@ -36,7 +36,7 @@ def test_html_doc():
     print(visualize_wordtoks(wordtoks))
 
     print("\n---Wordtoks with para br:")
-    wordtoks_with_para = wordtokenize(insert_para_wordtoks(_test_doc), bof_eof=True)
+    wordtoks_with_para = wordtokenize(_insert_para_wordtoks(_test_doc), bof_eof=True)
     print(visualize_wordtoks(wordtoks_with_para))
 
     assert (

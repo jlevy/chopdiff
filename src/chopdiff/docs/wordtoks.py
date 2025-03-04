@@ -117,7 +117,7 @@ def wordtokenize(text: str, bof_eof=False) -> List[str]:
     return wordtoks
 
 
-def insert_para_wordtoks(text: str) -> str:
+def _insert_para_wordtoks(text: str) -> str:
     """
     Replace paragraph breaks in text with para break tokens.
     """
@@ -133,6 +133,9 @@ def _initial_wordtoks(text: str, max_chars: int) -> List[str]:
 
 
 def first_wordtok(text: str) -> Optional[str]:
+    """
+    Get the first wordtok from the text, if it has one.
+    """
     wordtoks = _initial_wordtoks(text, 100)
     return wordtoks[0] if wordtoks else None
 
