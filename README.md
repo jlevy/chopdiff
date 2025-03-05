@@ -92,7 +92,7 @@ pip install chopdiff
 ## Examples
 
 Here are a couple examples to illustrate how all this works, with verbose logging to see
-the ouput. See the [examples/](examples/) directory.
+the output. See the [examples/](examples/) directory.
 
 ### Inserting Paragraph Breaks
 

@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Iterable, Tuple, TypeAlias, TypeVar
+from typing import Generic, Iterable, Tuple, TypeAlias, TypeVar
 
 
 T = TypeVar("T")
@@ -14,7 +14,7 @@ class ContentNotFound(ValueError):
     """
 
 
-class Extractor[T](ABC):
+class Extractor(ABC, Generic[T]):
     """
     Abstract base class for extractors that extract information from a document at a
     given location. We use a class and not a pure function since we may need to
