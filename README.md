@@ -91,12 +91,13 @@ pip install chopdiff
 
 ## Examples
 
-See the [examples/](examples/) directory.
+Here are a couple examples to illustrate how all this works, with verbose logging to see
+the ouput. See the [examples/](examples/) directory.
 
 ### Inserting Paragraph Breaks
 
-Here is an example of doingh diff filtering, in
-[insert_para_breaks.py](examples/insert_para_breaks.py):
+This is an example of diff filtering (see
+[insert_para_breaks.py](examples/insert_para_breaks.py) for full code):
 
 ```python
 import argparse
@@ -262,8 +263,10 @@ $
 
 ### Backfilling Timestamps
 
-Here is an example of backfilling data from a similar but not identical source file,
-from [backfill_timestamps.py](examples/backfill_timestamps.py):
+Here is an example of backfilling data from one text file to another similar but not
+identical text file (see [backfill_timestamps.py](examples/backfill_timestamps.py) for
+code). As you can see, the text is aligned by mapping the words and then the timestamps
+inserted at the end of each paragraph based on the first sentence of each paragraph:
 
 ```
 $ poetry run python examples/backfill_timestamps.py 
@@ -391,9 +394,6 @@ Welcome to this video about Python programming. <span class="timestamp">⏱️00
 First, we'll talk about variables. Next, let's look at functions. Functions help us organize and reuse code. <span class="timestamp">⏱️00:15</span> 
 $
 ```
-
-As you can see, the text was aligned by mapping the words and then the timestamps
-inserted at the end of each paragraph based on the first sentence of each paragraph.
 
 ## Development
 
