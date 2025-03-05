@@ -2,7 +2,7 @@ import argparse
 import logging
 from textwrap import dedent
 
-import openai
+import openai  # type: ignore  # Not a project dep.
 
 from chopdiff.docs import TextDoc
 from chopdiff.transforms import changes_whitespace, filtered_transform, WINDOW_2K_WORDTOKS

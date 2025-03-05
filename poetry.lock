@@ -327,14 +327,14 @@ files = [
 
 [[package]]
 name = "flowmark"
-version = "0.2.0"
+version = "0.2.1"
 description = "Better line wrapping and formatting for plaintext and Markdown"
 optional = false
 python-versions = "<4.0,>=3.10"
 groups = ["main"]
 files = [
-    {file = "flowmark-0.2.0-py3-none-any.whl", hash = "sha256:9db8b19e245a1ad03faf034394b929540b01a854005bdb512e9ced6ad871c590"},
-    {file = "flowmark-0.2.0.tar.gz", hash = "sha256:fb2ea094cd1bd47cd4014be271e5dcf8476919b349110715c46abdf953470bad"},
+    {file = "flowmark-0.2.1-py3-none-any.whl", hash = "sha256:f058fd32e22f3222442fff703181d206662a4e88bbf752195698adc761bcdc8a"},
+    {file = "flowmark-0.2.1.tar.gz", hash = "sha256:d2ba0dcd24906fe11fa1cd134f068f7bc8959056cabc2e5b621e53c8c8b4fe71"},
 ]
 
 [package.dependencies]
@@ -344,14 +344,14 @@ strif = ">=2.0.0,<3.0.0"
 
 [[package]]
 name = "funlog"
-version = "0.1.1"
+version = "0.1.2"
 description = "Simple, useful decorators for logging and tallying function calls"
 optional = false
-python-versions = "<4.0,>=3.11"
+python-versions = "<4.0,>=3.10"
 groups = ["main"]
 files = [
-    {file = "funlog-0.1.1-py3-none-any.whl", hash = "sha256:73a4c1e6c01bb415ff533c0a111d68f46b1fa9d55159c44e1cc592e1c845b199"},
-    {file = "funlog-0.1.1.tar.gz", hash = "sha256:3187e51f47a071176bcd8e1a4bc6787e90a455881451a73d31295e034a309509"},
+    {file = "funlog-0.1.2-py3-none-any.whl", hash = "sha256:b86c8ed84ed87269455f157e93007b155a3b35b4d39c50bb9d65837badccae94"},
+    {file = "funlog-0.1.2.tar.gz", hash = "sha256:7df9686edd27d13a185db4cf9bcb2ce10ea4b5aa997b71310ed899b1ffc05d89"},
 ]
 
 [package.dependencies]
@@ -1108,4 +1108,4 @@ trailrunner = ">=1.0"
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.11"
-content-hash = "d1b82e9e1bd25b82892eab87c78f3b252dc1f0280c920a78996428acf27a3181"
+content-hash = "00bb203f8d419d76cb1437acf9f2db74cb0dca28344efc80140910e154cae848"
