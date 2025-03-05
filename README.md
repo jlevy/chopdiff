@@ -16,14 +16,14 @@ Example use cases:
   Or let it only edit punctuation, whitespace, and lemma variants of words.
   Or only change one word at a time (e.g. for spell checking).
 
-- **Backfill information:** Match edited text against a previous version of a document,
+- **Backfill information:** Match edited text against a previous version of a document
   (using a word-level LCS diff), then pull information from one doc to another.
   For example, say you have a timestamped transcript and an edited summary.
   You can then backfill timestamps of each paragraph into the edited text.
 
-- **Windowed transforms:** Walk through a document N paragraphs, N sentences, or N
-  tokens at a time, processing the results with an LLM call, then recombining the
-  results.
+- **Windowed transforms:** Walk through a large document N paragraphs, N sentences, or N
+  tokens at a time, processing the results with an LLM call, then "stitching together"
+  the results, even if the chunks overlap.
 
 More on what's here:
 
