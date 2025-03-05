@@ -1,26 +1,30 @@
 from abc import ABC, abstractmethod
-from typing import Any, Iterable, Tuple, TypeAlias, TypeVar
+from typing import Iterable, Tuple, TypeAlias, TypeVar
 
 
 T = TypeVar("T")
 
 Match: TypeAlias = Tuple[T, int, int]
-"""Match, index, and offset."""
+"""Match, index, and offset of content found by an extractor."""
 
 
-class Extractor(ABC):
+class ContentNotFound(ValueError):
     """
-    Abstract base class for extractors that extract information from a document at a given location.
-    We use a class not a pure function since we may need to preprocess the document.
+    Exception raised when content is not found by an extractor.
     """
 
-    def __init__(self, doc_str: str):
-        self.doc_str = doc_str
+
+class Extractor[T](ABC):
+    """
+    Abstract base class for extractors that extract information from a document at a
+    given location. We use a class and not a pure function since we may need to
+    preprocess the document.
+    """
 
     @abstractmethod
-    def extract_all(self) -> Iterable[Match[Any]]:
+    def extract_all(self) -> Iterable[Match[T]]:
         pass
 
     @abstractmethod
-    def extract_preceding(self, wordtok_offset: int) -> Match[Any]:
+    def extract_preceding(self, wordtok_offset: int) -> Match[T]:
         pass

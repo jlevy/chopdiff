@@ -3,10 +3,19 @@ import logging
 from textwrap import dedent
 
 import openai
-from flowmark import fill_text
 
 from chopdiff.docs import TextDoc
 from chopdiff.transforms import changes_whitespace, filtered_transform, WINDOW_2K_WORDTOKS
+from flowmark import fill_text
+
+
+logging.basicConfig(format=">> %(message)s")
+log = logging.getLogger(__name__)
+log.setLevel(logging.INFO)
+
+
+def heading(text: str):
+    return "\n--- " + text + " " + "-" * (70 - len(text)) + "\n"
 
 
 def insert_paragraph_breaks(text: str) -> str:
@@ -40,6 +49,7 @@ def insert_paragraph_breaks(text: str) -> str:
         doc, transform, windowing=WINDOW_2K_WORDTOKS, diff_filter=changes_whitespace
     )
 
+    print(heading("Output document"))
     print(f"\nOutput document: {result_doc.size_summary()}")
 
     # Return the transformed text
@@ -92,15 +102,12 @@ def main():
     with open(args.input_file, "r", encoding="utf-8") as f:
         input_text = f.read()
 
-    def heading(text: str):
-        print("\n--- " + text + " " + "-" * (70 - len(text)) + "\n")
-
-    heading("Original")
+    print(heading("Original"))
     print(fill_text(input_text))
 
     result = insert_paragraph_breaks(input_text)
 
-    heading("With Paragraph Breaks")
+    print(heading("With paragraph breaks"))
     print(fill_text(result))
 
 

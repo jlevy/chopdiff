@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 from dataclasses import dataclass
 from enum import Enum
@@ -141,12 +143,13 @@ class TokenDiff:
 
         return result
 
-    def filter(self, accept_fn: DiffFilter) -> Tuple["TokenDiff", "TokenDiff"]:
+    def filter(self, accept_fn: DiffFilter) -> Tuple[TokenDiff, TokenDiff]:
         """
         Return two diffs, one that only has accepted operations and one that only has
         rejected operations.
         """
-        accepted_ops, rejected_ops = [], []
+        accepted_ops: List[DiffOp] = []
+        rejected_ops: List[DiffOp] = []
 
         for op in self.ops:
             if op.action == OpType.EQUAL:

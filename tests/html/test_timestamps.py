@@ -1,6 +1,7 @@
 from textwrap import dedent
 
-from chopdiff.html.timestamps import ContentError, TimestampExtractor
+from chopdiff.html.extractor import ContentNotFound
+from chopdiff.html.timestamps import TimestampExtractor
 
 
 def test_timestamp_extractor():
@@ -14,7 +15,7 @@ def test_timestamp_extractor():
     for i, wordtok in enumerate(wordtoks):
         try:
             timestamp, _index, offset = extractor.extract_preceding(i)
-        except ContentError:
+        except ContentNotFound:
             timestamp = None
             offset = -1
         results.append(f"{i}: {timestamp} ⎪{wordtok}⎪")

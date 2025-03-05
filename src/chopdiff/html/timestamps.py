@@ -5,30 +5,25 @@ from typing_extensions import override
 
 from chopdiff.docs.search_tokens import search_tokens
 from chopdiff.docs.wordtoks import wordtokenize_with_offsets
-
-from chopdiff.html.extractor import Extractor, Match
-
-
-class ContentError(ValueError):
-    pass
+from chopdiff.html.extractor import ContentNotFound, Extractor, Match
 
 
 # Match any span or div with a data-timestamp attribute.
 _TIMESTAMP_RE = regex.compile(r'(?:<\w+[^>]*\s)?data-timestamp=[\'"](\d+(\.\d+)?)[\'"][^>]*>')
 
 
-def extract_timestamp(wordtok: str):
+def extract_timestamp(wordtok: str) -> float | None:
     match = _TIMESTAMP_RE.search(wordtok)
     return float(match.group(1)) if match else None
 
 
-def has_timestamp(wordtok: str):
-    return bool(extract_timestamp(wordtok))
+def has_timestamp(wordtok: str) -> bool:
+    return extract_timestamp(wordtok) is not None
 
 
 class TimestampExtractor(Extractor):
     """
-    Extract the first timestamp of the form `<... data-timestamp="123.45">`.
+    Extract timestamps of the form `<... data-timestamp="123.45">` from a document.
     """
 
     def __init__(self, doc_str: str):
@@ -42,7 +37,7 @@ class TimestampExtractor(Extractor):
         """
         for index, (wordtok, offset) in enumerate(zip(self.wordtoks, self.offsets)):
             timestamp = extract_timestamp(wordtok)
-            if timestamp:
+            if timestamp is not None:
                 yield timestamp, index, offset
 
     @override
@@ -55,6 +50,10 @@ class TimestampExtractor(Extractor):
                 timestamp = extract_timestamp(wordtok)
                 if timestamp is not None:
                     return timestamp, index, self.offsets[index]
-            raise ContentError(f"No timestamp found seeking back from {wordtok_offset}: {wordtok}")
+            raise ContentNotFound(
+                f"No timestamp found seeking back from token {wordtok_offset}: {wordtok!r}"
+            )
         except KeyError as e:
-            raise ContentError(f"No timestamp found searching back from {wordtok_offset}: {e}")
+            raise ContentNotFound(
+                f"No timestamp found searching back from token {wordtok_offset}: {e}"
+            )

@@ -407,11 +407,11 @@ class TextDoc:
             return (
                 f"{nbytes} bytes ("
                 f"{self.size(TextUnit.lines)} lines, "
-                f"{self.size(TextUnit.paragraphs)} paragraphs, "
-                f"{self.size(TextUnit.sentences)} sentences, "
+                f"{self.size(TextUnit.paragraphs)} paras, "
+                f"{self.size(TextUnit.sentences)} sents, "
                 f"{self.size(TextUnit.words)} words, "
                 # f"{self.size(TextUnit.wordtoks)} wordtoks, "
-                f"{self.size(TextUnit.tiktokens)} tiktokens)"
+                f"{self.size(TextUnit.tiktokens)} tiktoks)"
             )
         else:
             return f"{nbytes} bytes"

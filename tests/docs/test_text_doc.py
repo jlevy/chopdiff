@@ -189,9 +189,7 @@ def test_doc_sizes():
     size_summary = doc.size_summary()
     print(size_summary)
 
-    assert (
-        size_summary == "726 bytes (37 lines, 16 paragraphs, 20 sentences, 82 words, 215 tiktokens)"
-    )
+    assert size_summary == "726 bytes (37 lines, 16 paras, 20 sents, 82 words, 215 tiktoks)"
 
 
 def test_seek_doc():

@@ -1,6 +1,6 @@
 # flake8: noqa: F401
 
-from chopdiff.html.extractor import Extractor, Match
+from chopdiff.html.extractor import ContentNotFound, Extractor, Match
 from chopdiff.html.html_find_tags import html_extract_attribute_value, html_find_tag, TagMatch
 from chopdiff.html.html_in_md import (
     div_wrapper,

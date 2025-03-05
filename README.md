@@ -1,20 +1,25 @@
 # chopdiff
 
-`chopdiff` is a small library of tools I've developed for use especially with LLMs that
-let you handle Markdown and text document edits.
+`chopdiff` is a small library of tools I've developed to make it easier to do make
+fairly complex transformations of text documents, especially for LLM applications, where
+you want to manipulate text, Markdown, and HTML documents in a clean way.
 
-It aims to have minimal dependencies and be useful for various LLM applications where
-you want to manipulate text, Markdown, and lightweight (not fully parsed) HTML
-documents.
+Basically, it lets you parse, diff, and transform text at the level of words, sentences,
+paragraphs, and "chunks" (paragraphs grouped in an HTML tag like a `<div>`). It aims to
+have minimal dependencies.
 
 Example use cases:
 
-- **Filtered diffs:** Diff two documents, and only accept changes that fit a specific
-  filter. For example, ask an LLM to edit a transcript, only inserting paragraph breaks
-  but enforcing that the LLM can't do anything except insert whitespace.
+- **Filter diffs:** Diff two documents and only accept changes that fit a specific
+  filter. For example, you can ask an LLM to edit a transcript, only inserting paragraph
+  breaks but enforcing that the LLM can't do anything except insert whitespace.
+  Or let it only edit punctuation, whitespace, and lemma variants of words.
+  Or only change one word at a time (e.g. for spell checking).
 
-- **Backfill information:** Match edited text against a timestamped transcript, then
-  backfill the timestamps into the edited text.
+- **Backfill information:** Match edited text against a previous version of a document,
+  (using a word-level LCS diff), then pull information from one doc to another.
+  For example, say you have a timestamped transcript and an edited summary.
+  You can then backfill timestamps of each paragraph into the edited text.
 
 - **Windowed transforms:** Walk through a document N paragraphs, N sentences, or N
   tokens at a time, processing the results with an LLM call, then recombining the
@@ -27,20 +32,20 @@ More on what's here:
   By default, this uses only regex heuristics for speed and simplicity, but optionally
   you can use a sentence splitter of your choice, like Spacy.
 
-- Word-based tokenization (using [wordtoks](src/chopdiff/docs/wordtoks.py) that is lets
-  you measure size and extract subdocs via arbitrary units of paragraphs, sentences,
-  words, chars, or tokens, with mappings between each, e.g. mapping sentence 3 of
-  paragraph 2 to its corresponding character or token offset.
-  The tokenization is simple but HTML-aware so words, punctuation, and HTML are all
-  single tokens. It also maintains exact offsets of each token with the original document
-  text.
+- Tokenization using ["wordtoks"](src/chopdiff/docs/wordtoks.py) that lets you measure
+  size and extract subdocs via arbitrary units of paragraphs, sentences, words, chars,
+  or tokens, with mappings between each, e.g. mapping sentence 3 of paragraph 2 to its
+  corresponding character or token offset.
+  The tokenization is simple but flexible, including whitespace (sentence or paragraph
+  breaks) and HTML tags as single tokens.
+  It also maintains exact offsets of each token in the original document text.
 
 - [Word-level diffs](src/chopdiff/docs/token_diffs.py) that don't work at the line level
-  (like usual git diffs) but rather treat whitespace, sentence, and paragraph breaks as
-  indidivdual tokens. You can perform LCS-style token-based diffs with
-  [cydifflib](https://pypi.org/project/cydifflib/), which is quite fast—significantly
-  faster than Python's built-in
-  [difflib](https://docs.python.org/3.10/library/difflib.html).
+  (like usual git-style diffs) but rather treat whitespace, sentence, and paragraph
+  breaks as indidivdual tokens.
+  It performs LCS-style token-based diffs with
+  [cydifflib](https://github.com/rapidfuzz/cydifflib), which is significantly faster
+  than Python's built-in [difflib](https://docs.python.org/3.10/library/difflib.html).
 
 - [Filtering](src/chopdiff/transforms/diff_filters.py) of these text-based diffs based
   on specific criteria.
@@ -51,9 +56,15 @@ More on what's here:
   mappings between docs, allowing you to find what part of a doc corresponds with
   another doc as a token index mappings.
 
-- Lightweight "chunking" of documents by wrapping paragraphs in named `<div>`s to
-  indicate chunks. [`TextNode`](src/chopdiff/divs/text_node.py) offers simple recursive
-  parsing around `<div>` tags.
+- [`search_tokens`](src/chopdiff/docs/search_tokens.py) gives simple way to search back
+  and forth among the tokens of a document.
+  That is, you can seek forward or backward to any desired token (HTML tag, word,
+  punctuation, or sentence or paragraph break matching a predicate) from any given
+  position.
+
+- Lightweight "chunking" of documents by wrapping paragraphs in `<div>`s to indicate
+  chunks. [`TextNode`](src/chopdiff/divs/text_node.py) offers simple recursive parsing
+  around `<div>` tags.
   This is not a general HTML parser, but rather a way to chunk documents into named
   pieces. Unlike more complex parsers, the `TextNode` parser operates on character
   offsets, so maintains the original document exactly and allows exact reassembly if
@@ -80,9 +91,12 @@ pip install chopdiff
 
 ## Examples
 
-See the [examples/](/examples/) directory.
+See the [examples/](examples/) directory.
 
 ### Inserting Paragraph Breaks
+
+Here is an example of doingh diff filtering, in
+[insert_para_breaks.py](examples/insert_para_breaks.py):
 
 ```python
 import argparse
@@ -168,7 +182,7 @@ Note GPT-4o-mini makes a typo correction, even though it wasn't requested.
 But the diff filter enforces that the output exactly contains only paragraph breaks:
 
 ```
-$ python examples/insert_para_breaks.py examples/gettysberg.txt 
+$ poetry run python examples/insert_para_breaks.py examples/gettysberg.txt 
 
 --- Original --------------------------------------------------------------
 
@@ -245,6 +259,141 @@ this nation, under God, shall have a new birth of freedom—and that government 
 people, by the people, for the people, shall not perish from the earth.
 $
 ```
+
+### Backfilling Timestamps
+
+Here is an example of backfilling data from a similar but not identical source file,
+from [backfill_timestamps.py](examples/backfill_timestamps.py):
+
+```
+$ poetry run python examples/backfill_timestamps.py 
+
+--- Source text (with timestamps) -----------------------------------------
+
+
+<span data-timestamp="0.0">Welcome to this um ... video about Python programming.</span>
+<span data-timestamp="15.5">First, we'll talk about variables. Variables are containers for storing data values.</span>
+<span data-timestamp="25.2">Then let's look at functions. Functions help us organize and reuse code.</span>
+
+
+--- Target text (without timestamps) --------------------------------------
+
+
+## Introduction
+
+Welcome to this video about Python programming.
+
+First, we'll talk about variables. Next, let's look at functions. Functions help us organize and reuse code.
+
+
+--- Diff ------------------------------------------------------------------
+
+TextDiff: add/remove +9/-32 out of 87 total:
+at pos    0 keep    1 toks:   ⎪<-BOF->⎪
+at pos    1 add     2 toks: + ⎪##⎪
+at pos    1 keep    1 toks:   ⎪ ⎪
+at pos    2 repl    1 toks: - ⎪<span data-timestamp="0.0">⎪
+            repl    2 toks: + ⎪Introduction<-PARA-BR->⎪
+at pos    3 keep    5 toks:   ⎪Welcome to this⎪
+at pos    8 del     6 toks: - ⎪ um ...⎪
+at pos   14 keep    9 toks:   ⎪ video about Python programming.⎪
+at pos   23 repl    3 toks: - ⎪</span> <span data-timestamp="15.5">⎪
+            repl    1 toks: + ⎪<-PARA-BR->⎪
+at pos   26 keep   13 toks:   ⎪First, we'll talk about variables.⎪
+at pos   39 repl   19 toks: - ⎪ Variables are containers for storing data values.</span> <span data-timestamp="25.2">Then⎪
+            repl    3 toks: + ⎪<-SENT-BR->Next,⎪
+at pos   58 keep   11 toks:   ⎪ let's look at functions.⎪
+at pos   69 repl    1 toks: - ⎪ ⎪
+            repl    1 toks: + ⎪<-SENT-BR->⎪
+at pos   70 keep   14 toks:   ⎪Functions help us organize and reuse code.⎪
+at pos   84 del     2 toks: - ⎪</span> ⎪
+at pos   86 keep    1 toks:   ⎪<-EOF->⎪
+
+--- Token mapping ---------------------------------------------------------
+
+0 ⎪<-BOF->⎪ -> 0 ⎪<-BOF->⎪
+1 ⎪#⎪ -> 0 ⎪<-BOF->⎪
+2 ⎪#⎪ -> 0 ⎪<-BOF->⎪
+3 ⎪ ⎪ -> 1 ⎪ ⎪
+4 ⎪Introduction⎪ -> 2 ⎪<span data-timestamp="0.0">⎪
+5 ⎪<-PARA-BR->⎪ -> 2 ⎪<span data-timestamp="0.0">⎪
+6 ⎪Welcome⎪ -> 3 ⎪Welcome⎪
+7 ⎪ ⎪ -> 4 ⎪ ⎪
+8 ⎪to⎪ -> 5 ⎪to⎪
+9 ⎪ ⎪ -> 6 ⎪ ⎪
+10 ⎪this⎪ -> 7 ⎪this⎪
+11 ⎪ ⎪ -> 14 ⎪ ⎪
+12 ⎪video⎪ -> 15 ⎪video⎪
+13 ⎪ ⎪ -> 16 ⎪ ⎪
+14 ⎪about⎪ -> 17 ⎪about⎪
+15 ⎪ ⎪ -> 18 ⎪ ⎪
+16 ⎪Python⎪ -> 19 ⎪Python⎪
+17 ⎪ ⎪ -> 20 ⎪ ⎪
+18 ⎪programming⎪ -> 21 ⎪programming⎪
+19 ⎪.⎪ -> 22 ⎪.⎪
+20 ⎪<-PARA-BR->⎪ -> 25 ⎪<span data-timestamp="15.5">⎪
+21 ⎪First⎪ -> 26 ⎪First⎪
+22 ⎪,⎪ -> 27 ⎪,⎪
+23 ⎪ ⎪ -> 28 ⎪ ⎪
+24 ⎪we⎪ -> 29 ⎪we⎪
+25 ⎪'⎪ -> 30 ⎪'⎪
+26 ⎪ll⎪ -> 31 ⎪ll⎪
+27 ⎪ ⎪ -> 32 ⎪ ⎪
+28 ⎪talk⎪ -> 33 ⎪talk⎪
+29 ⎪ ⎪ -> 34 ⎪ ⎪
+30 ⎪about⎪ -> 35 ⎪about⎪
+31 ⎪ ⎪ -> 36 ⎪ ⎪
+32 ⎪variables⎪ -> 37 ⎪variables⎪
+33 ⎪.⎪ -> 38 ⎪.⎪
+34 ⎪<-SENT-BR->⎪ -> 57 ⎪Then⎪
+35 ⎪Next⎪ -> 57 ⎪Then⎪
+36 ⎪,⎪ -> 57 ⎪Then⎪
+37 ⎪ ⎪ -> 58 ⎪ ⎪
+38 ⎪let⎪ -> 59 ⎪let⎪
+39 ⎪'⎪ -> 60 ⎪'⎪
+40 ⎪s⎪ -> 61 ⎪s⎪
+41 ⎪ ⎪ -> 62 ⎪ ⎪
+42 ⎪look⎪ -> 63 ⎪look⎪
+43 ⎪ ⎪ -> 64 ⎪ ⎪
+44 ⎪at⎪ -> 65 ⎪at⎪
+45 ⎪ ⎪ -> 66 ⎪ ⎪
+46 ⎪functions⎪ -> 67 ⎪functions⎪
+47 ⎪.⎪ -> 68 ⎪.⎪
+48 ⎪<-SENT-BR->⎪ -> 69 ⎪ ⎪
+49 ⎪Functions⎪ -> 70 ⎪Functions⎪
+50 ⎪ ⎪ -> 71 ⎪ ⎪
+51 ⎪help⎪ -> 72 ⎪help⎪
+52 ⎪ ⎪ -> 73 ⎪ ⎪
+53 ⎪us⎪ -> 74 ⎪us⎪
+54 ⎪ ⎪ -> 75 ⎪ ⎪
+55 ⎪organize⎪ -> 76 ⎪organize⎪
+56 ⎪ ⎪ -> 77 ⎪ ⎪
+57 ⎪and⎪ -> 78 ⎪and⎪
+58 ⎪ ⎪ -> 79 ⎪ ⎪
+59 ⎪reuse⎪ -> 80 ⎪reuse⎪
+60 ⎪ ⎪ -> 81 ⎪ ⎪
+61 ⎪code⎪ -> 82 ⎪code⎪
+62 ⎪.⎪ -> 83 ⎪.⎪
+63 ⎪<-EOF->⎪ -> 86 ⎪<-EOF->⎪
+>> Seeking back tok 1 (<-PARA-BR->) to para start tok 1 (#), map back to source tok 0 (<-BOF->)
+>> Failed to extract timestamp at doc token 1 (<-PARA-BR->) -> source token 0 (<-BOF->): ¶0,S0
+>> Seeking back tok 6 (<-PARA-BR->) to para start tok 6 (Welcome), map back to source tok 3 (Welcome)
+>> Adding timestamp to sentence: 'Welcome to this video about Python programming.'
+>> Seeking back tok 21 (<-EOF->) to para start tok 21 (First), map back to source tok 26 (First)
+>> Adding timestamp to sentence: 'Functions help us organize and reuse code.'
+
+--- Result (with backfilled timestamps) -----------------------------------
+
+## Introduction
+
+Welcome to this video about Python programming. <span class="timestamp">⏱️00:00</span> 
+
+First, we'll talk about variables. Next, let's look at functions. Functions help us organize and reuse code. <span class="timestamp">⏱️00:15</span> 
+$
+```
+
+As you can see, the text was aligned by mapping the words and then the timestamps
+inserted at the end of each paragraph based on the first sentence of each paragraph.
 
 ## Development
 
