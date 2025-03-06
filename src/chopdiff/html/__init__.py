@@ -12,7 +12,9 @@ from chopdiff.html.html_in_md import (
     html_img,
     html_join_blocks,
     html_span,
+    md_para,
     span_wrapper,
+    Wrapper,
 )
 from chopdiff.html.html_plaintext import html_to_plaintext, plaintext_to_html
 from chopdiff.html.timestamps import extract_timestamp, has_timestamp, TimestampExtractor

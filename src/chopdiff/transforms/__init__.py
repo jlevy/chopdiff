@@ -13,10 +13,12 @@ from chopdiff.transforms.diff_filters import (
 )
 from chopdiff.transforms.sliding_transforms import (
     filtered_transform,
+    find_best_alignment,
     remove_window_br,
     sliding_para_window_transform,
     sliding_window_transform,
     sliding_wordtok_window_transform,
+    TextDocTransform,
 )
 from chopdiff.transforms.sliding_windows import sliding_para_window, sliding_word_window
 from chopdiff.transforms.window_settings import (

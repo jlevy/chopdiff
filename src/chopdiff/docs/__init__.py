@@ -5,6 +5,7 @@ from chopdiff.docs.sizes import TextUnit
 from chopdiff.docs.text_doc import Paragraph, Sentence, SentIndex, TextDoc
 from chopdiff.docs.token_diffs import (
     diff_docs,
+    DIFF_FILTER_NONE,
     diff_wordtoks,
     DiffFilter,
     DiffOp,
@@ -21,9 +22,11 @@ from chopdiff.docs.wordtoks import (
     EOF_TOK,
     first_wordtok,
     is_break_or_space,
+    is_div,
     is_header_tag,
     is_tag,
     is_tag_close,
+    is_tag_open,
     is_whitespace_or_punct,
     is_word,
     join_wordtoks,
