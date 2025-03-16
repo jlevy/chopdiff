@@ -1,8 +1,8 @@
 # chopdiff
 
-`chopdiff` is a small library of tools I've developed to make it easier to do make
-fairly complex transformations of text documents, especially for LLM applications, where
-you want to manipulate text, Markdown, and HTML documents in a clean way.
+`chopdiff` is a small library of tools I've developed to make it easier to do fairly
+complex transformations of text documents, especially for LLM applications, where you
+want to manipulate text, Markdown, and HTML documents in a clean way.
 
 Basically, it lets you parse, diff, and transform text at the level of words, sentences,
 paragraphs, and "chunks" (paragraphs grouped in an HTML tag like a `<div>`). It aims to
@@ -24,6 +24,28 @@ Example use cases:
 - **Windowed transforms:** Walk through a large document N paragraphs, N sentences, or N
   tokens at a time, processing the results with an LLM call, then "stitching together"
   the results, even if the chunks overlap.
+
+## Installation
+
+It's on PyPI so use `pip install chopdiff` or (recommended for modern uv projects) `uv
+add chopdiff`.
+
+## Comparison to Alternatives
+
+There are full-blown Markdown and HTML parsing libs (such as
+[Marko](https://github.com/frostming/marko) and
+[BeautifulSoup](https://www.crummy.com/software/BeautifulSoup/bs4/doc/)) but these tend
+to focus specifically on fully parsing documents as parse trees.
+On the other end of the spectrum, there are NLP libraries (like
+[spaCy](https://github.com/explosion/spaCy)) that do more expensive, full language
+parsing and sentence segmentation.
+This is a lightweight alternative to those approaches when you are just focusing on
+processing text, don't want a big dependency (like a full XML parser or NLP toolkit) and
+also want full control over the original source format (since the original text is
+exactly preserved, even whitespace—every sentence, paragraph, and token is mapped back
+to the original text).
+
+## Overview
 
 More on what's here:
 
@@ -82,12 +104,6 @@ keep things simple and with few dependencies.
 `chopdiff` has no heavier dependencies like full XML or BeautifulSoup parsing or Spacy
 or nltk for sentence splitting (though you can use these as custom sentence parsers if
 you like).
-
-## Installation
-
-```
-pip install chopdiff
-```
 
 ## Examples
 
