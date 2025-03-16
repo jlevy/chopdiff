@@ -1,10 +1,10 @@
-# Update as needed.
-SRC_PATHS = ["src", "tests", "examples"]
-DOC_PATHS = ["README.md"]
-
-
 import subprocess
+
 from rich import print as rprint
+
+# Update as needed.
+SRC_PATHS = ["src", "tests", "devtools"]
+DOC_PATHS = ["README.md"]
 
 
 def main():
@@ -12,9 +12,8 @@ def main():
 
     errcount = 0
     errcount += _run(["codespell", "--write-changes", *SRC_PATHS, *DOC_PATHS])
-    errcount += _run(["usort", "format", *SRC_PATHS])
     errcount += _run(["ruff", "check", "--fix", *SRC_PATHS])
-    errcount += _run(["black", *SRC_PATHS])
+    errcount += _run(["ruff", "format", *SRC_PATHS])
     errcount += _run(["mypy", *SRC_PATHS])
 
     rprint()
