@@ -3,7 +3,7 @@ import subprocess
 from rich import print as rprint
 
 # Update as needed.
-SRC_PATHS = ["src", "tests", "devtools"]
+SRC_PATHS = ["src", "tests", "devtools", "examples"]
 DOC_PATHS = ["README.md"]
 
 

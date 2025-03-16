@@ -1,3 +1,11 @@
+# /// script
+# requires-python = ">=3.13"
+# dependencies = [
+#     "chopdiff",
+#     "flowmark",
+#     "openai",
+# ]
+# ///
 import argparse
 import logging
 from textwrap import dedent
@@ -5,9 +13,8 @@ from textwrap import dedent
 import openai  # type: ignore  # Not a project dep.
 
 from chopdiff.docs import TextDoc
-from chopdiff.transforms import changes_whitespace, filtered_transform, WINDOW_2K_WORDTOKS
+from chopdiff.transforms import WINDOW_2K_WORDTOKS, changes_whitespace, filtered_transform
 from flowmark import fill_text
-
 
 logging.basicConfig(format=">> %(message)s")
 log = logging.getLogger(__name__)
@@ -99,7 +106,7 @@ def main():
 
     logging.basicConfig(level=logging.INFO)
 
-    with open(args.input_file, "r", encoding="utf-8") as f:
+    with open(args.input_file, encoding="utf-8") as f:
         input_text = f.read()
 
     print(heading("Original"))

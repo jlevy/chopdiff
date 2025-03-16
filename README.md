@@ -183,7 +183,7 @@ Note GPT-4o-mini makes a typo correction, even though it wasn't requested.
 But the diff filter enforces that the output exactly contains only paragraph breaks:
 
 ```
-$ poetry run python examples/insert_para_breaks.py examples/gettysberg.txt 
+$ uv run examples/insert_para_breaks.py examples/gettysberg.txt 
 
 --- Original --------------------------------------------------------------
 
@@ -269,7 +269,7 @@ code). As you can see, the text is aligned by mapping the words and then the tim
 inserted at the end of each paragraph based on the first sentence of each paragraph:
 
 ```
-$ poetry run python examples/backfill_timestamps.py 
+$ uv run examples/backfill_timestamps.py 
 
 --- Source text (with timestamps) -----------------------------------------
 

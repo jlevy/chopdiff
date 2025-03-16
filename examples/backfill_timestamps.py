@@ -1,9 +1,15 @@
+# /// script
+# requires-python = ">=3.13"
+# dependencies = [
+#     "chopdiff",
+#     "flowmark",
+# ]
+# ///
 import logging
 from textwrap import dedent
 
-from chopdiff.docs import BOF_TOK, EOF_TOK, PARA_BR_TOK, search_tokens, TextDoc, TokenMapping
+from chopdiff.docs import BOF_TOK, EOF_TOK, PARA_BR_TOK, TextDoc, TokenMapping, search_tokens
 from chopdiff.html import ContentNotFound, TimestampExtractor
-
 
 logging.basicConfig(format=">> %(message)s")
 log = logging.getLogger(__name__)
