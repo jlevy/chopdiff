@@ -39,11 +39,17 @@ to focus specifically on fully parsing documents as parse trees.
 On the other end of the spectrum, there are NLP libraries (like
 [spaCy](https://github.com/explosion/spaCy)) that do more expensive, full language
 parsing and sentence segmentation.
+
 This is a lightweight alternative to those approaches when you are just focusing on
 processing text, don't want a big dependency (like a full XML parser or NLP toolkit) and
 also want full control over the original source format (since the original text is
 exactly preserved, even whitespace—every sentence, paragraph, and token is mapped back
 to the original text).
+
+Note you may wish to also use this in conjunction with a Markdown parser or
+auto-formatter, as it can make documents and diffs more readable.
+You may wish to use [**flowmark**](https://github.com/jlevy/flowmark) for this alongside
+chopdiff.
 
 ## Overview
 
