@@ -9,10 +9,8 @@ whitespace.
 """
 
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Tuple
 
 import regex
-
 
 # Special tokens to represent sentence, paragraph, and document boundaries.
 # Note these parse as tokens and like HTML tags, so they can safely be mixed into inputs if desired.
@@ -87,7 +85,7 @@ def normalize_wordtok(wordtok: str) -> str:
     return normalized
 
 
-def wordtokenize_with_offsets(text: str, bof_eof=False) -> Tuple[List[str], List[int]]:
+def wordtokenize_with_offsets(text: str, bof_eof=False) -> tuple[list[str], list[int]]:
     """
     Same as `wordtokenize`, but returns a list of tuples `(wordtok, offset)`.
     """
@@ -107,7 +105,7 @@ def wordtokenize_with_offsets(text: str, bof_eof=False) -> Tuple[List[str], List
     return wordtoks, offsets
 
 
-def wordtokenize(text: str, bof_eof=False) -> List[str]:
+def wordtokenize(text: str, bof_eof=False) -> list[str]:
     """
     Convert text to word tokens, including words, whitespace, punctuation, and
     HTML tags. Does not parse paragraph or sentence breaks. Normalizes all
@@ -124,7 +122,7 @@ def _insert_para_wordtoks(text: str) -> str:
     return _para_br_pattern.sub(PARA_BR_TOK, text)
 
 
-def _initial_wordtoks(text: str, max_chars: int) -> List[str]:
+def _initial_wordtoks(text: str, max_chars: int) -> list[str]:
     sub_text = text[:max_chars]
     wordtoks = wordtokenize(sub_text)
     if wordtoks:
@@ -132,7 +130,7 @@ def _initial_wordtoks(text: str, max_chars: int) -> List[str]:
     return wordtoks
 
 
-def first_wordtok(text: str) -> Optional[str]:
+def first_wordtok(text: str) -> str | None:
     """
     Get the first wordtok from the text, if it has one.
     """
@@ -140,7 +138,7 @@ def first_wordtok(text: str) -> Optional[str]:
     return wordtoks[0] if wordtoks else None
 
 
-def join_wordtoks(wordtoks: List[str]) -> str:
+def join_wordtoks(wordtoks: list[str]) -> str:
     """
     Join wordtoks back into a sentence.
     """
@@ -148,7 +146,7 @@ def join_wordtoks(wordtoks: List[str]) -> str:
     return "".join(wordtoks)
 
 
-def visualize_wordtoks(wordtoks: List[str]) -> str:
+def visualize_wordtoks(wordtoks: list[str]) -> str:
     """
     Visualize wordtoks with a separator for debugging.
     """
@@ -199,11 +197,11 @@ class Tag:
     name: str
     is_open: bool
     is_close: bool
-    attrs: Dict[str, str]
-    comment: Optional[str] = None
+    attrs: dict[str, str]
+    comment: str | None = None
 
 
-def parse_tag(wordtok: Optional[str] = None) -> Optional[Tag]:
+def parse_tag(wordtok: str | None = None) -> Tag | None:
     """
     Parse a wordtok to determine if it's an HTML tag and extract its components.
     """
@@ -232,7 +230,7 @@ def parse_tag(wordtok: Optional[str] = None) -> Optional[Tag]:
     return Tag(name=tag_name, is_open=is_open, is_close=is_close, attrs=attrs)
 
 
-def is_tag(wordtok: Optional[str] = None, tag_names: Optional[List[str]] = None) -> bool:
+def is_tag(wordtok: str | None = None, tag_names: list[str] | None = None) -> bool:
     """
     Check if a wordtok is an HTML tag and optionally if it's in the specified tag names.
     """
@@ -240,7 +238,7 @@ def is_tag(wordtok: Optional[str] = None, tag_names: Optional[List[str]] = None)
     return bool(tag and (not tag_names or tag.name in [name.lower() for name in tag_names]))
 
 
-def is_tag_close(wordtok: str, tag_names: Optional[List[str]] = None) -> bool:
+def is_tag_close(wordtok: str, tag_names: list[str] | None = None) -> bool:
     """
     Check if a wordtok is an HTML close tag and optionally if it's in the specified tag names.
     """
@@ -250,7 +248,7 @@ def is_tag_close(wordtok: str, tag_names: Optional[List[str]] = None) -> bool:
     )
 
 
-def is_tag_open(wordtok: str, tag_names: Optional[List[str]] = None) -> bool:
+def is_tag_open(wordtok: str, tag_names: list[str] | None = None) -> bool:
     """
     Check if a wordtok is an HTML open tag and optionally if it's in the specified tag names.
     """
@@ -260,11 +258,11 @@ def is_tag_open(wordtok: str, tag_names: Optional[List[str]] = None) -> bool:
     )
 
 
-def is_div(wordtok: Optional[str] = None) -> bool:
+def is_div(wordtok: str | None = None) -> bool:
     return is_tag(wordtok, tag_names=["div"])
 
 
-def is_entity(wordtok: Optional[str] = None) -> bool:
+def is_entity(wordtok: str | None = None) -> bool:
     """
     Check if a wordtok is an HTML entity.
     """

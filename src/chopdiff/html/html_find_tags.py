@@ -1,8 +1,6 @@
 from dataclasses import dataclass
-from typing import List, Optional
 
 import regex
-
 from prettyfmt import abbrev_obj
 
 
@@ -11,8 +9,8 @@ class TagMatch:
     tag_name: str
     start_offset: int
     end_offset: int
-    attribute_name: Optional[str]
-    attribute_value: Optional[str]
+    attribute_name: str | None
+    attribute_value: str | None
     inner_text: str
 
     def __repr__(self):
@@ -21,10 +19,10 @@ class TagMatch:
 
 def html_find_tag(
     html_string: str,
-    tag_name: Optional[str] = None,
-    attr_name: Optional[str] = None,
-    attr_value: Optional[str] = None,
-) -> List[TagMatch]:
+    tag_name: str | None = None,
+    attr_name: str | None = None,
+    attr_value: str | None = None,
+) -> list[TagMatch]:
     """
     Find all HTML elements matching the specified tag name, attribute name, and attribute
     value. If any are not specified, any tag, attribute, or value will be matched.
@@ -46,7 +44,7 @@ def html_find_tag(
         regex.IGNORECASE | regex.DOTALL,
     )
 
-    matches: List[TagMatch] = []
+    matches: list[TagMatch] = []
     for match in compiled_pattern.finditer(html_string):
         matched_tag = match.group(1)
         inner_text = match.group(2)

@@ -2,9 +2,12 @@ from pprint import pprint
 from textwrap import dedent
 
 import regex
+from prettyfmt import fmt_words
+from strif import abbrev_str
 
 from chopdiff.docs.text_doc import SentIndex, TextDoc, TextUnit
 from chopdiff.docs.wordtoks import (
+    PARA_BR_TOK,
     is_break_or_space,
     is_entity,
     is_header_tag,
@@ -12,14 +15,10 @@ from chopdiff.docs.wordtoks import (
     is_tag,
     is_word,
     join_wordtoks,
-    PARA_BR_TOK,
     visualize_wordtoks,
     wordtok_len,
     wordtokenize,
 )
-from prettyfmt import fmt_words
-from strif import abbrev_str
-
 
 _med_test_doc = dedent(
     """
@@ -167,7 +166,7 @@ def test_markup_detection():
     )
 
     assert doc.paragraphs[-2].sentences[0].text == "<!--window-br-->"
-    assert doc.paragraphs[-2].is_markup() == True
+    assert doc.paragraphs[-2].is_markup()
     assert doc.paragraphs[-1].sentences[-1].is_markup()
 
 

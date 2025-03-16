@@ -1,4 +1,5 @@
-from typing import Callable, List, Optional, TypeAlias
+from collections.abc import Callable
+from typing import TypeAlias
 
 from chopdiff.docs.token_diffs import DiffFilter, DiffOp, OpType
 from chopdiff.docs.wordtoks import (
@@ -8,7 +9,6 @@ from chopdiff.docs.wordtoks import (
     is_whitespace_or_punct,
     is_word,
 )
-
 from chopdiff.util.lemmatize import lemmatize, lemmatized_equal
 
 
@@ -23,12 +23,12 @@ class WildcardToken:
 
 WILDCARD_TOK = WildcardToken()
 
-TokenMatcher: TypeAlias = List[str] | Callable[[str], bool]
+TokenMatcher: TypeAlias = list[str] | Callable[[str], bool]
 
 TokenPattern: TypeAlias = str | Callable[[str], bool] | WildcardToken
 
 
-def _matches_pattern(tokens: List[str], pattern: List[TokenPattern]) -> bool:
+def _matches_pattern(tokens: list[str], pattern: list[TokenPattern]) -> bool:
     def match_from(i: int, j: int) -> bool:
         while i <= len(tokens) and j < len(pattern):
             pattern_elem = pattern[j]
@@ -67,9 +67,9 @@ def _matches_pattern(tokens: List[str], pattern: List[TokenPattern]) -> bool:
 
 
 def make_token_sequence_filter(
-    pattern: List[TokenPattern],
-    action: Optional[OpType] = None,
-    ignore: Optional[TokenMatcher] = None,
+    pattern: list[TokenPattern],
+    action: OpType | None = None,
+    ignore: TokenMatcher | None = None,
 ) -> DiffFilter:
     """
     Returns a `DiffFilter` that accepts `DiffOps` where the tokens match the given pattern.

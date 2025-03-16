@@ -1,10 +1,10 @@
 from abc import ABC, abstractmethod
-from typing import Generic, Iterable, Tuple, TypeAlias, TypeVar
-
+from collections.abc import Iterable
+from typing import Generic, TypeAlias, TypeVar
 
 T = TypeVar("T")
 
-Match: TypeAlias = Tuple[T, int, int]
+Match: TypeAlias = tuple[T, int, int]
 """Match, index, and offset of content found by an extractor."""
 
 

@@ -4,15 +4,15 @@ from chopdiff.docs.search_tokens import search_tokens
 from chopdiff.docs.sizes import TextUnit
 from chopdiff.docs.text_doc import Paragraph, Sentence, SentIndex, TextDoc
 from chopdiff.docs.token_diffs import (
-    diff_docs,
     DIFF_FILTER_NONE,
-    diff_wordtoks,
     DiffFilter,
     DiffOp,
     DiffStats,
     OpType,
-    scored_diff_wordtoks,
     TokenDiff,
+    diff_docs,
+    diff_wordtoks,
+    scored_diff_wordtoks,
 )
 from chopdiff.docs.token_mapping import TokenMapping
 from chopdiff.docs.wordtoks import (
@@ -20,6 +20,13 @@ from chopdiff.docs.wordtoks import (
     BOF_TOK,
     EOF_STR,
     EOF_TOK,
+    PARA_BR_STR,
+    PARA_BR_TOK,
+    SENT_BR_STR,
+    SENT_BR_TOK,
+    SPACE_TOK,
+    SYMBOL_SEP,
+    Tag,
     first_wordtok,
     is_break_or_space,
     is_div,
@@ -31,13 +38,6 @@ from chopdiff.docs.wordtoks import (
     is_word,
     join_wordtoks,
     normalize_wordtok,
-    PARA_BR_STR,
-    PARA_BR_TOK,
-    SENT_BR_STR,
-    SENT_BR_TOK,
-    SPACE_TOK,
-    SYMBOL_SEP,
-    Tag,
     wordtok_len,
     wordtok_to_str,
     wordtokenize,

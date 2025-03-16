@@ -7,7 +7,8 @@ Perhaps worth using FastHTML for this?
 """
 
 import re
-from typing import Callable, Dict, List, Optional, TypeAlias
+from collections.abc import Callable
+from typing import TypeAlias
 
 
 def escape_md_html(s: str, safe: bool = False) -> str:
@@ -32,18 +33,18 @@ def escape_attribute(s: str) -> str:
     return s
 
 
-ClassNames = str | List[str]
+ClassNames = str | list[str]
 
 _TAGS_WITH_PADDING = ["div", "p"]
 
 
 def tag_with_attrs(
     tag: str,
-    text: Optional[str],
-    class_name: Optional[ClassNames] = None,
-    attrs: Optional[Dict[str, str]] = None,
+    text: str | None,
+    class_name: ClassNames | None = None,
+    attrs: dict[str, str] | None = None,
     safe: bool = False,
-    padding: Optional[str] = None,
+    padding: str | None = None,
 ) -> str:
     class_value = ""
     if class_name is not None:
@@ -72,8 +73,8 @@ def tag_with_attrs(
 
 def html_span(
     text: str,
-    class_name: Optional[ClassNames] = None,
-    attrs: Optional[Dict[str, str]] = None,
+    class_name: ClassNames | None = None,
+    attrs: dict[str, str] | None = None,
     safe: bool = False,
 ) -> str:
     """
@@ -84,10 +85,10 @@ def html_span(
 
 def html_div(
     text: str,
-    class_name: Optional[ClassNames] = None,
-    attrs: Optional[Dict[str, str]] = None,
+    class_name: ClassNames | None = None,
+    attrs: dict[str, str] | None = None,
     safe: bool = False,
-    padding: Optional[str] = None,
+    padding: str | None = None,
 ) -> str:
     """
     Write a div tag for use in Markdown, with the given text and optional class and attributes.
@@ -113,8 +114,8 @@ def html_i(text: str, safe: bool = False) -> str:
 def html_img(
     src: str,
     alt: str,
-    class_name: Optional[ClassNames] = None,
-    attrs: Optional[Dict[str, str]] = None,
+    class_name: ClassNames | None = None,
+    attrs: dict[str, str] | None = None,
     safe: bool = False,
 ) -> str:
     img_attrs = {"src": src, "alt": alt}
@@ -123,7 +124,7 @@ def html_img(
     return tag_with_attrs("img", None, class_name, img_attrs, safe=safe)
 
 
-def html_join_blocks(*blocks: Optional[str]) -> str:
+def html_join_blocks(*blocks: str | None) -> str:
     """
     Join block elements, with double newlines for better Markdown compatibility.
     Ignore empty strings or None.
@@ -146,13 +147,13 @@ def identity_wrapper(text: str) -> str:
     return text
 
 
-def _check_class_name(class_name: Optional[str]) -> None:
+def _check_class_name(class_name: str | None) -> None:
     if class_name and not re.match(r"^[a-zA-Z_][a-zA-Z0-9_-]*$", class_name):
         raise ValueError(f"Expected a valid CSS class name but got: '{class_name}'")
 
 
 def div_wrapper(
-    class_name: Optional[str] = None, safe: bool = True, padding: Optional[str] = "\n\n"
+    class_name: str | None = None, safe: bool = True, padding: str | None = "\n\n"
 ) -> Wrapper:
     _check_class_name(class_name)
 
@@ -162,7 +163,7 @@ def div_wrapper(
     return div_wrapper_func
 
 
-def span_wrapper(class_name: Optional[str] = None, safe: bool = True) -> Wrapper:
+def span_wrapper(class_name: str | None = None, safe: bool = True) -> Wrapper:
     _check_class_name(class_name)
 
     def span_wrapper_func(text: str) -> str:

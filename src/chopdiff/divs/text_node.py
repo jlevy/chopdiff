@@ -2,12 +2,11 @@ from __future__ import annotations
 
 from copy import copy
 from dataclasses import dataclass, field
-from typing import List, Optional
 
 from prettyfmt import fmt_lines
 
 from chopdiff.docs.sizes import TextUnit
-from chopdiff.docs.text_doc import default_sentence_splitter, Splitter, TextDoc
+from chopdiff.docs.text_doc import Splitter, TextDoc, default_sentence_splitter
 from chopdiff.html.html_in_md import div_wrapper
 
 
@@ -25,12 +24,12 @@ class TextNode:
     content_start: int
     content_end: int
 
-    tag_name: Optional[str] = None
-    class_name: Optional[str] = None
-    begin_marker: Optional[str] = None
-    end_marker: Optional[str] = None
+    tag_name: str | None = None
+    class_name: str | None = None
+    begin_marker: str | None = None
+    end_marker: str | None = None
 
-    children: List["TextNode"] = field(default_factory=list)
+    children: list[TextNode] = field(default_factory=list)
 
     @property
     def end_offset(self) -> int:
@@ -44,7 +43,7 @@ class TextNode:
     def text_doc(self, sentence_splitter: Splitter = default_sentence_splitter) -> TextDoc:
         return TextDoc.from_text(self.contents, sentence_splitter=sentence_splitter)
 
-    def slice_children(self, start: int, end: int) -> "TextNode":
+    def slice_children(self, start: int, end: int) -> TextNode:
         if not self.children:
             raise ValueError("Cannot slice_children on a non-container node.")
         else:
@@ -72,7 +71,7 @@ class TextNode:
         def path_join(*selectors: str) -> str:
             return " > ".join(selectors)
 
-        def tally_recursive(node: "TextNode", path: List[str], tally: dict) -> None:
+        def tally_recursive(node: TextNode, path: list[str], tally: dict) -> None:
             # Skip leaf nodes.
             if not node.children and not node.tag_name and not node.class_name:
                 return
@@ -96,7 +95,7 @@ class TextNode:
         sorted_tally = dict(sorted(tally.items()))
         return sorted_tally
 
-    def structure_summary_str(self) -> Optional[str]:
+    def structure_summary_str(self) -> str | None:
         structure_summary = self.structure_summary()
         if not structure_summary:
             return None
@@ -122,10 +121,8 @@ class TextNode:
         """
         return not self.children and self.contents.strip() == ""
 
-    def children_by_class_names(
-        self, *class_names: str, recursive: bool = False
-    ) -> List["TextNode"]:
-        def collect_children(node: "TextNode") -> List["TextNode"]:
+    def children_by_class_names(self, *class_names: str, recursive: bool = False) -> list[TextNode]:
+        def collect_children(node: TextNode) -> list[TextNode]:
             matching_children = [
                 child for child in node.children if child.class_name in class_names
             ]
@@ -136,7 +133,7 @@ class TextNode:
 
         return collect_children(self)
 
-    def child_by_class_name(self, class_name: str) -> Optional["TextNode"]:
+    def child_by_class_name(self, class_name: str) -> TextNode | None:
         nodes = self.children_by_class_names(class_name, recursive=False)
         if len(nodes) == 0:
             return None

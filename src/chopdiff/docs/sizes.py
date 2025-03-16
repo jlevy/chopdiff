@@ -2,7 +2,6 @@ from enum import Enum
 
 from chopdiff.docs.wordtoks import wordtokenize
 from chopdiff.html.html_plaintext import html_to_plaintext
-
 from chopdiff.util.tiktoken_utils import tiktoken_len
 
 

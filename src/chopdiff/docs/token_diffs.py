@@ -1,15 +1,15 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 from dataclasses import dataclass
 from enum import Enum
-from typing import Callable, List, Optional, Tuple, TypeAlias
+from typing import TypeAlias
 
 import cydifflib as difflib
 from funlog import log_calls, tally_calls
 
 from chopdiff.docs.text_doc import TextDoc
-
 
 log = logging.getLogger(__name__)
 
@@ -45,8 +45,8 @@ class OpType(Enum):
 @dataclass(frozen=True)
 class DiffOp:
     action: OpType
-    left: List[str]
-    right: List[str]
+    left: list[str]
+    right: list[str]
 
     def __post_init__(self):
         if self.action == OpType.REPLACE:
@@ -76,7 +76,7 @@ class DiffOp:
             s += f":   {SYMBOL_SEP}{''.join(tok for tok in self.left)}{SYMBOL_SEP}"
         return s
 
-    def all_changed(self) -> List[str]:
+    def all_changed(self) -> list[str]:
         return [] if self.action == OpType.EQUAL else self.left + self.right
 
 
@@ -107,7 +107,7 @@ class TokenDiff:
     A diff of two texts as a sequence of EQUAL, INSERT, and DELETE operations on wordtoks.
     """
 
-    ops: List[DiffOp]
+    ops: list[DiffOp]
 
     def left_size(self) -> int:
         return sum(len(op.left) for op in self.ops)
@@ -115,7 +115,7 @@ class TokenDiff:
     def right_size(self) -> int:
         return sum(len(op.right) for op in self.ops)
 
-    def changes(self) -> List[DiffOp]:
+    def changes(self) -> list[DiffOp]:
         return [op for op in self.ops if op.action != OpType.EQUAL]
 
     def stats(self) -> DiffStats:
@@ -123,7 +123,7 @@ class TokenDiff:
         wordtoks_removed = sum(len(op.left) for op in self.ops if op.action != OpType.EQUAL)
         return DiffStats(wordtoks_added, wordtoks_removed, self.left_size())
 
-    def apply_to(self, original_wordtoks: List[str]) -> List[str]:
+    def apply_to(self, original_wordtoks: list[str]) -> list[str]:
         """
         Apply a complete diff (including equality ops) to a list of wordtoks.
         """
@@ -143,13 +143,13 @@ class TokenDiff:
 
         return result
 
-    def filter(self, accept_fn: DiffFilter) -> Tuple[TokenDiff, TokenDiff]:
+    def filter(self, accept_fn: DiffFilter) -> tuple[TokenDiff, TokenDiff]:
         """
         Return two diffs, one that only has accepted operations and one that only has
         rejected operations.
         """
-        accepted_ops: List[DiffOp] = []
-        rejected_ops: List[DiffOp] = []
+        accepted_ops: list[DiffOp] = []
+        rejected_ops: list[DiffOp] = []
 
         for op in self.ops:
             if op.action == OpType.EQUAL:
@@ -176,7 +176,7 @@ class TokenDiff:
 
         return accepted_diff, rejected_diff
 
-    def _diff_lines(self, include_equal=False) -> List[str]:
+    def _diff_lines(self, include_equal=False) -> list[str]:
         if len(self.ops) == 0:
             return ["(No changes)"]
 
@@ -220,12 +220,12 @@ def diff_docs(doc1: TextDoc, doc2: TextDoc) -> TokenDiff:
 
 
 @tally_calls(level="warning", min_total_runtime=5)
-def diff_wordtoks(wordtoks1: List[str], wordtoks2: List[str]) -> TokenDiff:
+def diff_wordtoks(wordtoks1: list[str], wordtoks2: list[str]) -> TokenDiff:
     """
     Perform an LCS-style diff on two lists of wordtoks.
     """
     s = difflib.SequenceMatcher(None, wordtoks1, wordtoks2, autojunk=False)  # type: ignore
-    diff: List[DiffOp] = []
+    diff: list[DiffOp] = []
 
     # log.message(f"Diffing {len(wordtoks1)} wordtoks against {len(wordtoks2)} wordtoks")
     # log.save_object("wordtoks1", "diff_wordtoks", "".join(wordtoks1))
@@ -247,10 +247,10 @@ def diff_wordtoks(wordtoks1: List[str], wordtoks2: List[str]) -> TokenDiff:
     return TokenDiff(diff)
 
 
-ScoredDiff: TypeAlias = Tuple[float, TokenDiff]
+ScoredDiff: TypeAlias = tuple[float, TokenDiff]
 
 
-def scored_diff_wordtoks(wordtoks1: List[str], wordtoks2: List[str]) -> ScoredDiff:
+def scored_diff_wordtoks(wordtoks1: list[str], wordtoks2: list[str]) -> ScoredDiff:
     """
     Calculate the number of wordtoks added and removed between two lists of tokens.
     Score is (wordtoks_added + wordtoks_removed) / min(len(doc1), len(doc2)),
@@ -267,14 +267,14 @@ def scored_diff_wordtoks(wordtoks1: List[str], wordtoks2: List[str]) -> ScoredDi
 
 @log_calls(level="message", if_slower_than=0.25)
 def find_best_alignment(
-    list1: List[str],
-    list2: List[str],
+    list1: list[str],
+    list2: list[str],
     min_overlap: int,
-    max_overlap: Optional[int] = None,
-    scored_diff: Callable[[List[str], List[str]], ScoredDiff] = scored_diff_wordtoks,
+    max_overlap: int | None = None,
+    scored_diff: Callable[[list[str], list[str]], ScoredDiff] = scored_diff_wordtoks,
     give_up_score: float = 0.75,
     give_up_count: int = 30,
-) -> Tuple[int, ScoredDiff]:
+) -> tuple[int, ScoredDiff]:
     """
     Find the best alignment of two lists of values, where edit distance is smallest but overlap is
     at least min_overlap and at most max_overlap. Returns offset into list1 and diff object.

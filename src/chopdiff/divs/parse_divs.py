@@ -1,9 +1,7 @@
 import copy
 import re
-from typing import List
 
 from chopdiff.divs.text_node import TextNode
-
 
 DIV_TAGS = re.compile(r"(<div\b[^>]*>|</div>)", re.IGNORECASE)
 
@@ -117,7 +115,7 @@ def _parse_divs_recursive(
     return result
 
 
-def parse_divs_by_class(text: str, class_name: str) -> List[TextNode]:
+def parse_divs_by_class(text: str, class_name: str) -> list[TextNode]:
     """
     Parse div chunks into TextNodes.
     """

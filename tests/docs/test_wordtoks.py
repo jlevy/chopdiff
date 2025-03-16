@@ -2,17 +2,16 @@ from textwrap import dedent
 
 from chopdiff.docs.search_tokens import search_tokens
 from chopdiff.docs.wordtoks import (
+    Tag,
     _insert_para_wordtoks,
     is_entity,
     is_tag,
     is_tag_close,
     is_tag_open,
     parse_tag,
-    Tag,
     visualize_wordtoks,
     wordtokenize,
 )
-
 
 _test_doc = dedent(
     """
@@ -76,24 +75,24 @@ def test_tag_functions():
         name="", is_open=False, is_close=False, attrs={}, comment=" Comment "
     )
 
-    assert is_tag("foo") == False
-    assert is_tag("<a") == False
-    assert is_tag("<div>") == True
-    assert is_tag("</div>") == True
-    assert is_tag("<span>") == True
-    assert is_tag("<div>", ["div"]) == True
-    assert is_tag("<div>", ["span"]) == False
-    assert is_tag("<div/>") == True
+    assert not is_tag("foo")
+    assert not is_tag("<a")
+    assert is_tag("<div>")
+    assert is_tag("</div>")
+    assert is_tag("<span>")
+    assert is_tag("<div>", ["div"])
+    assert not is_tag("<div>", ["span"])
+    assert is_tag("<div/>")
 
-    assert is_tag_close("</div>") == True
-    assert is_tag_close("<div>") == False
-    assert is_tag_close("</div>", ["div"]) == True
-    assert is_tag_close("</div>", ["span"]) == False
-    assert is_tag_close("<div/>") == True
-    assert is_tag_open("<div>") == True
-    assert is_tag_open("</div>") == False
-    assert is_tag_open("<div>", ["div"]) == True
-    assert is_tag_open("<div>", ["span"]) == False
+    assert is_tag_close("</div>")
+    assert not is_tag_close("<div>")
+    assert is_tag_close("</div>", ["div"])
+    assert not is_tag_close("</div>", ["span"])
+    assert is_tag_close("<div/>")
+    assert is_tag_open("<div>")
+    assert not is_tag_open("</div>")
+    assert is_tag_open("<div>", ["div"])
+    assert not is_tag_open("<div>", ["span"])
 
-    assert is_entity("&amp;") == True
-    assert is_entity("nbsp;") == False
+    assert is_entity("&amp;")
+    assert not is_entity("nbsp;")

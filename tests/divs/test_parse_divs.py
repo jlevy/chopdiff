@@ -3,7 +3,6 @@ from textwrap import dedent
 from chopdiff.divs.parse_divs import parse_divs, parse_divs_by_class
 from chopdiff.divs.text_node import TextNode
 
-
 _test_text = dedent(
     """
 
@@ -38,7 +37,6 @@ def _strip_lines(text):
 
 
 def test_parse_divs():
-
     def validate_node(node: TextNode, original_text: str):
         assert node.original_text == original_text
         assert 0 <= node.content_start <= len(original_text)
@@ -93,7 +91,6 @@ def test_parse_divs():
 
 
 def test_structure_summary_str_1():
-
     doc = """
         <div class="chunk">Chunk1</div>
         <div class="chunk">Chunk2</div>
@@ -118,7 +115,6 @@ def test_structure_summary_str_1():
 
 
 def test_structure_summary_str_2():
-
     node = parse_divs(_test_text)
     summary_str = node.structure_summary_str()
 
@@ -141,7 +137,6 @@ def test_structure_summary_str_2():
 
 
 def test_parse_chunk_divs():
-
     text = dedent(
         """
         <div class="chunk">

@@ -3,12 +3,11 @@ Sliding windows of text on a text doc.
 """
 
 import logging
-from typing import Callable, Generator
+from collections.abc import Callable, Generator
 
 from flowmark import fill_markdown
 
 from chopdiff.docs.text_doc import SentIndex, TextDoc, TextUnit
-
 
 log = logging.getLogger(__name__)
 

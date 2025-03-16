@@ -1,5 +1,4 @@
 import logging
-from typing import List, Optional
 
 from chopdiff.divs.chunk_utils import chunk_children, chunk_paras
 from chopdiff.divs.parse_divs import parse_divs
@@ -24,7 +23,7 @@ GROUP = "group"
 """Class name for a generic combination of elements."""
 
 
-def div(class_name: str, *blocks: Optional[str]) -> str:
+def div(class_name: str, *blocks: str | None) -> str:
     """
     Convenience to create Markdown-compatible div with HTML in its own paragraphs.
     """
@@ -41,7 +40,7 @@ def div_get_original(element: TextNode, child_name: str = ORIGINAL) -> str:
 
 def div_insert_wrapped(
     element: TextNode,
-    new_child_blocks: List[str],
+    new_child_blocks: list[str],
     container_class: str = CHUNK,
     original_class: str = ORIGINAL,
     at_front: bool = True,

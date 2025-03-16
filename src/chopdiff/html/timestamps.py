@@ -1,4 +1,4 @@
-from typing import Iterable
+from collections.abc import Iterable
 
 import regex
 from typing_extensions import override
@@ -6,7 +6,6 @@ from typing_extensions import override
 from chopdiff.docs.search_tokens import search_tokens
 from chopdiff.docs.wordtoks import wordtokenize_with_offsets
 from chopdiff.html.extractor import ContentNotFound, Extractor, Match
-
 
 # Match any span or div with a data-timestamp attribute.
 _TIMESTAMP_RE = regex.compile(r'(?:<\w+[^>]*\s)?data-timestamp=[\'"](\d+(\.\d+)?)[\'"][^>]*>')
@@ -35,7 +34,7 @@ class TimestampExtractor(Extractor):
         """
         Extract all timestamps from the document.
         """
-        for index, (wordtok, offset) in enumerate(zip(self.wordtoks, self.offsets)):
+        for index, (wordtok, offset) in enumerate(zip(self.wordtoks, self.offsets, strict=False)):
             timestamp = extract_timestamp(wordtok)
             if timestamp is not None:
                 yield timestamp, index, offset

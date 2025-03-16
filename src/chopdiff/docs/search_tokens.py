@@ -1,11 +1,11 @@
-from typing import Callable, List, Tuple, TypeAlias, Union
+from collections.abc import Callable
+from typing import TypeAlias
 
-
-Predicate: TypeAlias = Union[Callable[[str], bool], List[str]]
+Predicate: TypeAlias = Callable[[str], bool] | list[str]
 
 
 class _TokenSearcher:
-    def __init__(self, toks: List[str]):
+    def __init__(self, toks: list[str]):
         self.toks = toks
         self._cur_idx = 0
 
@@ -26,7 +26,7 @@ class _TokenSearcher:
 
     def seek_back(self, predicate: Predicate):
         if isinstance(predicate, list):
-            allowed: List[str] = predicate
+            allowed: list[str] = predicate
             predicate = lambda x: x in allowed
         for idx in range(self._cur_idx - 1, -1, -1):
             if predicate(self.toks[idx]):
@@ -36,7 +36,7 @@ class _TokenSearcher:
 
     def seek_forward(self, predicate: Predicate):
         if isinstance(predicate, list):
-            allowed: List[str] = predicate
+            allowed: list[str] = predicate
             predicate = lambda x: x in allowed
         for idx in range(self._cur_idx + 1, len(self.toks)):
             if predicate(self.toks[idx]):
@@ -59,11 +59,11 @@ class _TokenSearcher:
     def get_index(self) -> int:
         return self._cur_idx
 
-    def get_token(self) -> Tuple[int, str]:
+    def get_token(self) -> tuple[int, str]:
         return self._cur_idx, self.toks[self._cur_idx]
 
 
-def search_tokens(wordtoks: List[str]) -> _TokenSearcher:
+def search_tokens(wordtoks: list[str]) -> _TokenSearcher:
     """
     Fluent convenience function to search for offsets in an array of string tokens
     based on a predicate, previous, next, etc. Raises `KeyError` if any search

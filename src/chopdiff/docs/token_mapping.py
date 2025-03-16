@@ -1,6 +1,4 @@
-from typing import Dict, List, Optional
-
-from chopdiff.docs.token_diffs import diff_wordtoks, OpType, SYMBOL_SEP, TokenDiff
+from chopdiff.docs.token_diffs import SYMBOL_SEP, OpType, TokenDiff, diff_wordtoks
 
 
 class TokenMapping:
@@ -12,9 +10,9 @@ class TokenMapping:
 
     def __init__(
         self,
-        tokens1: List[str],
-        tokens2: List[str],
-        diff: Optional[TokenDiff] = None,
+        tokens1: list[str],
+        tokens2: list[str],
+        diff: TokenDiff | None = None,
         min_tokens: int = 10,
         max_diff_frac: float = 0.4,
     ):
@@ -22,7 +20,7 @@ class TokenMapping:
         self.tokens2 = tokens2
         self.diff = diff or diff_wordtoks(self.tokens1, self.tokens2)
         self._validate(min_tokens, max_diff_frac)
-        self.backmap: Dict[int, int] = {}
+        self.backmap: dict[int, int] = {}
         self._create_mapping()
 
     def map_back(self, offset2: int) -> int:

@@ -1,36 +1,36 @@
 from __future__ import annotations
 
 from collections import defaultdict
+from collections.abc import Callable, Generator, Iterable
 from dataclasses import dataclass
-from typing import Callable, Dict, Generator, Iterable, List, Optional, Tuple, TypeAlias
+from typing import TypeAlias
 
 import regex
 from flowmark.sentence_split_regex import split_sentences_regex
 from funlog import tally_calls
 
-from chopdiff.docs.sizes import size, size_in_bytes, TextUnit
+from chopdiff.docs.sizes import TextUnit, size, size_in_bytes
 from chopdiff.docs.wordtoks import (
     BOF_TOK,
     EOF_TOK,
+    PARA_BR_STR,
+    PARA_BR_TOK,
+    SENT_BR_STR,
+    SENT_BR_TOK,
     is_break_or_space,
     is_header_tag,
     is_tag,
     is_word,
     join_wordtoks,
-    PARA_BR_STR,
-    PARA_BR_TOK,
-    SENT_BR_STR,
-    SENT_BR_TOK,
     wordtokenize,
 )
 from chopdiff.util.tiktoken_utils import tiktoken_len
-
 
 SYMBOL_PARA = "¶"
 
 SYMBOL_SENT = "S"
 
-Splitter: TypeAlias = Callable[[str], List[str]]
+Splitter: TypeAlias = Callable[[str], list[str]]
 
 default_sentence_splitter: Splitter = split_sentences_regex
 """
@@ -60,10 +60,10 @@ class SentIndex:
         return f"{SYMBOL_PARA}{self.para_index},{SYMBOL_SENT}{self.sent_index}"
 
 
-WordtokMapping: TypeAlias = Dict[int, SentIndex]
+WordtokMapping: TypeAlias = dict[int, SentIndex]
 """A mapping from wordtok index to sentences in a TextDoc."""
 
-SentenceMapping: TypeAlias = Dict[SentIndex, List[int]]
+SentenceMapping: TypeAlias = dict[SentIndex, list[int]]
 """A mapping from sentence index to wordtoks in a TextDoc."""
 
 
@@ -79,7 +79,7 @@ class Sentence:
     def size(self, unit: TextUnit) -> int:
         return size(self.text, unit)
 
-    def as_wordtoks(self) -> List[str]:
+    def as_wordtoks(self) -> list[str]:
         return wordtokenize(self.text)
 
     def is_markup(self) -> bool:
@@ -111,7 +111,7 @@ class Paragraph:
     """
 
     original_text: str
-    sentences: List[Sentence]
+    sentences: list[Sentence]
     char_offset: int  # Offset of the paragraph in the original text.
 
     @classmethod
@@ -121,7 +121,7 @@ class Paragraph:
         text: str,
         char_offset: int = -1,
         sentence_splitter: Splitter = default_sentence_splitter,
-    ) -> "Paragraph":
+    ) -> Paragraph:
         # TODO: Lazily compute sentences for better performance.
         sent_values = sentence_splitter(text)
         sent_offset = 0
@@ -138,7 +138,7 @@ class Paragraph:
         for sent in self.sentences:
             sent.text = sent.text.replace(old, new)
 
-    def sent_iter(self, reverse: bool = False) -> Iterable[Tuple[int, Sentence]]:
+    def sent_iter(self, reverse: bool = False) -> Iterable[tuple[int, Sentence]]:
         enum_sents = list(enumerate(self.sentences))
         return reversed(enum_sents) if reverse else enum_sents
 
@@ -165,7 +165,7 @@ class Paragraph:
 
         raise ValueError(f"Unsupported unit for Paragraph: {unit}")
 
-    def as_wordtok_to_sent(self) -> Generator[Tuple[str, int], None, None]:
+    def as_wordtok_to_sent(self) -> Generator[tuple[str, int], None, None]:
         last_sent_index = len(self.sentences) - 1
         for sent_index, sent in enumerate(self.sentences):
             for wordtok in sent.as_wordtoks():
@@ -200,7 +200,7 @@ class TextDoc:
     Compatible with Markdown and Markown with HTML tags.
     """
 
-    paragraphs: List[Paragraph]
+    paragraphs: list[Paragraph]
 
     @classmethod
     @tally_calls(level="warning", min_total_runtime=5)
@@ -223,7 +223,7 @@ class TextDoc:
         return cls(paragraphs=paragraphs)
 
     @classmethod
-    def from_wordtoks(cls, wordtoks: List[str]) -> TextDoc:
+    def from_wordtoks(cls, wordtoks: list[str]) -> TextDoc:
         """
         Parse a document from a list of wordtoks.
         """
@@ -245,11 +245,11 @@ class TextDoc:
     def last_index(self) -> SentIndex:
         return SentIndex(len(self.paragraphs) - 1, len(self.paragraphs[-1].sentences) - 1)
 
-    def para_iter(self, reverse: bool = False) -> Iterable[Tuple[int, Paragraph]]:
+    def para_iter(self, reverse: bool = False) -> Iterable[tuple[int, Paragraph]]:
         enum_paras = list(enumerate(self.paragraphs))
         return reversed(enum_paras) if reverse else enum_paras
 
-    def sent_iter(self, reverse: bool = False) -> Iterable[Tuple[SentIndex, Sentence]]:
+    def sent_iter(self, reverse: bool = False) -> Iterable[tuple[SentIndex, Sentence]]:
         for para_index, para in self.para_iter(reverse=reverse):
             for sent_index, sent in para.sent_iter(reverse=reverse):
                 yield SentIndex(para_index, sent_index), sent
@@ -263,7 +263,7 @@ class TextDoc:
             sent_str, old_sent.char_offset
         )
 
-    def seek_to_sent(self, offset: int, unit: TextUnit) -> Tuple[SentIndex, int]:
+    def seek_to_sent(self, offset: int, unit: TextUnit) -> tuple[SentIndex, int]:
         """
         Find the last sentence that starts before a given offset. Returns the SentIndex
         and the offset of the sentence start in the original document.
@@ -306,7 +306,7 @@ class TextDoc:
 
         return last_fit_index, last_fit_offset
 
-    def sub_doc(self, first: SentIndex, last: Optional[SentIndex] = None) -> "TextDoc":
+    def sub_doc(self, first: SentIndex, last: SentIndex | None = None) -> TextDoc:
         """
         Get a sub-document. Inclusive ranges. Preserves original paragraph and sentence offsets.
         """
@@ -349,7 +349,7 @@ class TextDoc:
 
         return TextDoc(sub_paras)
 
-    def sub_paras(self, start: int, end: Optional[int] = None) -> TextDoc:
+    def sub_paras(self, start: int, end: int | None = None) -> TextDoc:
         """
         Get a sub-document containing a range of paragraphs.
         """
@@ -416,7 +416,7 @@ class TextDoc:
         else:
             return f"{nbytes} bytes"
 
-    def as_wordtok_to_sent(self, bof_eof=False) -> Generator[Tuple[str, SentIndex], None, None]:
+    def as_wordtok_to_sent(self, bof_eof=False) -> Generator[tuple[str, SentIndex], None, None]:
         if bof_eof:
             yield BOF_TOK, self.first_index()
 
@@ -434,7 +434,7 @@ class TextDoc:
         for wordtok, _sent_index in self.as_wordtok_to_sent(bof_eof=bof_eof):
             yield wordtok
 
-    def wordtok_mappings(self) -> Tuple[WordtokMapping, SentenceMapping]:
+    def wordtok_mappings(self) -> tuple[WordtokMapping, SentenceMapping]:
         """
         Get mappings between wordtok indexes and sentence indexes.
         """

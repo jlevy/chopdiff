@@ -2,7 +2,6 @@ from dataclasses import dataclass
 
 from chopdiff.docs.sizes import TextUnit
 
-
 WINDOW_BR = "<!--window-br-->"
 """Marker inserted into result documents to show where window breaks have occurred."""
 
