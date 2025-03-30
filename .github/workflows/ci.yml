@@ -27,6 +27,7 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
+
       # Generally following uv docs:
       # https://docs.astral.sh/uv/guides/integration/github/
 
@@ -36,10 +37,15 @@ jobs:
           # Important for versioning plugins:
           fetch-depth: 0
 
+      # From debugging the cydifflib build failure.
+      # Confirmed we have version 3.31.6 installed.
+      - name: Display CMake Version
+        run: cmake --version
+
       - name: Install uv (official Astral action)
         uses: astral-sh/setup-uv@v5
         with:
-          version: "0.6.5"
+          version: "0.6.11"
           enable-cache: true
           python-version: ${{ matrix.python-version }}
 
@@ -54,6 +60,10 @@ jobs:
 
       - name: Install all dependencies
         run: uv sync --all-extras --dev
+        env:
+          # Unclear why this should be needed since we already have a newer CMake,
+          # but it seems to be needed when building cydifflib.
+          CMAKE_ARGS: "-DCMAKE_POLICY_VERSION_MINIMUM=3.5"
 
       - name: Run linting
         run: uv run python devtools/lint.py
