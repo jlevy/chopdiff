@@ -16,11 +16,11 @@ requires-python = ">=3.11,<4.0"
 dynamic = ["version"]
 
 dependencies = [
-    "prettyfmt>=0.1.7",
-    "flowmark>=0.2.1",
-    "strif>=2.0.1",
-    "funlog>=0.1.2",
-    "cydifflib>=1.1.0",
+    "prettyfmt>=0.3.0",
+    "flowmark>=0.3.3",
+    "strif>=2.1.0",
+    "funlog>=0.2.1",
+    "cydifflib>=1.2.0",
     "tiktoken>=0.9.0",
     "regex>=2024.11.6",
     "simplemma>=1.1.2",

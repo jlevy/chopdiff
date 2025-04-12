@@ -11,10 +11,10 @@ import logging
 from textwrap import dedent
 
 import openai  # type: ignore  # Not a project dep.
+from flowmark import fill_text
 
 from chopdiff.docs import TextDoc
 from chopdiff.transforms import WINDOW_2K_WORDTOKS, changes_whitespace, filtered_transform
-from flowmark import fill_text
 
 logging.basicConfig(format=">> %(message)s")
 log = logging.getLogger(__name__)
