@@ -438,9 +438,15 @@ First, we'll talk about variables. Next, let's look at functions. Functions help
 $
 ```
 
-## Development
+* * *
+
+## Project Docs
+
+For how to install uv and Python, see [installation.md](installation.md).
 
 For development workflows, see [development.md](development.md).
+
+For instructions on publishing to PyPI, see [publishing.md](publishing.md).
 
 * * *
 
