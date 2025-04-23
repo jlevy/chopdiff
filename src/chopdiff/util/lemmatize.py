@@ -1,10 +1,14 @@
-import simplemma
-
-
 def lemmatize(text: str, lang: str = "en") -> str:
     """
     Returns a string of lemmatized tokens using simplemma.
     """
+    try:
+        import simplemma
+    except ImportError:
+        raise ImportError(
+            "simplemma is an optional dependency of chopdiff. Add it to use lemmatization."
+        )
+
     tokens = simplemma.simple_tokenizer(text)
     lemmatized_tokens = [simplemma.lemmatize(token, lang=lang) for token in tokens]
     return " ".join(lemmatized_tokens)

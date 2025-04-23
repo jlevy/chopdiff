@@ -27,8 +27,29 @@ Example use cases:
 
 ## Installation
 
-It's on PyPI so use `pip install chopdiff` or (recommended for modern uv projects) `uv
-add chopdiff`.
+Drop the `extras` if you don't want the dependency on `simplemma` (it's about 70MB).
+
+Full deps:
+
+```shell
+# Using uv (recommended)
+uv add chopdiff[extras]
+# Using poetry
+poetry add chopdiff -E extras
+# Using pip
+pip install chopdiff[extras]
+```
+
+Basic deps:
+
+```shell
+# Using uv (recommended)
+uv add chopdiff
+# Using poetry
+poetry add chopdiff
+# Using pip
+pip install chopdiff
+```
 
 ## Comparison to Alternatives
 
