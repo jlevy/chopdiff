@@ -1,6 +1,5 @@
 from chopdiff.transforms.diff_filters import (
     WILDCARD_TOK,
-    accept_all,
     adds_headings,
     changes_whitespace,
     changes_whitespace_or_punct,
@@ -39,7 +38,6 @@ from chopdiff.transforms.window_settings import (
 
 __all__ = [
     "WILDCARD_TOK",
-    "accept_all",
     "adds_headings",
     "changes_whitespace",
     "changes_whitespace_or_punct",

@@ -145,11 +145,14 @@ class TokenDiff:
 
         return result
 
-    def filter(self, accept_fn: DiffFilter) -> tuple[TokenDiff, TokenDiff]:
+    def filter(self, accept_fn: DiffFilter | None) -> tuple[TokenDiff, TokenDiff]:
         """
         Return two diffs, one that only has accepted operations and one that only has
         rejected operations.
         """
+        if not accept_fn:
+            accept_fn = DIFF_FILTER_NONE
+
         accepted_ops: list[DiffOp] = []
         rejected_ops: list[DiffOp] = []
 

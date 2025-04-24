@@ -13,9 +13,8 @@ from prettyfmt import fmt_lines
 
 from chopdiff.docs.sizes import TextUnit
 from chopdiff.docs.text_doc import Paragraph, TextDoc
-from chopdiff.docs.token_diffs import DiffFilter, diff_docs, find_best_alignment
+from chopdiff.docs.token_diffs import DIFF_FILTER_NONE, DiffFilter, diff_docs, find_best_alignment
 from chopdiff.docs.wordtoks import join_wordtoks
-from chopdiff.transforms.diff_filters import accept_all
 from chopdiff.transforms.sliding_windows import sliding_para_window, sliding_word_window
 from chopdiff.transforms.window_settings import WINDOW_BR, WindowSettings
 
@@ -37,7 +36,7 @@ def filtered_transform(
     doc: TextDoc,
     transform_func: TextDocTransform,
     windowing: WindowSettings | None,
-    diff_filter: DiffFilter = accept_all,
+    diff_filter: DiffFilter | None = None,
     debug_save: SaveFunc | None = None,
 ) -> TextDoc:
     """
@@ -49,7 +48,7 @@ def filtered_transform(
     `debug_save` is an optional function that takes a message, a filename, and an object, and saves
     the object to a file for debugging.
     """
-    has_filter = diff_filter != accept_all
+    has_filter = diff_filter and diff_filter != DIFF_FILTER_NONE
 
     if not windowing or not windowing.size:
         transformed_doc = transform_func(doc)

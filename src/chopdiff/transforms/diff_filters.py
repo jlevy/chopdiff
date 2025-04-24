@@ -172,11 +172,3 @@ def adds_headings(diff_op: DiffOp) -> bool:
         ignore=is_break_or_space,
     )
     return matcher(diff_op)
-
-
-def accept_all(_diff_op: DiffOp) -> bool:
-    """
-    Accepts all changes.
-    """
-
-    return True
