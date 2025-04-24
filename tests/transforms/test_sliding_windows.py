@@ -1,7 +1,8 @@
 from pprint import pprint
 from textwrap import dedent
 
-from chopdiff.docs.text_doc import TextDoc, TextUnit, size
+from chopdiff.docs.sizes import TextUnit, size
+from chopdiff.docs.text_doc import TextDoc
 from chopdiff.transforms.sliding_windows import sliding_word_window
 
 _example_text = dedent(

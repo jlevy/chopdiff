@@ -1,6 +1,8 @@
 from collections.abc import Callable
 from typing import TypeAlias
 
+from typing_extensions import override
+
 from chopdiff.docs.token_diffs import DiffFilter, DiffOp, OpType
 from chopdiff.docs.wordtoks import (
     is_break_or_space,
@@ -17,6 +19,7 @@ class WildcardToken:
     Wildcard token that matches any number of tokens (including zero).
     """
 
+    @override
     def __str__(self):
         return "*"
 
@@ -161,8 +164,8 @@ def adds_headings(diff_op: DiffOp) -> bool:
     Only accept changes that add contents within header tags.
     """
     headers = ["h1", "h2", "h3", "h4", "h5", "h6"]
-    is_header = lambda tok: is_tag_open(tok, tag_names=headers)
-    is_header_close = lambda tok: is_tag_close(tok, tag_names=headers)
+    is_header = lambda tok: is_tag_open(tok, tag_names=headers)  # pyright: ignore
+    is_header_close = lambda tok: is_tag_close(tok, tag_names=headers)  # pyright: ignore
     matcher = make_token_sequence_filter(
         [is_header, WILDCARD_TOK, is_header_close],
         action=OpType.INSERT,
@@ -171,7 +174,7 @@ def adds_headings(diff_op: DiffOp) -> bool:
     return matcher(diff_op)
 
 
-def accept_all(diff_op: DiffOp) -> bool:
+def accept_all(_diff_op: DiffOp) -> bool:
     """
     Accepts all changes.
     """

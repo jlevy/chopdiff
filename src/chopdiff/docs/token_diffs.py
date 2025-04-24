@@ -8,6 +8,7 @@ from typing import TypeAlias
 
 import cydifflib as difflib
 from funlog import log_calls, tally_calls
+from typing_extensions import override
 
 from chopdiff.docs.text_doc import TextDoc
 
@@ -58,19 +59,19 @@ class DiffOp:
         elif self.action == OpType.DELETE:
             assert not self.right
 
-    def left_str(self, show_toks=True) -> str:
+    def left_str(self, show_toks: bool = True) -> str:
         s = f"{self.action.as_abbrev()} {len(self.left):4} toks"
         if show_toks:
             s += f": - {SYMBOL_SEP}{''.join(tok for tok in self.left)}{SYMBOL_SEP}"
         return s
 
-    def right_str(self, show_toks=True) -> str:
+    def right_str(self, show_toks: bool = True) -> str:
         s = f"{self.action.as_abbrev()} {len(self.right):4} toks"
         if show_toks:
             s += f": + {SYMBOL_SEP}{''.join(tok for tok in self.right)}{SYMBOL_SEP}"
         return s
 
-    def equal_str(self, show_toks=True) -> str:
+    def equal_str(self, show_toks: bool = True) -> str:
         s = f"{self.action.as_abbrev()} {len(self.left):4} toks"
         if show_toks:
             s += f":   {SYMBOL_SEP}{''.join(tok for tok in self.left)}{SYMBOL_SEP}"
@@ -89,6 +90,7 @@ class DiffStats:
     def nchanges(self) -> int:
         return self.added + self.removed
 
+    @override
     def __str__(self):
         return f"add/remove +{self.added}/-{self.removed} out of {self.input_size} total"
 
@@ -127,7 +129,7 @@ class TokenDiff:
         """
         Apply a complete diff (including equality ops) to a list of wordtoks.
         """
-        result = []
+        result: list[str] = []
         original_index = 0
 
         if len(original_wordtoks) != self.left_size():
@@ -176,12 +178,12 @@ class TokenDiff:
 
         return accepted_diff, rejected_diff
 
-    def _diff_lines(self, include_equal=False) -> list[str]:
+    def _diff_lines(self, include_equal: bool = False) -> list[str]:
         if len(self.ops) == 0:
             return ["(No changes)"]
 
         pos = 0
-        lines = []
+        lines: list[str] = []
         for op in self.ops:
             if op.action == OpType.EQUAL:
                 if include_equal:
@@ -197,10 +199,11 @@ class TokenDiff:
             pos += len(op.left)
         return lines
 
-    def as_diff_str(self, include_equal=True) -> str:
+    def as_diff_str(self, include_equal: bool = True) -> str:
         diff_str = "\n".join(self._diff_lines(include_equal=include_equal))
         return f"TextDiff: {self.stats()}:\n{diff_str}"
 
+    @override
     def __str__(self):
         return self.as_diff_str()
 
@@ -224,7 +227,7 @@ def diff_wordtoks(wordtoks1: list[str], wordtoks2: list[str]) -> TokenDiff:
     """
     Perform an LCS-style diff on two lists of wordtoks.
     """
-    s = difflib.SequenceMatcher(None, wordtoks1, wordtoks2, autojunk=False)  # type: ignore
+    s = difflib.SequenceMatcher(None, wordtoks1, wordtoks2, autojunk=False)  # pyright: ignore
     diff: list[DiffOp] = []
 
     # log.message(f"Diffing {len(wordtoks1)} wordtoks against {len(wordtoks2)} wordtoks")
@@ -232,7 +235,7 @@ def diff_wordtoks(wordtoks1: list[str], wordtoks2: list[str]) -> TokenDiff:
     # log.save_object("wordtoks2", "diff_wordtoks", "".join(wordtoks2))
     # log.save_object("diff opcodes", "diff_wordtoks", "\n".join(str(o) for o in s.get_opcodes()))
 
-    for tag, i1, i2, j1, j2 in s.get_opcodes():
+    for tag, i1, i2, j1, j2 in s.get_opcodes():  # pyright: ignore
         if tag == "equal":
             slice1 = wordtoks1[i1:i2]
             assert slice1 == wordtoks2[j1:j2]

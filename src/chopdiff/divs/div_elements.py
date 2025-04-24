@@ -3,7 +3,8 @@ import logging
 from chopdiff.divs.chunk_utils import chunk_children, chunk_paras
 from chopdiff.divs.parse_divs import parse_divs
 from chopdiff.divs.text_node import TextNode
-from chopdiff.docs.text_doc import TextDoc, TextUnit
+from chopdiff.docs.sizes import TextUnit
+from chopdiff.docs.text_doc import TextDoc
 from chopdiff.docs.wordtoks import first_wordtok, is_div
 from chopdiff.html.html_in_md import div_wrapper, html_join_blocks
 

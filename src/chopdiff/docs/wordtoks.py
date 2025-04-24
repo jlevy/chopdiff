@@ -85,7 +85,7 @@ def normalize_wordtok(wordtok: str) -> str:
     return normalized
 
 
-def wordtokenize_with_offsets(text: str, bof_eof=False) -> tuple[list[str], list[int]]:
+def wordtokenize_with_offsets(text: str, bof_eof: bool = False) -> tuple[list[str], list[int]]:
     """
     Same as `wordtokenize`, but returns a list of tuples `(wordtok, offset)`.
     """
@@ -105,7 +105,7 @@ def wordtokenize_with_offsets(text: str, bof_eof=False) -> tuple[list[str], list
     return wordtoks, offsets
 
 
-def wordtokenize(text: str, bof_eof=False) -> list[str]:
+def wordtokenize(text: str, bof_eof: bool = False) -> list[str]:
     """
     Convert text to word tokens, including words, whitespace, punctuation, and
     HTML tags. Does not parse paragraph or sentence breaks. Normalizes all
@@ -115,7 +115,7 @@ def wordtokenize(text: str, bof_eof=False) -> list[str]:
     return wordtoks
 
 
-def _insert_para_wordtoks(text: str) -> str:
+def _insert_para_wordtoks(text: str) -> str:  # pyright: ignore
     """
     Replace paragraph breaks in text with para break tokens.
     """
@@ -220,7 +220,7 @@ def parse_tag(wordtok: str | None = None) -> Tag | None:
     tag_name = match.group(2).lower()
     attrs_str = match.group(3).strip()
 
-    attrs = {}
+    attrs: dict[str, str] = {}
     if attrs_str:
         attr_pattern = regex.compile(r'(\w+)\s*=\s*"([^"]*)"')
         for attr_match in attr_pattern.finditer(attrs_str):

@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from copy import copy
 from dataclasses import dataclass, field
 
 from prettyfmt import fmt_lines
+from typing_extensions import override
 
 from chopdiff.docs.sizes import TextUnit
 from chopdiff.docs.text_doc import Splitter, TextDoc, default_sentence_splitter
@@ -71,7 +73,7 @@ class TextNode:
         def path_join(*selectors: str) -> str:
             return " > ".join(selectors)
 
-        def tally_recursive(node: TextNode, path: list[str], tally: dict) -> None:
+        def tally_recursive(node: TextNode, path: list[str], tally: dict[str, int]) -> None:
             # Skip leaf nodes.
             if not node.children and not node.tag_name and not node.class_name:
                 return
@@ -146,7 +148,7 @@ class TextNode:
         Reassemble as string. If padding is provided (not ""), then strip, skip whitespace,
         and insert our own padding.
         """
-        strip_fn = lambda s: s.strip() if padding else s
+        strip_fn: Callable[[str], str] = lambda s: s.strip() if padding else s
         skip_whitespace = bool(padding)
 
         if not self.children:
@@ -167,6 +169,7 @@ class TextNode:
                 wrap = div_wrapper(self.class_name, padding=padding)
                 return wrap(padded_children)
 
+    @override
     def __str__(self):
         """
         Return a recursive, formatted string representation of the node and its children.

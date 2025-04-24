@@ -2,6 +2,7 @@ from dataclasses import dataclass
 
 import regex
 from prettyfmt import abbrev_obj
+from typing_extensions import override
 
 
 @dataclass(frozen=True)
@@ -13,6 +14,7 @@ class TagMatch:
     attribute_value: str | None
     inner_text: str
 
+    @override
     def __repr__(self):
         return abbrev_obj(self)
 

@@ -1,3 +1,5 @@
+from typing_extensions import override
+
 from chopdiff.docs.token_diffs import SYMBOL_SEP, OpType, TokenDiff, diff_wordtoks
 
 
@@ -79,5 +81,6 @@ class TokenMapping:
             for i in range(len(self.tokens2))
         )
 
+    @override
     def __str__(self):
         return f"OffsetMapping(doc1 len {len(self.tokens1)}, doc2 len {len(self.tokens2)}, mapping len {len(self.backmap)})"

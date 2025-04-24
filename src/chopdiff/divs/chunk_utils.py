@@ -2,7 +2,8 @@ from collections.abc import Callable, Generator
 from typing import TypeVar
 
 from chopdiff.divs.text_node import TextNode
-from chopdiff.docs.text_doc import TextDoc, TextUnit
+from chopdiff.docs.sizes import TextUnit
+from chopdiff.docs.text_doc import TextDoc
 
 T = TypeVar("T")
 

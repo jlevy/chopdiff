@@ -8,6 +8,7 @@ from typing import TypeAlias
 import regex
 from flowmark.sentence_split_regex import split_sentences_regex
 from funlog import tally_calls
+from typing_extensions import override
 
 from chopdiff.docs.sizes import TextUnit, size, size_in_bytes
 from chopdiff.docs.wordtoks import (
@@ -56,6 +57,7 @@ class SentIndex:
     para_index: int
     sent_index: int
 
+    @override
     def __str__(self):
         return f"{SYMBOL_PARA}{self.para_index},{SYMBOL_SENT}{self.sent_index}"
 
@@ -100,6 +102,7 @@ class Sentence:
             return True
         return False
 
+    @override
     def __str__(self):
         return repr(self.text)
 
@@ -125,7 +128,7 @@ class Paragraph:
         # TODO: Lazily compute sentences for better performance.
         sent_values = sentence_splitter(text)
         sent_offset = 0
-        sentences = []
+        sentences: list[Sentence] = []
         for sent_str in sent_values:
             sentences.append(Sentence(sent_str, sent_offset))
             sent_offset += len(sent_str) + len(SENT_BR_STR)
@@ -211,7 +214,7 @@ class TextDoc:
         Parse a document from a string.
         """
         text = text.strip()
-        paragraphs = []
+        paragraphs: list[Paragraph] = []
         char_offset = 0
         for para in text.split(PARA_BR_STR):
             stripped_para = para.strip()
@@ -317,7 +320,7 @@ class TextDoc:
         if first < self.first_index():
             raise ValueError(f"Start index out of range: {first} < {self.first_index()}")
 
-        sub_paras = []
+        sub_paras: list[Paragraph] = []
         for i in range(first.para_index, last.para_index + 1):
             para = self.paragraphs[i]
             if i == first.para_index and i == last.para_index:
@@ -416,7 +419,9 @@ class TextDoc:
         else:
             return f"{nbytes} bytes"
 
-    def as_wordtok_to_sent(self, bof_eof=False) -> Generator[tuple[str, SentIndex], None, None]:
+    def as_wordtok_to_sent(
+        self, bof_eof: bool = False
+    ) -> Generator[tuple[str, SentIndex], None, None]:
         if bof_eof:
             yield BOF_TOK, self.first_index()
 
@@ -430,7 +435,7 @@ class TextDoc:
         if bof_eof:
             yield EOF_TOK, self.last_index()
 
-    def as_wordtoks(self, bof_eof=False) -> Generator[str, None, None]:
+    def as_wordtoks(self, bof_eof: bool = False) -> Generator[str, None, None]:
         for wordtok, _sent_index in self.as_wordtok_to_sent(bof_eof=bof_eof):
             yield wordtok
 
@@ -448,5 +453,6 @@ class TextDoc:
 
         return wordtok_mapping, sent_mapping
 
+    @override
     def __str__(self):
         return f"TextDoc({self.size_summary()})"

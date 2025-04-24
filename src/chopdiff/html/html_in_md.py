@@ -50,7 +50,7 @@ def tag_with_attrs(
     if class_name is not None:
         if isinstance(class_name, str):
             class_value = class_name
-        elif isinstance(class_name, list):
+        elif isinstance(class_name, list):  # pyright: ignore
             class_value = " ".join(class_name)
         else:
             raise ValueError(f"Expected a string or list of class names but got: {class_name}")

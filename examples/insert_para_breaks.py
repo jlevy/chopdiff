@@ -10,7 +10,7 @@ import argparse
 import logging
 from textwrap import dedent
 
-import openai  # type: ignore  # Not a project dep.
+import openai  # pyright: ignore  # Not a project dep.
 from flowmark import fill_text
 
 from chopdiff.docs import TextDoc
@@ -69,7 +69,7 @@ def llm_insert_para_breaks(input_text: str) -> str:
     This works best on a smaller chunk of text and might make
     other non-whitespace changes.
     """
-    client = openai.OpenAI()
+    client: openai.OpenAI = openai.OpenAI()
 
     response = client.chat.completions.create(
         model="gpt-4o-mini",

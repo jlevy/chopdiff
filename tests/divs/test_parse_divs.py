@@ -32,7 +32,7 @@ _test_text = dedent(
 )
 
 
-def _strip_lines(text):
+def _strip_lines(text: str) -> list[str]:
     return [line.strip() for line in text.strip().split("\n")]
 
 
@@ -98,7 +98,7 @@ def test_structure_summary_str_1():
         """
 
     node = parse_divs(doc)
-    summary_str = node.structure_summary_str()
+    summary_str = node.structure_summary_str() or ""
 
     print()
     print("Structure summary:")
@@ -116,7 +116,7 @@ def test_structure_summary_str_1():
 
 def test_structure_summary_str_2():
     node = parse_divs(_test_text)
-    summary_str = node.structure_summary_str()
+    summary_str = node.structure_summary_str() or ""
 
     print()
     print("Structure summary:")

@@ -10,8 +10,8 @@ def test_timestamp_extractor():
     extractor = TimestampExtractor(doc_str)
     wordtoks = extractor.wordtoks
 
-    results = []
-    offsets = []
+    results: list[str] = []
+    offsets: list[int] = []
     for i, wordtok in enumerate(wordtoks):
         try:
             timestamp, _index, offset = extractor.extract_preceding(i)

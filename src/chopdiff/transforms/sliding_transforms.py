@@ -11,7 +11,8 @@ from typing import Any, TypeAlias
 from flowmark import fill_markdown
 from prettyfmt import fmt_lines
 
-from chopdiff.docs.text_doc import Paragraph, TextDoc, TextUnit
+from chopdiff.docs.sizes import TextUnit
+from chopdiff.docs.text_doc import Paragraph, TextDoc
 from chopdiff.docs.token_diffs import DiffFilter, diff_docs, find_best_alignment
 from chopdiff.docs.wordtoks import join_wordtoks
 from chopdiff.transforms.diff_filters import accept_all

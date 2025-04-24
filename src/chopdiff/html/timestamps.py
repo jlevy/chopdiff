@@ -20,7 +20,7 @@ def has_timestamp(wordtok: str) -> bool:
     return extract_timestamp(wordtok) is not None
 
 
-class TimestampExtractor(Extractor):
+class TimestampExtractor(Extractor[float]):
     """
     Extract timestamps of the form `<... data-timestamp="123.45">` from a document.
     """

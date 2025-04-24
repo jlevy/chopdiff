@@ -10,7 +10,7 @@ class _TokenSearcher:
         self._cur_idx = 0
 
     def at(self, index: int):
-        if index is None:
+        if index is None:  # pyright: ignore
             raise KeyError("Index cannot be None")
         # Convert negative indices to positive ones.
         self._cur_idx = index if index >= 0 else len(self.toks) + index

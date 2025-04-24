@@ -5,7 +5,8 @@ import regex
 from prettyfmt import fmt_words
 from strif import abbrev_str
 
-from chopdiff.docs.text_doc import SentIndex, TextDoc, TextUnit
+from chopdiff.docs.sizes import TextUnit
+from chopdiff.docs.text_doc import SentIndex, TextDoc
 from chopdiff.docs.wordtoks import (
     PARA_BR_TOK,
     is_break_or_space,
@@ -76,7 +77,7 @@ def test_document_parse_reassemble():
     reassembled_text = doc.reassemble()
 
     # Should be exactly the same except for within-paragraph line breaks.
-    def normalize(text):
+    def normalize(text: str) -> str:
         return regex.sub(r"\s+", " ", text.replace("\n\n", "<PARA>"))
 
     assert normalize(reassembled_text) == normalize(text)
@@ -92,7 +93,7 @@ def test_markup_detection():
     doc = TextDoc.from_text(text)
 
     print("Paragraph markup and header detection:")
-    result = []
+    result: list[str] = []
     for para in doc.paragraphs:
         result.append(
             fmt_words(

@@ -7,7 +7,8 @@ from collections.abc import Callable, Generator
 
 from flowmark import fill_markdown
 
-from chopdiff.docs.text_doc import SentIndex, TextDoc, TextUnit
+from chopdiff.docs.sizes import TextUnit
+from chopdiff.docs.text_doc import SentIndex, TextDoc
 
 log = logging.getLogger(__name__)
 

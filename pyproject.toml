@@ -157,12 +157,16 @@ reportAny = false
 reportExplicitAny = false
 reportImplicitStringConcatenation = false
 reportUnreachable = false
+reportUnknownMemberType = false
 # reportPrivateImportUsage = false
 # reportPrivateLocalImportUsage = false
 # reportMissingImports = false
 # reportUnnecessaryIsInstance = false
-# reportUnknownVariableType = false
+reportUnknownVariableType = false
 # reportUnknownArgumentType = false
+reportUnannotatedClassAttribute = false
+reportUnknownLambdaType = false
+reportPrivateUsage = false
 
 [tool.codespell]
 ignore-words-list = "Numbe"

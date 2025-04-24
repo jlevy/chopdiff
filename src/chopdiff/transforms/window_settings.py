@@ -1,5 +1,7 @@
 from dataclasses import dataclass
 
+from typing_extensions import override
+
 from chopdiff.docs.sizes import TextUnit
 
 WINDOW_BR = "<!--window-br-->"
@@ -21,6 +23,7 @@ class WindowSettings:
     min_overlap: int = 0
     separator: str = ""
 
+    @override
     def __str__(self):
         return f"windowing size={self.size}, shift={self.shift}, min_overlap={self.min_overlap} {self.unit.value}"
 
