@@ -42,6 +42,7 @@ def tag_with_attrs(
     tag: str,
     text: str | None,
     class_name: ClassNames | None = None,
+    *,
     attrs: dict[str, str] | None = None,
     safe: bool = False,
     padding: str | None = None,
@@ -80,12 +81,13 @@ def html_span(
     """
     Write a span tag for use in Markdown, with the given text and optional class and attributes.
     """
-    return tag_with_attrs("span", text, class_name, attrs, safe)
+    return tag_with_attrs("span", text, class_name, attrs=attrs, safe=safe)
 
 
 def html_div(
     text: str,
     class_name: ClassNames | None = None,
+    *,
     attrs: dict[str, str] | None = None,
     safe: bool = False,
     padding: str | None = None,
@@ -93,7 +95,7 @@ def html_div(
     """
     Write a div tag for use in Markdown, with the given text and optional class and attributes.
     """
-    return tag_with_attrs("div", text, class_name, attrs, safe, padding)
+    return tag_with_attrs("div", text, class_name, attrs=attrs, safe=safe, padding=padding)
 
 
 def html_a(text: str, href: str, safe: bool = False) -> str:
@@ -115,13 +117,14 @@ def html_img(
     src: str,
     alt: str,
     class_name: ClassNames | None = None,
+    *,
     attrs: dict[str, str] | None = None,
     safe: bool = False,
 ) -> str:
     img_attrs = {"src": src, "alt": alt}
     if attrs:
         img_attrs.update(attrs)
-    return tag_with_attrs("img", None, class_name, img_attrs, safe=safe)
+    return tag_with_attrs("img", None, class_name, attrs=img_attrs, safe=safe)
 
 
 def html_join_blocks(*blocks: str | None) -> str:
@@ -153,21 +156,30 @@ def _check_class_name(class_name: str | None) -> None:
 
 
 def div_wrapper(
-    class_name: str | None = None, safe: bool = True, padding: str | None = "\n\n"
+    class_name: str | None = None,
+    *,
+    attrs: dict[str, str] | None = None,
+    safe: bool = True,
+    padding: str | None = "\n\n",
 ) -> Wrapper:
     _check_class_name(class_name)
 
     def div_wrapper_func(text: str) -> str:
-        return html_div(text, class_name, safe=safe, padding=padding)
+        return html_div(text, class_name, attrs=attrs, safe=safe, padding=padding)
 
     return div_wrapper_func
 
 
-def span_wrapper(class_name: str | None = None, safe: bool = True) -> Wrapper:
+def span_wrapper(
+    class_name: str | None = None,
+    *,
+    attrs: dict[str, str] | None = None,
+    safe: bool = True,
+) -> Wrapper:
     _check_class_name(class_name)
 
     def span_wrapper_func(text: str) -> str:
-        return html_span(text, class_name, safe=safe)
+        return html_span(text, class_name, attrs=attrs, safe=safe)
 
     return span_wrapper_func
 
