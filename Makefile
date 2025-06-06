@@ -18,7 +18,7 @@ test:
 	uv run pytest
 
 upgrade:
-	uv sync --upgrade
+	uv sync --upgrade --all-extras --dev
 
 build:
 	uv build
