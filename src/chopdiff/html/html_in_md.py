@@ -34,6 +34,7 @@ def escape_attribute(s: str) -> str:
 
 
 ClassNames = str | list[str]
+Attrs = dict[str, str | bool]
 
 _TAGS_WITH_PADDING = ["div", "p"]
 
@@ -43,10 +44,14 @@ def tag_with_attrs(
     text: str | None,
     class_name: ClassNames | None = None,
     *,
-    attrs: dict[str, str] | None = None,
+    attrs: Attrs | None = None,
     safe: bool = False,
     padding: str | None = None,
 ) -> str:
+    """
+    Create an HTML tag with optional class names and attributes.
+    Boolean attribute values: True includes the attribute, False omits it.
+    """
     class_value = ""
     if class_name is not None:
         if isinstance(class_name, str):
@@ -57,7 +62,12 @@ def tag_with_attrs(
             raise ValueError(f"Expected a string or list of class names but got: {class_name}")
     attr_str = f' class="{escape_attribute(class_value)}"' if class_value else ""
     if attrs:
-        attr_str += "".join(f' {k}="{escape_attribute(v)}"' for k, v in attrs.items())
+        for k, v in attrs.items():
+            if isinstance(v, bool):
+                if v:  # Only include attribute if True
+                    attr_str += f" {k}"
+            else:  # string value
+                attr_str += f' {k}="{escape_attribute(v)}"'
     # Default padding for div and p tags.
     if text is None:
         return f"<{tag}{attr_str} />"
@@ -75,7 +85,7 @@ def tag_with_attrs(
 def html_span(
     text: str,
     class_name: ClassNames | None = None,
-    attrs: dict[str, str] | None = None,
+    attrs: Attrs | None = None,
     safe: bool = False,
 ) -> str:
     """
@@ -88,7 +98,7 @@ def html_div(
     text: str,
     class_name: ClassNames | None = None,
     *,
-    attrs: dict[str, str] | None = None,
+    attrs: Attrs | None = None,
     safe: bool = False,
     padding: str | None = None,
 ) -> str:
@@ -118,12 +128,13 @@ def html_img(
     alt: str,
     class_name: ClassNames | None = None,
     *,
-    attrs: dict[str, str] | None = None,
+    attrs: Attrs | None = None,
     safe: bool = False,
 ) -> str:
-    img_attrs = {"src": src, "alt": alt}
+    img_attrs: Attrs = {"src": src, "alt": alt}
     if attrs:
-        img_attrs.update(attrs)
+        for k, v in attrs.items():
+            img_attrs[k] = v
     return tag_with_attrs("img", None, class_name, attrs=img_attrs, safe=safe)
 
 
@@ -158,7 +169,7 @@ def _check_class_name(class_name: str | None) -> None:
 def div_wrapper(
     class_name: str | None = None,
     *,
-    attrs: dict[str, str] | None = None,
+    attrs: Attrs | None = None,
     safe: bool = True,
     padding: str | None = "\n\n",
 ) -> Wrapper:
@@ -173,7 +184,7 @@ def div_wrapper(
 def span_wrapper(
     class_name: str | None = None,
     *,
-    attrs: dict[str, str] | None = None,
+    attrs: Attrs | None = None,
     safe: bool = True,
 ) -> Wrapper:
     _check_class_name(class_name)
@@ -205,6 +216,58 @@ def test_html():
     assert html_div("text") == "<div>\ntext\n</div>"
 
 
+def test_boolean_attrs():
+    assert tag_with_attrs("input", None, attrs={"disabled": True}) == "<input disabled />"
+    assert tag_with_attrs("input", None, attrs={"disabled": False}) == "<input />"
+    assert (
+        tag_with_attrs("input", None, attrs={"disabled": True, "required": True, "id": "test"})
+        == '<input disabled required id="test" />'
+    )
+    assert (
+        tag_with_attrs("input", None, attrs={"disabled": False, "required": True})
+        == "<input required />"
+    )
+
+
+def test_class_names():
+    assert (
+        tag_with_attrs("div", "text", class_name=["foo", "bar"])
+        == '<div class="foo bar">\ntext\n</div>'
+    )
+    assert tag_with_attrs("span", "text", class_name="single") == '<span class="single">text</span>'
+    assert tag_with_attrs("span", "text", class_name=None) == "<span>text</span>"
+
+
+def test_padding():
+    assert tag_with_attrs("span", "text") == "<span>text</span>"
+    assert tag_with_attrs("div", "text") == "<div>\ntext\n</div>"
+    assert tag_with_attrs("p", "text") == "<p>\ntext\n</p>"
+    assert tag_with_attrs("div", "text", padding="") == "<div>text</div>"
+    assert tag_with_attrs("div", "", padding="\n") == "<div></div>"
+
+
+def test_safe_mode():
+    assert tag_with_attrs("div", "<script>", safe=True) == "<div>\n<script>\n</div>"
+    assert tag_with_attrs("div", "<script>", safe=False) == "<div>\n&lt;script&gt;\n</div>"
+
+
+def test_html_functions():
+    assert html_a("link", "http://example.com") == '<a href="http://example.com">link</a>'
+    assert html_b("bold") == "<b>bold</b>"
+    assert html_i("italic") == "<i>italic</i>"
+    assert html_img("pic.jpg", "A picture") == '<img src="pic.jpg" alt="A picture" />'
+    assert (
+        html_img("pic.jpg", "A picture", attrs={"loading": "lazy"})
+        == '<img src="pic.jpg" alt="A picture" loading="lazy" />'
+    )
+
+
+def test_html_join_blocks():
+    assert html_join_blocks("block1", "block2") == "block1\n\nblock2"
+    assert html_join_blocks("block1", None, "block2") == "block1\n\nblock2"
+    assert html_join_blocks("", "block2") == "block2"
+
+
 def test_div_wrapper():
     safe_wrapper = div_wrapper(class_name="foo")
     assert safe_wrapper("<div>text</div>") == '<div class="foo">\n\n<div>text</div>\n\n</div>'
@@ -214,3 +277,11 @@ def test_div_wrapper():
         unsafe_wrapper("<div>text</div>")
         == '<div class="foo">\n\n&lt;div&gt;text&lt;/div&gt;\n\n</div>'
     )
+
+    bool_wrapper = div_wrapper(attrs={"hidden": True})
+    assert bool_wrapper("content") == "<div hidden>\n\ncontent\n\n</div>"
+
+
+def test_span_wrapper():
+    wrapper = span_wrapper(class_name="highlight", attrs={"data-id": "123"})
+    assert wrapper("text") == '<span class="highlight" data-id="123">text</span>'
