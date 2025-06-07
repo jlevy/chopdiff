@@ -6,7 +6,7 @@ from chopdiff.divs.text_node import TextNode
 from chopdiff.docs.sizes import TextUnit
 from chopdiff.docs.text_doc import TextDoc
 from chopdiff.docs.wordtoks import first_wordtok, is_div
-from chopdiff.html.html_in_md import div_wrapper, html_join_blocks
+from chopdiff.html.html_in_md import Attrs, ClassNames, div_wrapper, html_join_blocks
 
 log = logging.getLogger(__name__)
 
@@ -24,11 +24,18 @@ GROUP = "group"
 """Class name for a generic combination of elements."""
 
 
-def div(class_name: str, *blocks: str | None) -> str:
+def div(
+    class_name: ClassNames,
+    *blocks: str | None,
+    attrs: Attrs | None = None,
+    safe: bool = True,
+) -> str:
     """
     Convenience to create Markdown-compatible div with HTML in its own paragraphs.
     """
-    return div_wrapper(class_name=class_name, padding="\n\n")(html_join_blocks(*blocks))
+    return div_wrapper(class_name=class_name, attrs=attrs, safe=safe, padding="\n\n")(
+        html_join_blocks(*blocks)
+    )
 
 
 def div_get_original(element: TextNode, child_name: str = ORIGINAL) -> str:
@@ -42,7 +49,7 @@ def div_get_original(element: TextNode, child_name: str = ORIGINAL) -> str:
 def div_insert_wrapped(
     element: TextNode,
     new_child_blocks: list[str],
-    container_class: str = CHUNK,
+    container_class: ClassNames = CHUNK,
     original_class: str = ORIGINAL,
     at_front: bool = True,
 ) -> str:
@@ -65,7 +72,9 @@ def div_insert_wrapped(
     return div(container_class, html_join_blocks(*blocks))
 
 
-def chunk_text_as_divs(text: str, min_size: int, unit: TextUnit, class_name: str = CHUNK) -> str:
+def chunk_text_as_divs(
+    text: str, min_size: int, unit: TextUnit, class_name: ClassNames = CHUNK
+) -> str:
     """
     Add HTML divs around "chunks" of text paragraphs or top-level divs, where each chunk
     is at least the specified minimum size.
