@@ -1,8 +1,14 @@
 # flake8: noqa: F401
 
 from chopdiff.html.extractor import ContentNotFound, Extractor, Match
-from chopdiff.html.html_find_tags import TagMatch, html_extract_attribute_value, html_find_tag
+from chopdiff.html.html_find_tags import (
+    TagMatch,
+    html_extract_attribute_value,
+    html_find_tag,
+)
 from chopdiff.html.html_in_md import (
+    Attrs,
+    ClassNames,
     Wrapper,
     div_wrapper,
     escape_md_html,
@@ -15,11 +21,18 @@ from chopdiff.html.html_in_md import (
     html_span,
     md_para,
     span_wrapper,
+    tag_with_attrs,
 )
 from chopdiff.html.html_plaintext import html_to_plaintext, plaintext_to_html
-from chopdiff.html.timestamps import TimestampExtractor, extract_timestamp, has_timestamp
+from chopdiff.html.timestamps import (
+    TimestampExtractor,
+    extract_timestamp,
+    has_timestamp,
+)
 
 __all__ = [
+    "Attrs",
+    "ClassNames",
     "ContentNotFound",
     "Extractor",
     "Match",
@@ -38,6 +51,7 @@ __all__ = [
     "html_span",
     "md_para",
     "span_wrapper",
+    "tag_with_attrs",
     "html_to_plaintext",
     "plaintext_to_html",
     "TimestampExtractor",
