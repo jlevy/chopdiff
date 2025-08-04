@@ -39,7 +39,7 @@ classifiers = [
 
 dependencies = [
     "prettyfmt>=0.3.0",
-    "flowmark>=0.3.3",
+    "flowmark>=0.5.3",
     "strif>=2.1.0",
     "funlog>=0.2.1",
     "cydifflib>=1.2.0",

@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from typing import TypeAlias
 
 import regex
-from flowmark.sentence_split_regex import split_sentences_regex
+from flowmark import split_sentences_regex
 from funlog import tally_calls
 from typing_extensions import override
 
