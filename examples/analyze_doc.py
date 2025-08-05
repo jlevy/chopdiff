@@ -137,7 +137,7 @@ def analyze_sections_flat(doc: FlexDoc, words_per_minute: int = 250) -> None:
         title = f"{indent}{section.title}" if section.title else f"{indent}[Untitled]"
 
         # Choose style based on level
-        style = "bold" if section.level == 1 else "normal"
+        style = "bold" if section.level == 1 else None
 
         table.add_row(
             str(section.level),

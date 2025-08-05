@@ -52,12 +52,27 @@ class SectionDoc:
         """Find all Markdown headers in text with their offsets."""
         headers = []
 
+        # Track code blocks to avoid parsing headers inside them
+        code_fence_pattern = re.compile(r"^```", re.MULTILINE)
+
+        # Find all code fence positions
+        code_fences = [(m.start(), m.end()) for m in code_fence_pattern.finditer(text)]
+
         # Regex pattern for Markdown headers
         # Matches 1-6 # symbols at line start, followed by space and text
         header_pattern = re.compile(r"^(#{1,6})\s+(.+?)$", re.MULTILINE)
 
         for match in header_pattern.finditer(text):
             start_offset = match.start()
+
+            # Check if this header is inside a code block
+            # Count how many code fences appear before this position
+            fences_before = sum(1 for fence_start, _ in code_fences if fence_start < start_offset)
+
+            # If odd number of fences, we're inside a code block
+            if fences_before % 2 == 1:
+                continue
+
             end_offset = match.end()
 
             # Find the actual end of line (including newline if present)

@@ -418,6 +418,61 @@ class TestSectionDocOffsets:
         assert sections[0].body_content == "Content here."
 
 
+class TestSectionDocCodeBlocks:
+    """Test handling of code blocks in section parsing."""
+
+    def test_headers_in_code_blocks_ignored(self):
+        """Headers inside code blocks should not be parsed as sections."""
+        text = dedent("""
+            # Real Header
+            
+            Some content.
+            
+            ```python
+            # This is a comment, not a header
+            def foo():
+                pass
+            ```
+            
+            ## Another Real Header
+            
+            ```
+            # Shell comment
+            echo "hello"
+            ```
+            
+            More content.
+            """).strip()
+
+        doc = SectionDoc(text)
+        sections = list(doc.iter_sections())
+
+        # Should only have 2 real headers (root is excluded by default)
+        assert len(sections) == 2
+        assert sections[0].level == 1 and sections[0].title == "Real Header"
+        assert sections[1].level == 2 and sections[1].title == "Another Real Header"
+
+    def test_nested_code_blocks(self):
+        """Test code blocks with nested content."""
+        text = dedent("""
+            # Main Section
+            
+            ```markdown
+            # This is example markdown
+            ## Not a real header
+            ```
+            
+            ## Real Subsection
+            """).strip()
+
+        doc = SectionDoc(text)
+        sections = list(doc.iter_sections())
+
+        assert len(sections) == 2
+        assert sections[0].title == "Main Section"
+        assert sections[1].title == "Real Subsection"
+
+
 class TestSectionDocRepr:
     """Test string representation."""
 
