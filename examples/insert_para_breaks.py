@@ -1,17 +1,19 @@
 #!/usr/bin/env python3
+# /// script
+# requires-python = ">=3.11"
+# dependencies = [
+#     "chopdiff",
+#     "flowmark",
+#     "openai",
+# ]
+# ///
+
 import argparse
 import logging
-import sys
-from pathlib import Path
 from textwrap import dedent
 
-# Add the parent directory to the path to import chopdiff
-sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
-
-# Note: These dependencies need to be installed separately:
-# pip install openai flowmark
-import openai  # pyright: ignore  # Not a project dep.
-from flowmark import fill_text
+import openai  # pyright: ignore[reportMissingImports]
+from flowmark import fill_text  # pyright: ignore[reportMissingImports]
 
 from chopdiff.docs import TextDoc
 from chopdiff.transforms import WINDOW_2K_WORDTOKS, changes_whitespace, filtered_transform

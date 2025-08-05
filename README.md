@@ -221,7 +221,6 @@ the output. See the [examples/](examples/) directory.
 This example demonstrates using an LLM to identify and insert paragraph boundaries in text that lacks proper formatting. The script uses OpenAI's API to mark paragraph break locations, then uses `chopdiff`'s filtering capabilities to transform these markers into actual paragraph breaks.
 
 ```bash
-# Requires: pip install openai flowmark
 $ uv run examples/insert_para_breaks.py examples/gettysberg.txt
 ```
 
