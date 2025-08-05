@@ -1,12 +1,11 @@
-# /// script
-# requires-python = ">=3.13"
-# dependencies = [
-#     "chopdiff",
-#     "flowmark",
-# ]
-# ///
+#!/usr/bin/env python3
 import logging
+import sys
+from pathlib import Path
 from textwrap import dedent
+
+# Add the parent directory to the path to import chopdiff
+sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 from chopdiff.docs import BOF_TOK, EOF_TOK, PARA_BR_TOK, TextDoc, TokenMapping, search_tokens
 from chopdiff.html import ContentNotFound, TimestampExtractor
