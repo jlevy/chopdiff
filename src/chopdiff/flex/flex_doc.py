@@ -98,17 +98,7 @@ class FlexDoc:
         """
         Map a character offset to all coordinate systems.
 
-        Args:
-            offset: Character position in the document
-
-        Returns:
-            Dict with keys:
-            - offset: The input offset
-            - section: SectionNode containing the offset
-            - sentence: SentIndex of sentence containing the offset
-            - paragraph: Paragraph index containing the offset
-            - in_div: Whether offset is inside a div
-            - div_path: List of div class names from root to offset
+        Returns dict with keys: offset, section, sentence, paragraph, in_div, div_path.
         """
         result: dict[str, Any] = {"offset": offset}
 

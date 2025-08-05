@@ -160,12 +160,6 @@ class SectionDoc:
         """
         Navigate to a section by following a path of titles.
 
-        Args:
-            *path_components: Sequence of section titles forming a path
-
-        Returns:
-            The section at the specified path, or None if not found
-
         Example:
             doc.find_section_by_path("Chapter 1", "Introduction", "Background")
         """
@@ -188,18 +182,8 @@ class SectionDoc:
         """
         Generate table of contents for the document.
 
-        Args:
-            max_level: Maximum heading level to include (default: 3)
-            include_path: Whether to include the full path for each entry
-
-        Returns:
-            List of dicts with keys:
-            - level: Section level (1-6)
-            - title: Section title
-            - path: Full path to section (if include_path=True)
-            - offset: Character offset of section start
-            - has_children: Whether section has subsections
-            - size: Size of section in characters
+        Returns list of dicts with keys: level, title, path (if include_path),
+        offset, has_children, size.
         """
         toc = []
 

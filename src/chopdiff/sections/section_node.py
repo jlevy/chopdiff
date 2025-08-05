@@ -131,12 +131,7 @@ class SectionNode:
         return list(reversed(path))
 
     def get_depth(self) -> int:
-        """
-        Get depth of this node in the tree.
-
-        Returns:
-            0 for root, 1 for direct children of root, etc.
-        """
+        """Get depth of this node in the tree (0 for root)."""
         depth = 0
         current = self.parent
         while current:
