@@ -517,6 +517,90 @@ First, we'll talk about variables. Next, let's look at functions. Functions help
 $
 ```
 
+### Document Structure Analysis
+
+The [analyze_doc.py](examples/analyze_doc.py) example shows how to walk through all sections of a document and gather detailed statistics:
+
+```
+$ uv run examples/analyze_doc.py examples/sample_doc.md
+
+📊 Analysis of: sample_doc.md
+
+📄 Document Analysis
+   Total: 355 words • 1.4m read time
+
+└── 📖 [Document Root]
+       39 para • 42 sent • 355 words • 1.4m
+    ├── 📂 Technical Documentation Guide
+    │      36 para • 38 sent • 318 words • 1.3m
+    │   ├── 📂 Getting Started
+    │   │      9 para • 10 sent • 78 words • 18s
+    │   │   ├── 📑 Prerequisites
+    │   │   │      3 para • 3 sent • 33 words • 7s
+    │   │   └── 📑 Installation
+    │   │          4 para • 4 sent • 29 words • 6s
+    │   ├── 📂 Core Concepts
+    │   │      9 para • 9 sent • 78 words • 18s
+    │   │   ├── 📑 Document Structure
+    │   │   │      3 para • 3 sent • 31 words • 7s
+    │   │   └── 📑 Style Guidelines
+    │   │          4 para • 4 sent • 35 words • 8s
+    │   ├── 📂 Advanced Features
+    │   │      8 para • 8 sent • 67 words • 16s
+    │   │   ├── 📑 Templates
+    │   │   │      3 para • 3 sent • 28 words • 6s
+    │   │   └── 📑 Automation
+    │   │          3 para • 3 sent • 28 words • 6s
+    │   └── 📂 Best Practices
+    │          8 para • 8 sent • 72 words • 17s
+    │       ├── 📑 Review Process
+    │       │      3 para • 3 sent • 29 words • 6s
+    │       └── 📑 Maintenance
+    │              3 para • 3 sent • 33 words • 7s
+    └── 📑 Conclusion
+           3 para • 4 sent • 37 words • 8s
+```
+
+The analyzer also supports a flat table format:
+
+```
+$ uv run examples/analyze_doc.py examples/sample_doc.md --flat
+
+📊 Analysis of: sample_doc.md
+
+Level  Title                                    Paragraphs  Sentences    Words  Read Time
+----------------------------------------------------------------------------------------------
+1      Technical Documentation Guide                    36         38      318       1.3m
+2        Getting Started                                 9         10       78        18s
+3          Prerequisites                                 3          3       33         7s
+3          Installation                                  4          4       29         6s
+2        Core Concepts                                   9          9       78        18s
+3          Document Structure                            3          3       31         7s
+3          Style Guidelines                              4          4       35         8s
+2        Advanced Features                               8          8       67        16s
+3          Templates                                     3          3       28         6s
+3          Automation                                    3          3       28         6s
+2        Best Practices                                  8          8       72        17s
+3          Review Process                                3          3       29         6s
+3          Maintenance                                   3          3       33         7s
+1      Conclusion                                        3          4       37         8s
+----------------------------------------------------------------------------------------------
+TOTAL                                                   99        103      896       3.6m
+```
+
+Key features:
+- Hierarchical tree view of document structure
+- Per-section statistics (paragraphs, sentences, words)
+- Estimated reading time based on configurable words-per-minute
+- Support for both tree and flat table output formats
+- Can read from files or stdin
+
+This demonstrates using FlexDoc to:
+- Navigate the section hierarchy with `section_doc.iter_sections()`
+- Get per-section TextDoc instances with `get_section_text_doc()`
+- Calculate detailed statistics using `TextDoc.size()` with different units
+- Access section relationships (parent, children, siblings)
+
 ### Section Navigation
 
 Here's an example of using SectionDoc to navigate a Markdown document by its section
