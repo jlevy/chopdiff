@@ -149,6 +149,7 @@ include = ["src", "tests", "devtools"]
 # First, these turn off warnings about (yes) how you ignore warnings:
 reportIgnoreCommentWithoutRule = false
 reportUnnecessaryTypeIgnoreComment = false
+reportImplicitOverride = false
 # A few typically noisy warnings are next.
 # How many you enable is up to you. The first few are off by default, but you can
 # comment/uncomment these as desired:

@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 from threading import RLock
-from typing import Any, override
+from typing import Any
 
 from chopdiff.divs.parse_divs import parse_divs
 from chopdiff.divs.text_node import TextNode
@@ -322,7 +322,6 @@ class FlexDoc:
 
         return stats
 
-    @override
     def __repr__(self) -> str:
         """String representation for debugging."""
         size = len(self.original_text)

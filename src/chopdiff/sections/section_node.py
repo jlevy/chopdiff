@@ -6,7 +6,6 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 from dataclasses import dataclass, field
-from typing import override
 
 
 @dataclass
@@ -194,7 +193,6 @@ class SectionNode:
             pass
         return None
 
-    @override
     def __repr__(self) -> str:
         """String representation for debugging."""
         title_str = f'"{self.title}"' if self.title else "None"
