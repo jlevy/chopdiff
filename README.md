@@ -125,12 +125,61 @@ More on what's here:
   overlapping windows), then re-stitching the results back together with best
   alignments.
 
+- **Section-based document parsing** with [`SectionDoc`](src/chopdiff/sections/section_doc.py)
+  that creates a hierarchical tree structure of Markdown sections. Each section node
+  contains the header and all content until the next section at the same or higher level,
+  allowing easy iteration over document structure at any heading level.
+
+- **Unified document interface** through [`FlexDoc`](src/chopdiff/flex/flex_doc.py) that
+  provides lazy, thread-safe access to all three document views (tokens, divs, sections).
+  This allows you to parse once and work with the document through whichever lens is most
+  appropriate for your task, with automatic cross-view navigation.
+
 All this is done very simply in memory, and with only regex or basic Markdown parsing to
 keep things simple and with few dependencies.
 
 `chopdiff` has no heavier dependencies like full XML or BeautifulSoup parsing or Spacy
 or nltk for sentence splitting (though you can use these as custom sentence parsers if
 you like).
+
+## Document Views
+
+`chopdiff` provides three complementary ways to view and process documents:
+
+1. **Token View (`TextDoc`)**: Parse documents into tokens, sentences, and paragraphs.
+   Best for word-level operations, diffs, and transformations.
+
+2. **Div View (`TextNode`)**: Parse documents by HTML `<div>` structure for chunking.
+   Best for documents with explicit structural divisions.
+
+3. **Section View (`SectionDoc`)**: Parse Markdown documents into a hierarchical tree of
+   sections based on headers. Best for navigating document structure and extracting
+   content by heading.
+
+The **`FlexDoc`** class provides unified access to all three views with lazy loading and
+thread safety:
+
+```python
+from chopdiff import FlexDoc
+
+# Create a FlexDoc from markdown text
+doc = FlexDoc(markdown_text)
+
+# Access any view as needed - parsing happens on first access
+tokens = doc.text_doc.tokens()  # Token view
+sections = doc.section_doc.root_section.children  # Section view
+divs = doc.text_node.children if doc.text_node.is_container() else []  # Div view
+
+# Navigate between views
+section = doc.find_section_at_offset(100)  # Find section containing character offset
+token_idx = doc.find_token_at_offset(100)  # Find token at character offset
+
+# Section-aware chunking
+chunks = doc.chunk_by_sections(
+    max_chunk_size=2000,  # Max characters per chunk
+    respect_levels={1, 2}  # Keep h1 and h2 sections intact
+)
+```
 
 ## Examples
 
@@ -436,6 +485,85 @@ Welcome to this video about Python programming. <span class="timestamp">⏱️00
 
 First, we'll talk about variables. Next, let's look at functions. Functions help us organize and reuse code. <span class="timestamp">⏱️00:15</span> 
 $
+```
+
+### Section Navigation
+
+Here's an example of using SectionDoc to navigate a Markdown document by its section
+structure:
+
+```python
+from chopdiff import SectionDoc
+
+# Parse a markdown document
+text = """
+# Introduction
+
+Welcome to our guide.
+
+## Getting Started
+
+Here's how to begin.
+
+### Installation
+
+First, install the package.
+
+## Advanced Topics
+
+Let's dive deeper.
+
+# Conclusion
+
+Thanks for reading!
+"""
+
+# Create a SectionDoc
+doc = SectionDoc(text)
+
+# Iterate over all sections
+for section in doc.all_sections():
+    print(f"Level {section.level}: {section.title}")
+    
+# Get sections at a specific level
+h2_sections = doc.sections_at_level(2)
+for section in h2_sections:
+    print(f"## {section.title}")
+    print(section.body_content[:50] + "...")
+    
+# Find a section by title
+getting_started = doc.find_section_by_title("Getting Started")
+if getting_started:
+    # Navigate the hierarchy
+    print(f"Parent: {getting_started.parent.title}")
+    print(f"Children: {[child.title for child in getting_started.children]}")
+```
+
+### Cross-View Navigation with FlexDoc
+
+FlexDoc enables working with the same document through different lenses:
+
+```python
+from chopdiff import FlexDoc
+
+# Create a FlexDoc
+doc = FlexDoc(markdown_text)
+
+# Find which section contains a specific token
+token_idx = 42  # Some token of interest
+section = doc.find_section_containing_token(token_idx)
+print(f"Token {token_idx} is in section: {section.title}")
+
+# Get all tokens within a section
+section = doc.section_doc.find_section_by_title("Introduction")
+start_token, end_token = doc.section_to_token_range(section)
+tokens = doc.text_doc.tokens()[start_token:end_token]
+
+# Smart chunking that respects section boundaries
+chunks = doc.chunk_by_sections(max_chunk_size=1000, respect_levels={1, 2})
+for i, chunk in enumerate(chunks):
+    print(f"Chunk {i}: {chunk.start_offset}-{chunk.end_offset}")
+    print(f"Sections: {[s.title for s in chunk.sections]}")
 ```
 
 * * *
