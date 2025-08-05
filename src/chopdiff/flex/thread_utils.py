@@ -15,12 +15,6 @@ def synchronized(lock_attr: str = "_lock") -> Callable[[T], T]:
     and releases it afterwards. The lock must be an attribute of the
     instance (default name: '_lock').
 
-    Args:
-        lock_attr: Name of the lock attribute on the instance
-
-    Returns:
-        Decorator function
-
     Example:
         ```python
         class ThreadSafeClass:

@@ -8,6 +8,8 @@ from collections.abc import Iterator
 from threading import RLock
 from typing import Any
 
+from typing_extensions import override
+
 from chopdiff.divs.parse_divs import parse_divs
 from chopdiff.divs.text_node import TextNode
 from chopdiff.docs.sizes import TextUnit
@@ -31,13 +33,7 @@ class FlexDoc:
     """
 
     def __init__(self, text: str, sentence_splitter: Splitter = default_sentence_splitter):
-        """
-        Initialize FlexDoc with document text.
-
-        Args:
-            text: The document text
-            sentence_splitter: Function to split text into sentences (for TextDoc)
-        """
+        """Initialize FlexDoc with document text."""
         self.original_text = text
         self.sentence_splitter = sentence_splitter
         self._lock = RLock()
@@ -50,12 +46,7 @@ class FlexDoc:
     @property
     @synchronized()
     def text_doc(self) -> TextDoc:
-        """
-        Get token-based view of the document (lazy loaded).
-
-        Returns:
-            TextDoc instance for token/sentence/paragraph operations
-        """
+        """Get token-based view of the document (lazy loaded)."""
         if self._text_doc is None:
             self._text_doc = TextDoc.from_text(
                 self.original_text, sentence_splitter=self.sentence_splitter
@@ -65,12 +56,7 @@ class FlexDoc:
     @property
     @synchronized()
     def text_node(self) -> TextNode:
-        """
-        Get div-based view of the document (lazy loaded).
-
-        Returns:
-            TextNode tree representing HTML div structure
-        """
+        """Get div-based view of the document (lazy loaded)."""
         if self._text_node is None:
             self._text_node = parse_divs(self.original_text, skip_whitespace=True)
         return self._text_node
@@ -78,42 +64,21 @@ class FlexDoc:
     @property
     @synchronized()
     def section_doc(self) -> SectionDoc:
-        """
-        Get section-based view of the document (lazy loaded).
-
-        Returns:
-            SectionDoc instance for hierarchical section navigation
-        """
+        """Get section-based view of the document (lazy loaded)."""
         if self._section_doc is None:
             self._section_doc = SectionDoc(self.original_text)
         return self._section_doc
 
     @synchronized()
     def get_section_tokens(self, section: SectionNode) -> list[str]:
-        """
-        Get word tokens for a specific section.
-
-        Args:
-            section: Section to extract tokens from
-
-        Returns:
-            List of word tokens in the section
-        """
+        """Get word tokens for a specific section."""
         section_text = section.full_content
         section_doc = TextDoc.from_text(section_text, self.sentence_splitter)
         return list(section_doc.as_wordtoks())
 
     @synchronized()
     def get_section_text_doc(self, section: SectionNode) -> TextDoc:
-        """
-        Get a TextDoc instance for a specific section.
-
-        Args:
-            section: Section to create TextDoc from
-
-        Returns:
-            TextDoc instance for the section content
-        """
+        """Get a TextDoc instance for a specific section."""
         section_text = section.full_content
         return TextDoc.from_text(section_text, self.sentence_splitter)
 
@@ -199,13 +164,7 @@ class FlexDoc:
         """
         Chunk document into parts respecting section boundaries.
 
-        Args:
-            target_size: Target size for each chunk
-            unit: Unit for measuring size
-            respect_levels: Section levels that force chunk boundaries (default: [1, 2])
-
-        Returns:
-            List of text chunks
+        Section levels in `respect_levels` force chunk boundaries (default: [1, 2]).
         """
         if respect_levels is None:
             respect_levels = [1, 2]
@@ -272,24 +231,14 @@ class FlexDoc:
 
     @synchronized()
     def iter_sections_with_tokens(self) -> Iterator[tuple[SectionNode, list[str]]]:
-        """
-        Iterate sections with their token representation.
-
-        Yields:
-            Tuples of (section, tokens) for each section
-        """
+        """Iterate sections with their token representation."""
         for section in self.section_doc.iter_sections():
             tokens = self.get_section_tokens(section)
             yield section, tokens
 
     @synchronized()
     def get_stats(self) -> dict[str, Any]:
-        """
-        Get comprehensive statistics about the document.
-
-        Returns:
-            Dict with statistics from all three views
-        """
+        """Get comprehensive statistics about the document from all three views."""
         # Check if document has actual HTML divs (not just text content)
         has_actual_divs = any(child.tag_name == "div" for child in self.text_node.children)
 
@@ -322,7 +271,8 @@ class FlexDoc:
 
         return stats
 
-    def __repr__(self) -> str:  # pyright: ignore[reportImplicitOverride]
+    @override
+    def __repr__(self) -> str:
         """String representation for debugging."""
         size = len(self.original_text)
         loaded: list[str] = []

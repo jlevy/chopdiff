@@ -7,6 +7,8 @@ from __future__ import annotations
 from collections.abc import Iterator
 from dataclasses import dataclass, field
 
+from typing_extensions import override
+
 
 @dataclass
 class SectionNode:
@@ -88,31 +90,14 @@ class SectionNode:
         return self._original_text[self.start_offset : self.header_end_offset].strip()
 
     def iter_descendants(self, include_self: bool = True) -> Iterator[SectionNode]:
-        """
-        Iterate over all descendants in depth-first order.
-
-        Args:
-            include_self: Whether to include this node in the iteration
-
-        Yields:
-            SectionNode objects in depth-first order
-        """
+        """Iterate over all descendants in depth-first order."""
         if include_self:
             yield self
         for child in self.children:
             yield from child.iter_descendants(include_self=True)
 
     def find_section_by_title(self, title: str, recursive: bool = True) -> SectionNode | None:
-        """
-        Find first descendant section with matching title.
-
-        Args:
-            title: Title to search for (case-sensitive)
-            recursive: Whether to search in all descendants or just direct children
-
-        Returns:
-            First matching section or None if not found
-        """
+        """Find first descendant section with matching title (case-sensitive)."""
         if recursive:
             for section in self.iter_descendants(include_self=True):
                 if section.title == title:
@@ -126,12 +111,7 @@ class SectionNode:
         return None
 
     def get_path(self) -> list[str]:
-        """
-        Get path from root to this section as list of titles.
-
-        Returns:
-            List of titles from root to this section (excluding root)
-        """
+        """Get path from root to this section as list of titles (excluding root)."""
         path: list[str] = []
         current = self
         while current and current.title is not None:
@@ -193,7 +173,8 @@ class SectionNode:
             pass
         return None
 
-    def __repr__(self) -> str:  # pyright: ignore[reportImplicitOverride]
+    @override
+    def __repr__(self) -> str:
         """String representation for debugging."""
         title_str = f'"{self.title}"' if self.title else "None"
         return (

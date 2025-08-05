@@ -8,6 +8,8 @@ import re
 from collections.abc import Iterator
 from typing import Any
 
+from typing_extensions import override
+
 from chopdiff.docs.sizes import TextUnit
 from chopdiff.sections.section_node import SectionNode
 
@@ -21,12 +23,7 @@ class SectionDoc:
     """
 
     def __init__(self, text: str):
-        """
-        Parse a document into a section tree.
-
-        Args:
-            text: The document text to parse
-        """
+        """Parse a document into a section tree."""
         self.original_text = text
         self.root = self._parse_sections(text)
         self.root.set_original_text(text)
@@ -40,12 +37,7 @@ class SectionDoc:
         return self._build_section_tree(headers, text)
 
     def _find_headers_with_offsets(self, text: str) -> list[tuple[int, int, int, str]]:
-        """
-        Find all Markdown headers in text with their offsets.
-
-        Returns:
-            List of tuples: (start_offset, end_offset, level, title)
-        """
+        """Find all Markdown headers in text with their offsets."""
         headers = []
 
         # Regex pattern for Markdown headers
@@ -74,16 +66,7 @@ class SectionDoc:
     def _build_section_tree(
         self, headers: list[tuple[int, int, int, str]], text: str
     ) -> SectionNode:
-        """
-        Build hierarchical section tree from headers.
-
-        Args:
-            headers: List of (start_offset, end_offset, level, title) tuples
-            text: Original document text
-
-        Returns:
-            Root SectionNode containing the document tree
-        """
+        """Build hierarchical section tree from headers."""
         # Create root section
         root = SectionNode(
             level=0, title=None, start_offset=0, end_offset=len(text), header_end_offset=0
@@ -136,42 +119,17 @@ class SectionDoc:
     def iter_sections(
         self, min_level: int = 1, max_level: int | None = None
     ) -> Iterator[SectionNode]:
-        """
-        Iterate sections within specified level range.
-
-        Args:
-            min_level: Minimum section level to include (default: 1)
-            max_level: Maximum section level to include (default: None = no limit)
-
-        Yields:
-            SectionNode objects matching the level criteria
-        """
+        """Iterate sections within specified level range."""
         for section in self.root.iter_descendants(include_self=False):
             if section.level >= min_level and (max_level is None or section.level <= max_level):
                 yield section
 
     def get_sections_at_level(self, level: int) -> list[SectionNode]:
-        """
-        Get all sections at a specific level.
-
-        Args:
-            level: The section level (1-6)
-
-        Returns:
-            List of sections at the specified level
-        """
+        """Get all sections at a specific level (1-6)."""
         return list(self.iter_sections(min_level=level, max_level=level))
 
     def get_section_at_offset(self, offset: int) -> SectionNode:
-        """
-        Find the deepest section containing the given character offset.
-
-        Args:
-            offset: Character position in the document
-
-        Returns:
-            The most specific section containing the offset, or root if offset is invalid
-        """
+        """Find the deepest section containing the given character offset."""
 
         def _find_deepest(node: SectionNode) -> SectionNode | None:
             if not (node.start_offset <= offset < node.end_offset):
@@ -255,15 +213,6 @@ class SectionDoc:
 
         Note: Currently only supports character count. For other units,
         use FlexDoc which integrates with TextDoc.
-
-        Args:
-            unit: Unit of measurement (only TextUnit.chars supported)
-
-        Returns:
-            Size in specified units
-
-        Raises:
-            NotImplementedError: If unit other than chars is requested
         """
         if unit == TextUnit.chars:
             return len(self.original_text)
@@ -276,12 +225,7 @@ class SectionDoc:
         """
         Get statistics about the document structure.
 
-        Returns:
-            Dict with keys:
-            - total_sections: Total number of sections
-            - max_depth: Maximum section nesting depth
-            - sections_by_level: Dict mapping level to count
-            - avg_section_size: Average section size in characters
+        Returns dict with keys: total_sections, max_depth, sections_by_level, avg_section_size.
         """
         sections = list(self.iter_sections())
 
@@ -310,7 +254,8 @@ class SectionDoc:
             "avg_section_size": total_size // len(sections) if sections else 0,
         }
 
-    def __repr__(self) -> str:  # pyright: ignore[reportImplicitOverride]
+    @override
+    def __repr__(self) -> str:
         """String representation for debugging."""
         stats = self.get_stats()
         return (
