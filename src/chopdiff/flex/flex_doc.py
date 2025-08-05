@@ -322,7 +322,7 @@ class FlexDoc:
 
         return stats
 
-    def __repr__(self) -> str:
+    def __repr__(self) -> str:  # pyright: ignore[reportImplicitOverride]
         """String representation for debugging."""
         size = len(self.original_text)
         loaded: list[str] = []

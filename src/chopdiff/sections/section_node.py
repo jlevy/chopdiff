@@ -193,7 +193,7 @@ class SectionNode:
             pass
         return None
 
-    def __repr__(self) -> str:
+    def __repr__(self) -> str:  # pyright: ignore[reportImplicitOverride]
         """String representation for debugging."""
         title_str = f'"{self.title}"' if self.title else "None"
         return (

@@ -310,7 +310,7 @@ class SectionDoc:
             "avg_section_size": total_size // len(sections) if sections else 0,
         }
 
-    def __repr__(self) -> str:
+    def __repr__(self) -> str:  # pyright: ignore[reportImplicitOverride]
         """String representation for debugging."""
         stats = self.get_stats()
         return (
