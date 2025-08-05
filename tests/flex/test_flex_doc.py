@@ -3,6 +3,7 @@
 import threading
 from concurrent.futures import ThreadPoolExecutor
 from textwrap import dedent
+from typing import Any
 
 from chopdiff.docs.sizes import TextUnit
 from chopdiff.flex.flex_doc import FlexDoc
@@ -265,8 +266,8 @@ class TestFlexDocThreadSafety:
         """).strip()
 
         doc = FlexDoc(text)
-        results = {}
-        errors = []
+        results: dict[str, Any] = {}
+        errors: list[str] = []
 
         def access_text_doc():
             try:
@@ -337,7 +338,7 @@ class TestFlexDocThreadSafety:
         doc = FlexDoc(text)
 
         # Access from multiple threads
-        results = []
+        results: list[Any] = []
 
         def access_text_doc():
             td = doc.text_doc

@@ -1,6 +1,7 @@
 """Tests for thread safety utilities."""
 
 import time
+from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from threading import RLock
 
@@ -44,14 +45,14 @@ class TestSynchronizedDecorator:
         class SafeBox:
             def __init__(self):
                 self.my_special_lock = RLock()
-                self.items = []
+                self.items: list[int] = []
 
             @synchronized(lock_attr="my_special_lock")
-            def add_item(self, item):
+            def add_item(self, item: int) -> None:
                 self.items.append(item)
 
             @synchronized(lock_attr="my_special_lock")
-            def get_items(self):
+            def get_items(self) -> list[int]:
                 return list(self.items)
 
         box = SafeBox()
@@ -185,24 +186,24 @@ class TestSynchronizedDecorator:
         class SharedResource:
             def __init__(self):
                 self._lock = RLock()
-                self.data = {}
+                self.data: dict[str, int] = {}
                 self.read_count = 0
                 self.write_count = 0
 
             @synchronized()
-            def write(self, key, value):
+            def write(self, key: str, value: int) -> None:
                 self.write_count += 1
                 time.sleep(0.001)  # Simulate work
                 self.data[key] = value
 
             @synchronized()
-            def read(self, key):
+            def read(self, key: str) -> int | None:
                 self.read_count += 1
                 time.sleep(0.001)  # Simulate work
                 return self.data.get(key)
 
             @synchronized()
-            def read_write(self, key, transform):
+            def read_write(self, key: str, transform: Callable[[int | None], int]) -> int:
                 old_value = self.read(key)
                 new_value = transform(old_value)
                 self.write(key, new_value)
@@ -210,7 +211,7 @@ class TestSynchronizedDecorator:
 
         resource = SharedResource()
 
-        def worker(worker_id):
+        def worker(worker_id: int) -> None:
             # Each worker does some reads and writes
             for i in range(5):
                 resource.write(f"worker_{worker_id}_item_{i}", i)

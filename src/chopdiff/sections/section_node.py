@@ -6,6 +6,7 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 from dataclasses import dataclass, field
+from typing import override
 
 
 @dataclass
@@ -132,7 +133,7 @@ class SectionNode:
         Returns:
             List of titles from root to this section (excluding root)
         """
-        path = []
+        path: list[str] = []
         current = self
         while current and current.title is not None:
             path.append(current.title)
@@ -193,6 +194,7 @@ class SectionNode:
             pass
         return None
 
+    @override
     def __repr__(self) -> str:
         """String representation for debugging."""
         title_str = f'"{self.title}"' if self.title else "None"

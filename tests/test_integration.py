@@ -85,7 +85,7 @@ class TestFlexDocIntegration:
     def test_performance_with_large_document(self):
         """Test that lazy loading works efficiently with large documents."""
         # Create a large document
-        sections = []
+        sections: list[str] = []
         for i in range(50):
             sections.append(f"# Section {i}\n\nContent for section {i}.")
 
@@ -98,8 +98,8 @@ class TestFlexDocIntegration:
         assert doc._text_node is None
 
         # Access only section view
-        sections = list(doc.section_doc.iter_sections(max_level=1))
-        assert len(sections) == 50
+        section_nodes = list(doc.section_doc.iter_sections(max_level=1))
+        assert len(section_nodes) == 50
 
         # Other views should still not be loaded
         assert doc._text_doc is None

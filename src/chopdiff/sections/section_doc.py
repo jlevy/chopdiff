@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import re
 from collections.abc import Iterator
-from typing import Any
+from typing import Any, override
 
 from chopdiff.docs.sizes import TextUnit
 from chopdiff.sections.section_node import SectionNode
@@ -293,7 +293,7 @@ class SectionDoc:
                 "avg_section_size": 0,
             }
 
-        sections_by_level = {}
+        sections_by_level: dict[int, int] = {}
         total_size = 0
         max_depth = 0
 
@@ -310,6 +310,7 @@ class SectionDoc:
             "avg_section_size": total_size // len(sections) if sections else 0,
         }
 
+    @override
     def __repr__(self) -> str:
         """String representation for debugging."""
         stats = self.get_stats()

@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 from threading import RLock
-from typing import Any
+from typing import Any, override
 
 from chopdiff.divs.parse_divs import parse_divs
 from chopdiff.divs.text_node import TextNode
@@ -168,7 +168,8 @@ class FlexDoc:
 
         # Find div information
         result["in_div"] = False
-        result["div_path"] = []
+        div_path: list[str] = []
+        result["div_path"] = div_path
 
         def find_div_at_offset(node: TextNode, path: list[str]) -> bool:
             if node.offset <= offset < node.end_offset:
@@ -184,7 +185,7 @@ class FlexDoc:
                 return True
             return False
 
-        find_div_at_offset(self.text_node, result["div_path"])
+        find_div_at_offset(self.text_node, div_path)
 
         return result
 
@@ -209,8 +210,8 @@ class FlexDoc:
         if respect_levels is None:
             respect_levels = [1, 2]
 
-        chunks = []
-        current_sections = []
+        chunks: list[str] = []
+        current_sections: list[SectionNode] = []
         current_size = 0
 
         # Only iterate top-level sections to avoid duplicates
@@ -262,7 +263,7 @@ class FlexDoc:
         sorted_sections = sorted(sections, key=lambda s: s.start_offset)
 
         # Get text for each section
-        parts = []
+        parts: list[str] = []
         for section in sorted_sections:
             parts.append(section.full_content)
 
@@ -321,10 +322,11 @@ class FlexDoc:
 
         return stats
 
+    @override
     def __repr__(self) -> str:
         """String representation for debugging."""
         size = len(self.original_text)
-        loaded = []
+        loaded: list[str] = []
         if self._text_doc is not None:
             loaded.append("TextDoc")
         if self._text_node is not None:
