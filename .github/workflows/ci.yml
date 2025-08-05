@@ -46,7 +46,7 @@ jobs:
         uses: astral-sh/setup-uv@v5
         with:
           # Update this as needed:
-          version: "0.7.11"
+          version: "0.8.4"
           enable-cache: true
           python-version: ${{ matrix.python-version }}
 
@@ -60,7 +60,7 @@ jobs:
       #     python-version: ${{ matrix.python-version }}
 
       - name: Install all dependencies
-        run: uv sync --all-extras --dev
+        run: uv sync --all-extras
 
       - name: Run linting
         run: uv run python devtools/lint.py

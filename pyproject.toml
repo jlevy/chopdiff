@@ -59,7 +59,7 @@ dev = [
     "ruff>=0.11.9",
     "codespell>=2.4.1",
     "rich>=14.0.0",
-    "basedpyright>=1.29.1",
+    "basedpyright==1.29.5",  # TODO: Upgrade when Cursor supports it.
     "funlog>=0.2.1",
 ]
 
