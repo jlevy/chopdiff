@@ -166,19 +166,49 @@ from chopdiff import FlexDoc
 doc = FlexDoc(markdown_text)
 
 # Access any view as needed - parsing happens on first access
-tokens = doc.text_doc.tokens()  # Token view
-sections = doc.section_doc.root_section.children  # Section view
-divs = doc.text_node.children if doc.text_node.is_container() else []  # Div view
+paras = doc.text_doc.paragraphs  # Token view - paragraphs
+sections = list(doc.section_doc.iter_sections())  # Section view - all sections
+has_divs = any(child.tag_name == "div" for child in doc.text_node.children)  # Div view
 
-# Navigate between views
-section = doc.find_section_at_offset(100)  # Find section containing character offset
-token_idx = doc.find_token_at_offset(100)  # Find token at character offset
+# Navigate between views using character offsets
+coords = doc.offset_to_coordinates(100)  # Get all coordinate systems at offset 100
+section = coords["section"]  # SectionNode containing the offset
+paragraph_idx = coords["paragraph"]  # Paragraph index
+sentence = coords["sentence"]  # SentIndex (paragraph, sentence) tuple
+
+# Get tokens for a specific section
+section = doc.section_doc.get_section_at_offset(100)
+tokens = doc.get_section_tokens(section)
 
 # Section-aware chunking
+from chopdiff import TextUnit
 chunks = doc.chunk_by_sections(
-    max_chunk_size=2000,  # Max characters per chunk
-    respect_levels={1, 2}  # Keep h1 and h2 sections intact
+    target_size=2000,  # Target size for each chunk
+    unit=TextUnit.words,  # Unit for measuring size (words, chars, etc.)
+    respect_levels=[1, 2]  # Keep h1 and h2 sections intact
 )
+```
+
+### Thread Safety with FlexDoc
+
+FlexDoc is thread-safe and all views are lazily loaded:
+
+```python
+from concurrent.futures import ThreadPoolExecutor
+from chopdiff import FlexDoc
+
+doc = FlexDoc(large_document)
+
+# Views are loaded only when accessed
+def process_section(section):
+    # This is thread-safe - each thread can access views
+    tokens = doc.get_section_tokens(section)
+    return len(tokens)
+
+# Process sections in parallel
+with ThreadPoolExecutor(max_workers=4) as executor:
+    sections = list(doc.section_doc.iter_sections())
+    token_counts = list(executor.map(process_section, sections))
 ```
 
 ## Examples
@@ -522,21 +552,26 @@ Thanks for reading!
 doc = SectionDoc(text)
 
 # Iterate over all sections
-for section in doc.all_sections():
+for section in doc.iter_sections():
     print(f"Level {section.level}: {section.title}")
     
 # Get sections at a specific level
-h2_sections = doc.sections_at_level(2)
+h2_sections = doc.get_sections_at_level(2)
 for section in h2_sections:
     print(f"## {section.title}")
     print(section.body_content[:50] + "...")
     
 # Find a section by title
-getting_started = doc.find_section_by_title("Getting Started")
-if getting_started:
-    # Navigate the hierarchy
-    print(f"Parent: {getting_started.parent.title}")
-    print(f"Children: {[child.title for child in getting_started.children]}")
+for section in doc.iter_sections():
+    if section.title == "Getting Started":
+        # Navigate the hierarchy
+        print(f"Parent: {section.parent.title if section.parent else 'None'}")
+        print(f"Children: {[child.title for child in section.children]}")
+        print(f"Path: {section.get_path()}")
+        break
+
+# Or find by path components
+intro_section = doc.find_section_by_path("Chapter 1", "Introduction")
 ```
 
 ### Cross-View Navigation with FlexDoc

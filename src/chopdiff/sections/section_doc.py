@@ -20,6 +20,18 @@ class SectionDoc:
 
     Each section contains its header and all content until the next header
     of equal or higher level, including any subsections.
+
+    Key properties:
+    - `original_text`: The original document text
+    - `root`: Root SectionNode of the section tree
+
+    Key methods:
+    - `iter_sections()`: Iterate sections within level range
+    - `get_sections_at_level()`: Get all sections at specific level
+    - `get_section_at_offset()`: Find section containing character offset
+    - `find_section_by_path()`: Navigate by path of titles
+    - `get_toc()`: Generate table of contents
+    - `get_stats()`: Get document structure statistics
     """
 
     def __init__(self, text: str):

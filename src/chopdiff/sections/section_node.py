@@ -19,6 +19,17 @@ class SectionNode:
     - The header line itself
     - All content until the next header of equal or higher level
     - All subsections (headers of lower level)
+
+    Key properties:
+    - `body_content`: Content without the header line or subsections
+    - `full_content`: Complete content including header and subsections
+    - `header_text`: Just the header line text
+
+    Key methods:
+    - `iter_descendants()`: Iterate over all descendant sections
+    - `find_section_by_title()`: Find descendant by title
+    - `get_path()`: Get path from root as list of titles
+    - `get_siblings()`: Get list of sibling sections
     """
 
     # Section metadata

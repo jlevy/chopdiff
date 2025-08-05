@@ -30,6 +30,17 @@ class FlexDoc:
 
     All views are lazily loaded on first access and cached for efficiency.
     Thread safety is ensured through synchronized property access.
+
+    Key properties (lazy loaded):
+    - `text_doc`: Token-based view
+    - `text_node`: Div-based view
+    - `section_doc`: Section-based view
+
+    Key methods:
+    - `get_section_tokens()`: Get tokens for a specific section
+    - `offset_to_coordinates()`: Map offset to all coordinate systems
+    - `chunk_by_sections()`: Smart chunking respecting section boundaries
+    - `get_stats()`: Comprehensive document statistics
     """
 
     def __init__(self, text: str, sentence_splitter: Splitter = default_sentence_splitter):
