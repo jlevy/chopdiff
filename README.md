@@ -1,18 +1,18 @@
 # chopdiff
 
-`chopdiff` is a small library of tools I've developed to make it easier to do fairly
+`chopdiff` is a small library of tools I’ve developed to make it easier to do fairly
 complex transformations of text documents, especially for LLM applications, where you
 want to manipulate text, Markdown, and HTML documents in a clean way.
 
 Basically, it lets you parse, diff, and transform text at the level of words, sentences,
-paragraphs, and "chunks" (paragraphs grouped in an HTML tag like a `<div>`). It aims to
+paragraphs, and “chunks” (paragraphs grouped in an HTML tag like a `<div>`). It aims to
 have minimal dependencies.
 
 Example use cases:
 
 - **Filter diffs:** Diff two documents and only accept changes that fit a specific
   filter. For example, you can ask an LLM to edit a transcript, only inserting paragraph
-  breaks but enforcing that the LLM can't do anything except insert whitespace.
+  breaks but enforcing that the LLM can’t do anything except insert whitespace.
   Or let it only edit punctuation, whitespace, and lemma variants of words.
   Or only change one word at a time (e.g. for spell checking).
 
@@ -22,12 +22,12 @@ Example use cases:
   You can then backfill timestamps of each paragraph into the edited text.
 
 - **Windowed transforms:** Walk through a large document N paragraphs, N sentences, or N
-  tokens at a time, processing the results with an LLM call, then "stitching together"
+  tokens at a time, processing the results with an LLM call, then “stitching together”
   the results, even if the chunks overlap.
 
 ## Installation
 
-Drop the `extras` if you don't want the dependency on `simplemma` (it's about 70MB).
+Drop the `extras` if you don’t want the dependency on `simplemma` (it’s about 70MB).
 
 Full deps:
 
@@ -62,7 +62,7 @@ On the other end of the spectrum, there are NLP libraries (like
 parsing and sentence segmentation.
 
 This is a lightweight alternative to those approaches when you are just focusing on
-processing text, don't want a big dependency (like a full XML parser or NLP toolkit) and
+processing text, don’t want a big dependency (like a full XML parser or NLP toolkit) and
 also want full control over the original source format (since the original text is
 exactly preserved, even whitespace—every sentence, paragraph, and token is mapped back
 to the original text).
@@ -74,14 +74,14 @@ chopdiff.
 
 ## Overview
 
-More on what's here:
+More on what’s here:
 
 - The [`TextDoc`](src/chopdiff/docs/text_doc.py) class allows parsing of documents into
   sentences and paragraphs.
   By default, this uses only regex heuristics for speed and simplicity, but optionally
   you can use a sentence splitter of your choice, like Spacy.
 
-- Tokenization using ["wordtoks"](src/chopdiff/docs/wordtoks.py) that lets you measure
+- Tokenization using [“wordtoks”](src/chopdiff/docs/wordtoks.py) that lets you measure
   size and extract subdocs via arbitrary units of paragraphs, sentences, words, chars,
   or tokens, with mappings between each, e.g. mapping sentence 3 of paragraph 2 to its
   corresponding character or token offset.
@@ -89,12 +89,12 @@ More on what's here:
   breaks) and HTML tags as single tokens.
   It also maintains exact offsets of each token in the original document text.
 
-- [Word-level diffs](src/chopdiff/docs/token_diffs.py) that don't work at the line level
+- [Word-level diffs](src/chopdiff/docs/token_diffs.py) that don’t work at the line level
   (like usual git-style diffs) but rather treat whitespace, sentence, and paragraph
   breaks as indidivdual tokens.
   It performs LCS-style token-based diffs with
   [cydifflib](https://github.com/rapidfuzz/cydifflib), which is significantly faster
-  than Python's built-in [difflib](https://docs.python.org/3.10/library/difflib.html).
+  than Python’s built-in [difflib](https://docs.python.org/3.10/library/difflib.html).
 
 - [Filtering](src/chopdiff/transforms/diff_filters.py) of these text-based diffs based
   on specific criteria.
@@ -111,7 +111,7 @@ More on what's here:
   punctuation, or sentence or paragraph break matching a predicate) from any given
   position.
 
-- Lightweight "chunking" of documents by wrapping paragraphs in `<div>`s to indicate
+- Lightweight “chunking” of documents by wrapping paragraphs in `<div>`s to indicate
   chunks. [`TextNode`](src/chopdiff/divs/text_node.py) offers simple recursive parsing
   around `<div>` tags.
   This is not a general HTML parser, but rather a way to chunk documents into named
@@ -125,15 +125,17 @@ More on what's here:
   overlapping windows), then re-stitching the results back together with best
   alignments.
 
-- **Section-based document parsing** with [`SectionDoc`](src/chopdiff/sections/section_doc.py)
-  that creates a hierarchical tree structure of Markdown sections. Each section node
-  contains the header and all content until the next section at the same or higher level,
-  allowing easy iteration over document structure at any heading level.
+- **Section-based document parsing** with
+  [`SectionDoc`](src/chopdiff/sections/section_doc.py) that creates a hierarchical tree
+  structure of Markdown sections.
+  Each section node contains the header and all content until the next section at the
+  same or higher level, allowing easy iteration over document structure at any heading
+  level.
 
 - **Unified document interface** through [`FlexDoc`](src/chopdiff/flex/flex_doc.py) that
-  provides lazy, thread-safe access to all three document views (tokens, divs, sections).
-  This allows you to parse once and work with the document through whichever lens is most
-  appropriate for your task, with automatic cross-view navigation.
+  provides lazy, thread-safe access to all three document views (tokens, divs,
+  sections). This allows you to parse once and work with the document through whichever
+  lens is most appropriate for your task, with automatic cross-view navigation.
 
 All this is done very simply in memory, and with only regex or basic Markdown parsing to
 keep things simple and with few dependencies.
@@ -153,8 +155,8 @@ you like).
    Best for documents with explicit structural divisions.
 
 3. **Section View (`SectionDoc`)**: Parse Markdown documents into a hierarchical tree of
-   sections based on headers. Best for navigating document structure and extracting
-   content by heading.
+   sections based on headers.
+   Best for navigating document structure and extracting content by heading.
 
 The **`FlexDoc`** class provides unified access to all three views with lazy loading and
 thread safety:
@@ -218,27 +220,37 @@ the output. See the [examples/](examples/) directory.
 
 ### Inserting Paragraph Breaks
 
-This example demonstrates using an LLM to identify and insert paragraph boundaries in text that lacks proper formatting. The script uses OpenAI's API to mark paragraph break locations, then uses `chopdiff`'s filtering capabilities to transform these markers into actual paragraph breaks.
+This example demonstrates using an LLM to identify and insert paragraph boundaries in
+text that lacks proper formatting.
+The script uses OpenAI’s API to mark paragraph break locations, then uses `chopdiff`'s
+filtering capabilities to transform these markers into actual paragraph breaks.
 
 ```bash
 $ uv run examples/insert_para_breaks.py examples/gettysberg.txt
 ```
 
-See [examples/insert_para_breaks.py](examples/insert_para_breaks.py) for the full implementation.
+See [examples/insert_para_breaks.py](examples/insert_para_breaks.py) for the full
+implementation.
 
 ### Backfilling Timestamps
 
-This example shows how to align content across multiple versions of a transcript, backfilling timestamps from a source document to a target document that's missing them. This is useful for synchronizing edited transcripts with their original timestamped versions.
+This example shows how to align content across multiple versions of a transcript,
+backfilling timestamps from a source document to a target document that’s missing them.
+This is useful for synchronizing edited transcripts with their original timestamped
+versions.
 
 ```bash
 $ uv run examples/backfill_timestamps.py
 ```
 
-See [examples/backfill_timestamps.py](examples/backfill_timestamps.py) for the full implementation.
+See [examples/backfill_timestamps.py](examples/backfill_timestamps.py) for the full
+implementation.
 
 ### Document Structure Analysis
 
-Analyze the structure of a Markdown document with detailed statistics per section. This example walks through all sections hierarchically, calculating word counts, sentence counts, paragraph counts, and estimated reading times for each section.
+Analyze the structure of a Markdown document with detailed statistics per section.
+This example walks through all sections hierarchically, calculating word counts,
+sentence counts, paragraph counts, and estimated reading times for each section.
 
 ```bash
 # Tree view (default)
@@ -252,7 +264,9 @@ See [examples/analyze_doc.py](examples/analyze_doc.py) for the full implementati
 
 ### Section Navigation
 
-Use `SectionDoc` to navigate Markdown documents by their hierarchical section structure. You can iterate sections, find sections by title or path, and navigate the parent-child relationships between sections:
+Use `SectionDoc` to navigate Markdown documents by their hierarchical section structure.
+You can iterate sections, find sections by title or path, and navigate the parent-child
+relationships between sections:
 
 ```python
 from chopdiff import SectionDoc
@@ -274,7 +288,8 @@ print(f"Children: {[child.title for child in section.children]}")
 
 ### Cross-View Navigation with FlexDoc
 
-`FlexDoc` provides unified access to all three document views (tokens, divs, sections) with automatic cross-view navigation:
+`FlexDoc` provides unified access to all three document views (tokens, divs, sections)
+with automatic cross-view navigation:
 
 ```python
 from chopdiff import FlexDoc, TextUnit
