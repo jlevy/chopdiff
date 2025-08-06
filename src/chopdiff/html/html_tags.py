@@ -394,7 +394,7 @@ def rewrite_html_img_urls(
         html,
         "img",
         "src",
-        url_rewriter,  # Note: url_rewriter is correct here since this function specifically handles URLs
+        value_rewriter=url_rewriter,
         from_prefix=from_prefix,
         to_prefix=to_prefix,
     )
