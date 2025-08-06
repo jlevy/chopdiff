@@ -114,20 +114,14 @@ def test_insert_size_info_with_level_limits():
     assert '#### H4\n\n<div class="size-info"' not in result
 
 
-def test_insert_size_info_brief_mode():
-    """Test brief vs full mode for read time display."""
+def test_insert_size_info_format():
+    """Test that size info is properly formatted."""
     input_doc = "# Title\n\nSome content here."
 
-    # Brief mode
-    brief_result = insert_size_info(input_doc, brief=True)
-    assert "~" in brief_result  # Brief format uses ~
-
-    # Full mode
-    full_result = insert_size_info(input_doc, brief=False)
-    # Full format doesn't use ~ but has more precise timing
-    lines = full_result.split("\n")
+    result = insert_size_info(input_doc)
+    assert "~" in result  # Format uses ~
+    lines = result.split("\n")
     size_line = [line for line in lines if "size-info" in line][0]
-    # Should have more detailed time format in full mode
     assert "to read" in size_line
 
 

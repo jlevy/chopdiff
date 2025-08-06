@@ -4,7 +4,6 @@ Utilities for calculating and formatting reading time estimates.
 
 from prettyfmt import fmt_timedelta
 
-
 DEFAULT_WORDS_PER_MINUTE = 225
 
 
