@@ -262,6 +262,36 @@ $ uv run examples/analyze_doc.py examples/sample_doc.md --flat
 
 See [examples/analyze_doc.py](examples/analyze_doc.py) for the full implementation.
 
+### Inserting Document Statistics
+
+The `insert_size_info.py` example demonstrates how to enhance Markdown documents by
+automatically inserting size and reading time information after section headers.
+
+This illustrates inserting “chunks” of content into HTML in a structural way for each
+section.
+
+```bash
+# Insert size info divs after headers (levels 1-3 by default)
+$ uv run examples/insert_size_info.py README.md > README_with_stats.md
+
+# Customize header levels and reading speed
+$ uv run examples/insert_size_info.py doc.md --min-level 2 --max-level 4 --wpm 200
+```
+
+The script inserts HTML `<div>` elements with statistics like word count, character
+count, reading time, and subsection count:
+
+```markdown
+## Section Title
+
+<div class="size-info" data-words="150" data-chars="900">150 words • 10 sentences • 3 paragraphs • 2 subsections • ~45s to read</div>
+
+Section content continues here...
+```
+
+See [examples/insert_size_info.py](examples/insert_size_info.py) for the full
+implementation.
+
 ### Section Navigation
 
 Use `SectionDoc` to navigate Markdown documents by their hierarchical section structure.

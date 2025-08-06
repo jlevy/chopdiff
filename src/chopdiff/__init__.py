@@ -38,6 +38,9 @@ from chopdiff.html.html_in_md import (
 from chopdiff.sections.section_doc import SectionDoc
 from chopdiff.sections.section_node import SectionNode
 
+# Utilities
+from chopdiff.util.read_time import DEFAULT_WORDS_PER_MINUTE, format_read_time
+
 __all__ = [
     # Core document types
     "TextDoc",
@@ -67,4 +70,7 @@ __all__ = [
     "div_wrapper",
     "span_wrapper",
     "tag_wrapper",
+    # Utilities
+    "DEFAULT_WORDS_PER_MINUTE",
+    "format_read_time",
 ]
