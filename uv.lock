@@ -83,6 +83,7 @@ dependencies = [
     { name = "selectolax" },
     { name = "strif" },
     { name = "tiktoken" },
+    { name = "typing-extensions" },
 ]
 
 [package.optional-dependencies]
@@ -112,6 +113,7 @@ requires-dist = [
     { name = "simplemma", marker = "extra == 'extras'", specifier = ">=1.1.2" },
     { name = "strif", specifier = ">=2.1.0" },
     { name = "tiktoken", specifier = ">=0.9.0" },
+    { name = "typing-extensions", specifier = ">=4.14.1" },
 ]
 provides-extras = ["extras"]
 
