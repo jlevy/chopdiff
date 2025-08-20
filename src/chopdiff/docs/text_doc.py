@@ -31,6 +31,8 @@ SYMBOL_PARA = "¶"
 
 SYMBOL_SENT = "S"
 
+FOOTNOTE_DEF_REGEX = regex.compile(r"^\[\^[^\]]+\]:")
+
 Splitter: TypeAlias = Callable[[str], list[str]]
 
 default_sentence_splitter: Splitter = split_sentences_regex
@@ -193,6 +195,15 @@ class Paragraph:
         first_wordtok = next(self.as_wordtoks(), None)
         is_html_header = first_wordtok and is_tag(first_wordtok) and is_header_tag(first_wordtok)
         return is_html_header or is_markdown_header(self.original_text)
+
+    def is_footnote_def(self) -> bool:
+        """
+        Is this paragraph a Markdown footnote definition block (e.g. "[^id]: text")?
+        """
+        if len(self.sentences) == 0:
+            return False
+        initial_text = self.sentences[0].text
+        return FOOTNOTE_DEF_REGEX.match(initial_text) is not None
 
 
 @dataclass

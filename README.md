@@ -91,7 +91,7 @@ More on what's here:
 
 - [Word-level diffs](src/chopdiff/docs/token_diffs.py) that don't work at the line level
   (like usual git-style diffs) but rather treat whitespace, sentence, and paragraph
-  breaks as indidivdual tokens.
+  breaks as individual tokens.
   It performs LCS-style token-based diffs with
   [cydifflib](https://github.com/rapidfuzz/cydifflib), which is significantly faster
   than Python's built-in [difflib](https://docs.python.org/3.10/library/difflib.html).
