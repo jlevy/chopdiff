@@ -1,10 +1,11 @@
+#!/usr/bin/env python3
 # /// script
-# requires-python = ">=3.13"
+# requires-python = ">=3.11"
 # dependencies = [
 #     "chopdiff",
-#     "flowmark",
 # ]
 # ///
+
 import logging
 from textwrap import dedent
 
