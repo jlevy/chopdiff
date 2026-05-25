@@ -22,9 +22,9 @@ For the purposes of this example replace OWNER and PROJECT with the right values
 2. **Pick a name for the project** that isn't already taken.
 
    - Go to `https://pypi.org/project/PROJECT` to see if another project with that name
-     already exits.
+     already exists.
 
-   - If needed, update your `pyproject.yml` with the correct name.
+   - If needed, update your `pyproject.toml` with the correct name.
 
 3. **Authorize** your repository to publish to PyPI:
 

@@ -37,6 +37,13 @@ Therefore:
   Instead, specifically say what you’ve done, e.g., "I’ve added types, including
   generics, to all the methods in `Foo` and fixed all linter errors."
 
+# Supply-Chain Security
+
+Before adding or upgrading ANY dependency, read `SUPPLY-CHAIN-SECURITY.md` in the repo root.
+This repo enforces a 14-day cool-off on dependency resolution (via `exclude-newer` in
+`pyproject.toml`), commits its lockfile, and installs frozen in CI. Do not bypass the
+cool-off or self-approve an exception.
+
 # General Coding Guidelines
 
 ## Using Comments

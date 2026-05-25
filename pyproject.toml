@@ -40,7 +40,7 @@ classifiers = [
 dependencies = [
     "prettyfmt>=0.3.0",
     "flowmark>=0.5.3",
-    "strif>=2.1.0",
+    "strif>=3.1.0",
     "funlog>=0.2.1",
     "cydifflib>=1.2.0",
     "tiktoken>=0.9.0",
@@ -62,6 +62,11 @@ dev = [
     "rich>=14.0.0",
     "basedpyright==1.29.5",  # TODO: Upgrade when Cursor supports it.
     "funlog>=0.2.1",
+]
+# Supply-chain audit tooling, kept out of the default dev install. CI runs it via
+# `uv run --group audit pip-audit`. See SUPPLY-CHAIN-SECURITY.md.
+audit = [
+    "pip-audit>=2.7.0",
 ]
 
 [project.scripts]
@@ -95,6 +100,21 @@ packages = ["src/chopdiff"]
 
 
 # ---- Settings ----
+
+# Supply-chain hardening: enforce a 14-day cool-off on dependency resolution.
+# uv applies this cutoff at lock, sync, and run time, so dev and CI all install
+# the same vetted versions and never silently pull a just-published release.
+# See SUPPLY-CHAIN-SECURITY.md. To upgrade, bump this to (today - 14 days) and
+# re-run `make upgrade`.
+[tool.uv]
+exclude-newer = "2026-05-11T00:00:00Z"
+
+# Cool-off exceptions (reviewed and recorded in SUPPLY-CHAIN-SECURITY.md):
+# - strif 3.1.0: first-party, zero-dependency package, full source diff reviewed.
+# - idna 3.15: fixes CVE-2026-45409 reported against the in-window 3.14.
+[tool.uv.exclude-newer-package]
+strif = "2026-05-24T00:00:00Z"
+idna = "2026-05-13T00:00:00Z"
 
 [tool.ruff]
 # Set as desired, typically 88 (black standard) or 100 (wide).
