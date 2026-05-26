@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from collections.abc import Callable, Generator, Iterable
+from collections.abc import Callable, Generator, Iterable, Iterator
 from dataclasses import dataclass
+from enum import StrEnum
 from typing import TypeAlias
 
 import regex
@@ -48,6 +49,61 @@ def is_markdown_header(markdown: str) -> bool:
     Is the start of this content a Markdown header?
     """
     return regex.match(r"^#+ ", markdown) is not None
+
+
+class BlockType(StrEnum):
+    """
+    The kind of Markdown block a `Paragraph` represents, detected heuristically
+    from the block text.
+
+    `TextDoc` splits a document on blank lines, so each block is one
+    blank-line-separated unit. This means a fenced code block or a "loose" list
+    that contains a blank line can be split across multiple blocks, and a list is
+    a single block rather than one block per item. For exact block boundaries and
+    per-list-item granularity, a full Markdown block parse is required.
+    """
+
+    paragraph = "paragraph"
+    heading = "heading"
+    list = "list"
+    table = "table"
+    code = "code"
+    blockquote = "blockquote"
+    html = "html"
+    footnote = "footnote"
+
+
+_LIST_ITEM_REGEX = regex.compile(r"^\s{0,3}([-*+]|\d+[.)])\s+")
+"""Matches the start of a Markdown list item (bulleted or ordered)."""
+
+_TABLE_DELIM_REGEX = regex.compile(r"^\s*\|?\s*:?-{1,}:?\s*(\|\s*:?-{1,}:?\s*)+\|?\s*$")
+"""Matches a GFM table delimiter row, e.g. `| --- | :--: |`."""
+
+
+def _is_code_fence(text: str) -> bool:
+    return text.startswith("```") or text.startswith("~~~")
+
+
+def _is_blockquote(text: str) -> bool:
+    lines = [ln for ln in text.splitlines() if ln.strip()]
+    return bool(lines) and all(ln.lstrip().startswith(">") for ln in lines)
+
+
+def _is_table(text: str) -> bool:
+    # A GFM table needs a header row followed by a delimiter row of dashes/pipes.
+    lines = text.splitlines()
+    return (
+        len(lines) >= 2
+        and "|" in lines[0]
+        and _TABLE_DELIM_REGEX.match(lines[1].strip()) is not None
+    )
+
+
+def _is_list(text: str) -> bool:
+    for ln in text.splitlines():
+        if ln.strip():
+            return _LIST_ITEM_REGEX.match(ln) is not None
+    return False
 
 
 @dataclass(frozen=True, order=True)
@@ -204,6 +260,31 @@ class Paragraph:
             return False
         initial_text = self.sentences[0].text
         return FOOTNOTE_DEF_REGEX.match(initial_text) is not None
+
+    @property
+    def block_type(self) -> BlockType:
+        """
+        Classify this block by its Markdown kind. See `BlockType` for caveats about
+        blank-line splitting (e.g. a list is one block, not one block per item).
+        """
+        text = self.original_text.strip()
+        if not text:
+            return BlockType.paragraph
+        if self.is_header():
+            return BlockType.heading
+        if self.is_footnote_def():
+            return BlockType.footnote
+        if _is_code_fence(text):
+            return BlockType.code
+        if _is_blockquote(text):
+            return BlockType.blockquote
+        if _is_table(text):
+            return BlockType.table
+        if _is_list(text):
+            return BlockType.list
+        if self.is_markup():
+            return BlockType.html
+        return BlockType.paragraph
 
 
 @dataclass
@@ -370,6 +451,39 @@ class TextDoc:
         if end is None:
             end = len(self.paragraphs) - 1
         return TextDoc(self.paragraphs[start : end + 1])
+
+    def iter_blocks(
+        self,
+        *,
+        include: set[BlockType] | None = None,
+        exclude: set[BlockType] | None = None,
+    ) -> Iterator[Paragraph]:
+        """
+        Iterate over blocks (paragraphs), optionally filtering by `BlockType`.
+        `include` keeps only the given types; `exclude` drops the given types. If
+        both are given, a block must be in `include` and not in `exclude`.
+        """
+        for para in self.paragraphs:
+            block_type = para.block_type
+            if include is not None and block_type not in include:
+                continue
+            if exclude is not None and block_type in exclude:
+                continue
+            yield para
+
+    def filtered(
+        self,
+        *,
+        include: set[BlockType] | None = None,
+        exclude: set[BlockType] | None = None,
+    ) -> TextDoc:
+        """
+        Return a sub-document containing only the blocks matching the given
+        `BlockType` filter. Useful for counting or transforming a subset, e.g.
+        `doc.filtered(include={BlockType.paragraph}).size(TextUnit.words)` gives
+        the total words across all paragraph blocks.
+        """
+        return TextDoc(list(self.iter_blocks(include=include, exclude=exclude)))
 
     def prev_sent(self, index: SentIndex) -> SentIndex:
         if index.sent_index > 0:
