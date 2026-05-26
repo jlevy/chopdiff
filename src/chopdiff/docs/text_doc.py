@@ -73,11 +73,20 @@ class BlockType(StrEnum):
     `#` lines inside code) are recognized correctly.
 
     `TextDoc` splits a document on blank lines, so each block is one
-    blank-line-separated unit. This means a fenced code block or a "loose" list
-    that contains a blank line can be split across multiple blocks, and a list is
-    a single block rather than one block per item. For exact block boundaries and
-    per-list-item granularity, a full Markdown block parse over the whole document
-    is required (see the BlockDoc plan spec).
+    blank-line-separated unit, and list handling depends on item spacing:
+
+    - A "tight" list (no blank lines between items) is a single `list` block
+      containing every item; nested sublists stay inside that one block.
+    - A "loose" list (blank lines between items) yields one `list` block per
+      item, and nesting is flattened (each item, parent or child, is its own
+      block).
+    - A continuation paragraph inside a list item (separated by a blank line) is
+      classified as `paragraph`, since on its own it carries no list marker.
+
+    Likewise, a fenced code block containing a blank line can be split across
+    blocks. For exact block boundaries, preserved nesting, and reliable
+    per-list-item granularity, a full-document Markdown parse is required (see
+    the BlockDoc plan spec, #8).
     """
 
     paragraph = "paragraph"

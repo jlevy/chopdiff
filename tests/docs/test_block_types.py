@@ -105,3 +105,84 @@ def test_empty_filter_returns_empty_doc():
     empty = doc.filtered(include=set())
     assert empty.size(TextUnit.words) == 0
     assert empty.size(TextUnit.sentences) == 0
+
+
+# The following tests document how list spacing affects blocking, since TextDoc
+# splits on blank lines (see BlockType docstring).
+
+
+def test_tight_list_is_one_block():
+    doc = TextDoc.from_text(
+        dedent(
+            """
+            - item one
+            - item two
+            - item three
+            """
+        ).strip()
+    )
+    assert len(doc.paragraphs) == 1
+    assert doc.paragraphs[0].block_type == BlockType.list
+
+
+def test_loose_list_is_one_block_per_item():
+    doc = TextDoc.from_text(
+        dedent(
+            """
+            - item one
+
+            - item two
+
+            - item three
+            """
+        ).strip()
+    )
+    assert len(doc.paragraphs) == 3
+    assert all(p.block_type == BlockType.list for p in doc.paragraphs)
+
+
+def test_nested_tight_list_is_one_block():
+    doc = TextDoc.from_text(
+        dedent(
+            """
+            - parent one
+              - child a
+              - child b
+            - parent two
+            """
+        ).strip()
+    )
+    assert len(doc.paragraphs) == 1
+    assert doc.paragraphs[0].block_type == BlockType.list
+
+
+def test_nested_loose_list_is_flattened_into_list_blocks():
+    doc = TextDoc.from_text(
+        dedent(
+            """
+            - parent one
+
+              - child a
+
+            - parent two
+            """
+        ).strip()
+    )
+    assert len(doc.paragraphs) == 3
+    assert all(p.block_type == BlockType.list for p in doc.paragraphs)
+
+
+def test_list_item_continuation_paragraph_is_paragraph():
+    doc = TextDoc.from_text(
+        dedent(
+            """
+            - item one first para
+
+              item one second para
+
+            - item two
+            """
+        ).strip()
+    )
+    types = [p.block_type for p in doc.paragraphs]
+    assert types == [BlockType.list, BlockType.paragraph, BlockType.list]
