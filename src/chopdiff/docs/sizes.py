@@ -2,7 +2,7 @@ from enum import Enum
 
 from chopdiff.docs.wordtoks import wordtokenize
 from chopdiff.html.html_plaintext import html_to_plaintext
-from chopdiff.util.tiktoken_utils import tiktoken_len
+from chopdiff.util.token_estimate import estimate_tokens
 
 
 def size_in_bytes(text: str) -> int:
@@ -25,7 +25,8 @@ class TextUnit(Enum):
     wordtoks = "wordtoks"
     paragraphs = "paragraphs"
     sentences = "sentences"
-    tiktokens = "tiktokens"
+    tokens = "tokens"
+    """Estimated LLM token count (heuristic, no tokenizer). See `estimate_tokens`."""
 
 
 def size(text: str, unit: TextUnit) -> int:
@@ -40,7 +41,7 @@ def size(text: str, unit: TextUnit) -> int:
         return len(html_to_plaintext(text).split())
     elif unit == TextUnit.wordtoks:
         return size_in_wordtoks(text)
-    elif unit == TextUnit.tiktokens:
-        return tiktoken_len(text)
+    elif unit == TextUnit.tokens:
+        return estimate_tokens(text)
     else:
         raise NotImplementedError(f"Unsupported unit for string: {unit}")

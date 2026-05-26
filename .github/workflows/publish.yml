@@ -29,13 +29,10 @@ jobs:
       - name: Set up Python (using uv)
         run: uv python install
 
-      - name: Set supply-chain cool-off cutoff
-        # uv's --exclude-newer takes a date, not a relative duration, so compute
-        # "14 days ago" at run time. (Assumes a Linux runner with GNU date.)
-        run: echo "UV_EXCLUDE_NEWER=$(date -u -d '14 days ago' +%Y-%m-%d)" >> "$GITHUB_ENV"
-
       - name: Install all dependencies
-        run: uv sync --all-extras
+        # Install from the committed lockfile so the release is built and tested
+        # against the exact vetted versions (the pyproject cool-off governs upgrades).
+        run: uv sync --all-extras --locked
 
       - name: Run tests
         run: uv run pytest

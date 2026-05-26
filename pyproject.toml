@@ -41,10 +41,10 @@ classifiers = [
 dependencies = [
     "prettyfmt>=0.3.0",
     "flowmark>=0.5.3",
+    "marko>=2.2.2",
     "strif>=3.1.0",
     "funlog>=0.2.1",
     "cydifflib>=1.2.0",
-    "tiktoken>=0.9.0",
     "regex>=2024.11.6",
     "selectolax>=0.3.32",
 ]
@@ -69,10 +69,6 @@ dev = [
 audit = [
     "pip-audit>=2.7.0",
 ]
-
-[project.scripts]
-# Add script entry points here:
-chopdiff = "chopdiff:main"
 
 
 # ---- Build system ----
