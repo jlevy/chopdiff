@@ -30,19 +30,17 @@ ensure_tbd() {
 
     echo "[tbd] CLI not found, installing ${TBD_PKG}..."
 
-    # Try npm first (most common for Node.js tools)
+    # Try npm first (most common for Node.js tools).
+    # Supply-chain hardening: install into a user-local prefix instead of a
+    # global one, so this SessionStart hook does not mutate shared/global state.
+    # npm verifies the package tarball integrity against the registry on install.
     if command -v npm &> /dev/null; then
-        echo "[tbd] Installing via npm..."
-        npm install -g "${TBD_PKG}" 2>/dev/null || {
-            # If global install fails (permissions), try local install
-            echo "[tbd] Global npm install failed, trying user install..."
-            mkdir -p ~/.local/bin
-            npm install --prefix ~/.local "${TBD_PKG}"
-            # Create symlink if needed
-            if [ -f ~/.local/node_modules/.bin/tbd ]; then
-                ln -sf ~/.local/node_modules/.bin/tbd ~/.local/bin/tbd
-            fi
-        }
+        echo "[tbd] Installing via npm (user-local prefix)..."
+        mkdir -p ~/.local/bin
+        npm install --prefix ~/.local "${TBD_PKG}"
+        if [ -f ~/.local/node_modules/.bin/tbd ]; then
+            ln -sf ~/.local/node_modules/.bin/tbd ~/.local/bin/tbd
+        fi
     elif command -v pnpm &> /dev/null; then
         echo "[tbd] Installing via pnpm..."
         pnpm add -g "${TBD_PKG}"
