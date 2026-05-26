@@ -5,7 +5,7 @@ from collections.abc import Callable, Generator, Iterable, Iterator
 from copy import deepcopy
 from dataclasses import dataclass
 from enum import StrEnum
-from functools import cache
+from functools import cache, cached_property
 from typing import TypeAlias
 
 import regex
@@ -281,11 +281,13 @@ class Paragraph:
         initial_text = self.sentences[0].text
         return FOOTNOTE_DEF_REGEX.match(initial_text) is not None
 
-    @property
+    @cached_property
     def block_type(self) -> BlockType:
         """
         Classify this block by its Markdown kind. See `BlockType` for caveats about
         blank-line splitting (e.g. a list is one block, not one block per item).
+
+        Cached: derived from `original_text`, which does not change after parsing.
         """
         text = self.original_text.strip()
         if not text:

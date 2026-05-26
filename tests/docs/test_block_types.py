@@ -3,6 +3,22 @@ from textwrap import dedent
 from chopdiff.docs.sizes import TextUnit
 from chopdiff.docs.text_doc import BlockType, TextDoc
 
+
+def serialize_blocks(doc: TextDoc) -> str:
+    """
+    Render a TextDoc's blocks transparently: one line per block with its index,
+    classified `BlockType`, and a single-line preview. Used for golden tests that
+    show exactly how a document is split and classified.
+    """
+    lines: list[str] = []
+    for i, p in enumerate(doc.paragraphs):
+        preview = p.original_text.replace("\n", "\\n")
+        if len(preview) > 50:
+            preview = preview[:50] + "..."
+        lines.append(f"[{i}] {p.block_type.value}: {preview}")
+    return "\n".join(lines)
+
+
 DOC = dedent(
     """
     # Title
@@ -194,3 +210,104 @@ def test_list_item_continuation_paragraph_is_paragraph():
     )
     types = [p.block_type for p in doc.paragraphs]
     assert types == [BlockType.list, BlockType.paragraph, BlockType.list]
+
+
+# A rich document exercising the non-obvious paths: ATX/setext/trailing-hash
+# headings, a link-first paragraph, inline and standalone HTML, tight and loose
+# bulleted and ordered lists, blockquotes wrapping a list and a table (nested
+# blocks classify by their OUTER type), a table, fenced code containing a `#`
+# line, and a footnote definition.
+RICH_DOC = dedent(
+    """
+    # Heading One
+
+    A normal paragraph with two sentences. Here is the second.
+
+    Setext Heading
+    ==============
+
+    [Leading link](http://example.com) starts this paragraph, then more text.
+
+    Some prose with <span>inline html</span> in the middle.
+
+    <!-- a standalone comment -->
+
+    - tight item a
+    - tight item b
+
+    1. ordered one
+    2. ordered two
+
+    - loose item a
+
+    - loose item b
+
+    > A blockquote paragraph here.
+
+    > - quoted list item one
+    > - quoted list item two
+
+    > | q1 | q2 |
+    > | -- | -- |
+    > | a  | b  |
+
+    | Col A | Col B |
+    | ----- | ----- |
+    | x     | y     |
+
+    ```python
+    # not a heading
+    code = 1
+    ```
+
+    [^fn]: A footnote definition body.
+
+    ## Heading Two ##
+    """
+).strip()
+
+
+EXPECTED_RICH_BLOCKS = r"""
+[0] heading: # Heading One
+[1] paragraph: A normal paragraph with two sentences. Here is the...
+[2] heading: Setext Heading\n==============
+[3] paragraph: [Leading link](http://example.com) starts this par...
+[4] paragraph: Some prose with <span>inline html</span> in the mi...
+[5] html: <!-- a standalone comment -->
+[6] list: - tight item a\n- tight item b
+[7] list: 1. ordered one\n2. ordered two
+[8] list: - loose item a
+[9] list: - loose item b
+[10] blockquote: > A blockquote paragraph here.
+[11] blockquote: > - quoted list item one\n> - quoted list item two
+[12] blockquote: > | q1 | q2 |\n> | -- | -- |\n> | a  | b  |
+[13] table: | Col A | Col B |\n| ----- | ----- |\n| x     | y ...
+[14] code: ```python\n# not a heading\ncode = 1\n```
+[15] footnote: [^fn]: A footnote definition body.
+[16] heading: ## Heading Two ##
+""".strip()
+
+
+def test_rich_document_block_structure_golden():
+    doc = TextDoc.from_text(RICH_DOC)
+    assert serialize_blocks(doc) == EXPECTED_RICH_BLOCKS
+
+
+def test_nested_blocks_classify_by_outer_type():
+    # A blockquote wrapping a list or a table is classified `blockquote`; the
+    # inner block type is intentionally not surfaced at this level.
+    doc = TextDoc.from_text(RICH_DOC)
+    by_type: dict[BlockType, list[str]] = {}
+    for p in doc.paragraphs:
+        by_type.setdefault(p.block_type, []).append(p.original_text)
+    quotes = by_type[BlockType.blockquote]
+    assert any(q.startswith("> -") for q in quotes)  # list inside a quote
+    assert any(q.startswith("> |") for q in quotes)  # table inside a quote
+
+
+def test_block_offsets_reference_the_source_document():
+    # chopdiff references the backing text by offset; for normalized Markdown each
+    # block's char_offset indexes the (stripped) source back to its own content.
+    doc = TextDoc.from_text(RICH_DOC)
+    for p in doc.paragraphs:
+        assert RICH_DOC[p.char_offset : p.char_offset + len(p.original_text)] == p.original_text
