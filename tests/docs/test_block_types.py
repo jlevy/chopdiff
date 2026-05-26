@@ -131,6 +131,19 @@ def test_filtered_returns_independent_copy():
     assert doc.reassemble() == before
 
 
+def test_source_references_are_stable_under_edits():
+    # Editing content updates reassemble() but not the fixed source references
+    # (original_text, char_offset) or the cached block_type.
+    doc = TextDoc.from_text(DOC)
+    para = doc.paragraphs[1]
+    original_text, offset, block_type = para.original_text, para.char_offset, para.block_type
+    para.replace_str("paragraph", "PARA")
+    assert "PARA" in para.reassemble()
+    assert para.original_text == original_text
+    assert para.char_offset == offset
+    assert para.block_type == block_type
+
+
 # The following tests document how list spacing affects blocking, since TextDoc
 # splits on blank lines (see BlockType docstring).
 

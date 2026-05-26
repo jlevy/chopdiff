@@ -150,11 +150,13 @@ SentenceMapping: TypeAlias = dict[SentIndex, list[int]]
 @dataclass
 class Sentence:
     """
-    A sentence in a `TextDoc`.
+    A sentence in a `TextDoc`. `text` is the editable content (used by
+    `reassemble()`); `char_offset` is a fixed reference to the source set at parse
+    time and is not updated by edits. See `TextDoc` for the full contract.
     """
 
     text: str
-    char_offset: int  # Offset of the sentence in the original text.
+    char_offset: int  # Offset of the sentence within its paragraph's text (not the whole doc).
 
     def size(self, unit: TextUnit) -> int:
         return size(self.text, unit)
@@ -188,12 +190,18 @@ class Sentence:
 @dataclass
 class Paragraph:
     """
-    A paragraph in a `TextDoc`.
+    A paragraph (one blank-line-separated block) in a `TextDoc`.
+
+    `original_text` and `char_offset` are fixed references to the source as parsed
+    and are not updated by edits; `sentences` holds the editable content used by
+    `reassemble()`. `block_type` is derived from `original_text` and cached, so it
+    assumes `original_text` is not reassigned after construction. See `TextDoc`
+    for the full contract.
     """
 
     original_text: str
     sentences: list[Sentence]
-    char_offset: int  # Offset of the paragraph in the original text.
+    char_offset: int  # Offset of the paragraph in the source text (after the doc-level strip).
 
     @classmethod
     @tally_calls(level="warning", min_total_runtime=5)
@@ -306,6 +314,31 @@ class TextDoc:
     A class for parsing and handling documents consisting of sentences and paragraphs
     of text. Preserves original text, tracking offsets of each sentence and paragraph.
     Compatible with Markdown and Markown with HTML tags.
+
+    Contract and intended use:
+
+    - A `TextDoc` is a snapshot of a *parsed source document*, meant for analysis
+      (sizing, classifying, diffing, windowing) and for generating *new* text via
+      `reassemble()`. It is not a live, self-updating DOM.
+
+    - Source references are fixed at parse time. `Paragraph.original_text` and the
+      `char_offset`s on paragraphs and sentences describe the document as parsed
+      (after an initial `strip()`) and are not updated when content is mutated, so
+      they remain valid as references back to the source. Paragraph offsets are
+      relative to the (stripped) document; sentence offsets are relative to their
+      paragraph.
+
+    - In-place editing is supported for *building transformed output*: mutate
+      sentence text (`replace_str`, `set_sent`) or restructure the paragraph and
+      sentence lists (`sub_doc`, `sub_paras`, `filtered`, `append_sent`), then call
+      `reassemble()`. This is safe as long as you do not rely on the source
+      references tracking your edits: after editing, `original_text`, the
+      `char_offset`s, and cached values like `Paragraph.block_type` still describe
+      the *original* blocks. To get offsets/classification for edited content,
+      re-parse with `TextDoc.from_text(doc.reassemble())`.
+
+    - `filtered()` returns an independent deep copy; `iter_blocks()` and the
+      `paragraphs`/`sentences` lists expose this document's live objects.
     """
 
     paragraphs: list[Paragraph]
