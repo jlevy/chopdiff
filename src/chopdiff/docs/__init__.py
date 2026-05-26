@@ -2,7 +2,14 @@
 
 from chopdiff.docs.search_tokens import search_tokens
 from chopdiff.docs.sizes import TextUnit
-from chopdiff.docs.text_doc import BlockType, Paragraph, Sentence, SentIndex, TextDoc
+from chopdiff.docs.text_doc import (
+    BlockType,
+    Offsets,
+    Paragraph,
+    Sentence,
+    SentIndex,
+    TextDoc,
+)
 from chopdiff.docs.token_diffs import (
     DIFF_FILTER_NONE,
     DiffFilter,
@@ -48,6 +55,7 @@ __all__ = [
     "search_tokens",
     "TextUnit",
     "BlockType",
+    "Offsets",
     "Paragraph",
     "Sentence",
     "SentIndex",

@@ -133,14 +133,14 @@ def test_filtered_returns_independent_copy():
 
 def test_source_references_are_stable_under_edits():
     # Editing content updates reassemble() but not the fixed source references
-    # (original_text, char_offset) or the cached block_type.
+    # (original_text, offsets) or the cached block_type.
     doc = TextDoc.from_text(DOC)
     para = doc.paragraphs[1]
-    original_text, offset, block_type = para.original_text, para.char_offset, para.block_type
+    original_text, offsets, block_type = para.original_text, para.offsets, para.block_type
     para.replace_str("paragraph", "PARA")
     assert "PARA" in para.reassemble()
     assert para.original_text == original_text
-    assert para.char_offset == offset
+    assert para.offsets == offsets
     assert para.block_type == block_type
 
 
@@ -319,8 +319,9 @@ def test_nested_blocks_classify_by_outer_type():
 
 
 def test_block_offsets_reference_the_source_document():
-    # chopdiff references the backing text by offset; for normalized Markdown each
-    # block's char_offset indexes the (stripped) source back to its own content.
+    # chopdiff references the backing text by offset; each block's doc_offset
+    # indexes the source back to its own content.
     doc = TextDoc.from_text(RICH_DOC)
     for p in doc.paragraphs:
-        assert RICH_DOC[p.char_offset : p.char_offset + len(p.original_text)] == p.original_text
+        start = p.offsets.doc_offset
+        assert RICH_DOC[start : start + len(p.original_text)] == p.original_text

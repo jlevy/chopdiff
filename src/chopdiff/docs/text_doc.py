@@ -49,6 +49,13 @@ SYMBOL_SENT = "S"
 
 FOOTNOTE_DEF_REGEX = regex.compile(r"^\[\^[^\]]+\]:")
 
+_PARA_BREAK_REGEX = regex.compile(r"(?:[ \t\r]*\n){2,}[ \t\r]*")
+r"""
+A paragraph break: a run of whitespace containing two or more newlines (a blank
+line). Blank lines that contain only spaces, tabs, or `\r` still count, and any
+number of consecutive blank lines collapse into a single break.
+"""
+
 Splitter: TypeAlias = Callable[[str], list[str]]
 
 default_sentence_splitter: Splitter = split_sentences_regex
@@ -147,21 +154,35 @@ SentenceMapping: TypeAlias = dict[SentIndex, list[int]]
 """A mapping from sentence index to wordtoks in a TextDoc."""
 
 
+@dataclass(frozen=True)
+class Offsets:
+    """
+    Character offsets of a parsed element, with the same shape for paragraphs,
+    sentences, and any future parsed units.
+
+    - `doc_offset`: absolute offset in the document.
+    - `block_offset`: offset relative to the start of the enclosing block — the
+      document for a paragraph (so it equals `doc_offset`), or the paragraph for a
+      sentence.
+    """
+
+    doc_offset: int
+    block_offset: int
+
+
 @dataclass
 class Sentence:
     """
     A sentence in a `TextDoc`. `text` is the editable content (used by
-    `reassemble()`); `char_offset` is a fixed reference to the source set at parse
-    time and is not updated by edits.
-
-    `char_offset` follows the `TextDoc` convention: it is relative to the immediate
-    parent, which for a sentence is its paragraph (the offset within
-    `Paragraph.original_text`). Use `TextDoc.char_offset_in_doc` for the absolute
-    offset in the document. See `TextDoc` for the full contract.
+    `reassemble()`); `offsets` is a fixed reference to the source set at parse time
+    and is not updated by edits. Offsets are exact when the sentence is a verbatim
+    slice of the paragraph (prose); for content where the splitter normalizes
+    whitespace (e.g. tables), the offset is a best-effort position. See `TextDoc`
+    for the full contract.
     """
 
     text: str
-    char_offset: int  # Offset of the sentence within its paragraph's text.
+    offsets: Offsets
 
     def size(self, unit: TextUnit) -> int:
         return size(self.text, unit)
@@ -197,27 +218,23 @@ class Paragraph:
     """
     A paragraph (one blank-line-separated block) in a `TextDoc`.
 
-    `original_text` and `char_offset` are fixed references to the source as parsed
-    and are not updated by edits; `sentences` holds the editable content used by
+    `original_text` and `offsets` are fixed references to the source as parsed and
+    are not updated by edits; `sentences` holds the editable content used by
     `reassemble()`. `block_type` is derived from `original_text` and cached, so it
-    assumes `original_text` is not reassigned after construction.
-
-    `char_offset` follows the `TextDoc` convention: it is relative to the immediate
-    parent, which for a paragraph is the document, so it is already the absolute
-    offset of the paragraph in the document text. See `TextDoc` for the full
-    contract.
+    assumes `original_text` is not reassigned after construction. See `TextDoc` for
+    the full contract.
     """
 
     original_text: str
     sentences: list[Sentence]
-    char_offset: int  # Offset of the paragraph in the document text.
+    offsets: Offsets
 
     @classmethod
     @tally_calls(level="warning", min_total_runtime=5)
     def from_text(
         cls,
         text: str,
-        char_offset: int = -1,
+        doc_offset: int = 0,
         sentence_splitter: Splitter = default_sentence_splitter,
     ) -> Paragraph:
         # TODO: Lazily compute sentences for better performance.
@@ -225,14 +242,21 @@ class Paragraph:
         sentences: list[Sentence] = []
         cursor = 0
         for sent_str in sent_values:
-            # Locate each sentence's exact position within the paragraph so the
-            # offset is correct regardless of the original inter-sentence spacing.
+            # Locate each sentence's position within the paragraph. Sentence
+            # splitters may normalize whitespace (e.g. inside a table), so when the
+            # sentence is not a verbatim slice we fall back to the running cursor.
             idx = text.find(sent_str, cursor)
             if idx < 0:
                 idx = cursor
-            sentences.append(Sentence(sent_str, idx))
+            sentences.append(
+                Sentence(sent_str, Offsets(doc_offset=doc_offset + idx, block_offset=idx))
+            )
             cursor = idx + len(sent_str)
-        return cls(original_text=text, sentences=sentences, char_offset=char_offset)
+        return cls(
+            original_text=text,
+            sentences=sentences,
+            offsets=Offsets(doc_offset=doc_offset, block_offset=doc_offset),
+        )
 
     def reassemble(self) -> str:
         return SENT_BR_STR.join(sent.text for sent in self.sentences)
@@ -336,23 +360,22 @@ class TextDoc:
       `reassemble()`. It is not a live, self-updating DOM.
 
     - Source references are fixed at parse time. `Paragraph.original_text` and the
-      `char_offset`s on paragraphs and sentences are exact references into the text
+      `offsets` on paragraphs and sentences are exact references into the text
       passed to `from_text` (the input is not normalized) and are not updated when
       content is mutated, so they remain valid as references back to the source.
 
-    - Offset convention: every `char_offset` is relative to the immediate parent.
-      A paragraph's parent is the document (so `Paragraph.char_offset` is absolute
-      in the document), and a sentence's parent is its paragraph. Use
-      `char_offset_in_doc` for a sentence's absolute offset in the document.
+    - Offsets: every paragraph and sentence carries an `Offsets` record with both
+      `doc_offset` (absolute in the document) and `block_offset` (relative to the
+      enclosing block — the document for a paragraph, the paragraph for a sentence).
 
     - In-place editing is supported for *building transformed output*: mutate
       sentence text (`replace_str`, `set_sent`) or restructure the paragraph and
       sentence lists (`sub_doc`, `sub_paras`, `filtered`, `append_sent`), then call
       `reassemble()`. This is safe as long as you do not rely on the source
-      references tracking your edits: after editing, `original_text`, the
-      `char_offset`s, and cached values like `Paragraph.block_type` still describe
-      the *original* blocks. To get offsets/classification for edited content,
-      re-parse with `TextDoc.from_text(doc.reassemble())`.
+      references tracking your edits: after editing, `original_text`, the `offsets`,
+      and cached values like `Paragraph.block_type` still describe the *original*
+      blocks. To get offsets/classification for edited content, re-parse with
+      `TextDoc.from_text(doc.reassemble())`.
 
     - `filtered()` returns an independent deep copy; `iter_blocks()` and the
       `paragraphs`/`sentences` lists expose this document's live objects.
@@ -366,19 +389,26 @@ class TextDoc:
         cls, text: str, sentence_splitter: Splitter = default_sentence_splitter
     ) -> TextDoc:
         """
-        Parse a document from a string. The input is not normalized, so each
-        paragraph's `char_offset` is an exact reference into `text`:
-        `text[p.char_offset : p.char_offset + len(p.original_text)] == p.original_text`.
+        Parse a document from a string. Paragraphs are split on blank lines (two or
+        more newlines, including blank lines that contain only whitespace). The
+        input is not normalized, so every offset is an exact reference into `text`;
+        e.g. `text[p.offsets.doc_offset : p.offsets.doc_offset + len(p.original_text)]`
+        round-trips to `p.original_text`.
         """
         paragraphs: list[Paragraph] = []
-        pos = 0
-        for piece in text.split(PARA_BR_STR):
+        spans: list[tuple[int, int]] = []
+        start = 0
+        for m in _PARA_BREAK_REGEX.finditer(text):
+            spans.append((start, m.start()))
+            start = m.end()
+        spans.append((start, len(text)))
+        for span_start, span_end in spans:
+            piece = text[span_start:span_end]
             stripped = piece.strip()
             if stripped:
-                # Offset of the stripped content within the original text.
-                offset = pos + (len(piece) - len(piece.lstrip()))
-                paragraphs.append(Paragraph.from_text(stripped, offset, sentence_splitter))
-            pos += len(piece) + len(PARA_BR_STR)
+                # Doc offset of the stripped content within the original text.
+                doc_offset = span_start + (len(piece) - len(piece.lstrip()))
+                paragraphs.append(Paragraph.from_text(stripped, doc_offset, sentence_splitter))
         return cls(paragraphs=paragraphs)
 
     @classmethod
@@ -416,19 +446,10 @@ class TextDoc:
     def get_sent(self, index: SentIndex) -> Sentence:
         return self.paragraphs[index.para_index].sentences[index.sent_index]
 
-    def char_offset_in_doc(self, index: SentIndex) -> int:
-        """
-        Absolute character offset of a sentence in the document, combining the
-        paragraph's offset (`Paragraph.char_offset`) with the sentence's
-        paragraph-relative offset (`Sentence.char_offset`).
-        """
-        para = self.paragraphs[index.para_index]
-        return para.char_offset + para.sentences[index.sent_index].char_offset
-
     def set_sent(self, index: SentIndex, sent_str: str) -> None:
         old_sent = self.get_sent(index)
         self.paragraphs[index.para_index].sentences[index.sent_index] = Sentence(
-            sent_str, old_sent.char_offset
+            sent_str, old_sent.offsets
         )
 
     def seek_to_sent(self, offset: int, unit: TextUnit) -> tuple[SentIndex, int]:
@@ -493,7 +514,7 @@ class TextDoc:
                     Paragraph(
                         original_text=para.original_text,
                         sentences=para.sentences[first.sent_index : last.sent_index + 1],
-                        char_offset=para.char_offset,
+                        offsets=para.offsets,
                     )
                 )
             elif i == first.para_index:
@@ -501,7 +522,7 @@ class TextDoc:
                     Paragraph(
                         original_text=para.original_text,
                         sentences=para.sentences[first.sent_index :],
-                        char_offset=para.char_offset,
+                        offsets=para.offsets,
                     )
                 )
             elif i == last.para_index:
@@ -509,7 +530,7 @@ class TextDoc:
                     Paragraph(
                         original_text=para.original_text,
                         sentences=para.sentences[: last.sent_index + 1],
-                        char_offset=para.char_offset,
+                        offsets=para.offsets,
                     )
                 )
             else:
@@ -582,7 +603,7 @@ class TextDoc:
     def append_sent(self, sent: Sentence) -> None:
         if len(self.paragraphs) == 0:
             self.paragraphs.append(
-                Paragraph(original_text=sent.text, sentences=[sent], char_offset=0)
+                Paragraph(original_text=sent.text, sentences=[sent], offsets=Offsets(0, 0))
             )
         else:
             last_para = self.paragraphs[-1]
