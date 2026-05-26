@@ -25,7 +25,7 @@ from chopdiff.docs.wordtoks import (
     join_wordtoks,
     wordtokenize,
 )
-from chopdiff.util.tiktoken_utils import tiktoken_len
+from chopdiff.util.token_estimate import estimate_tokens
 
 SYMBOL_PARA = "¶"
 
@@ -155,8 +155,8 @@ class Paragraph:
         if unit == TextUnit.sentences:
             return len(self.sentences)
 
-        if unit == TextUnit.tiktokens:
-            return tiktoken_len(self.reassemble())
+        if unit == TextUnit.tokens:
+            return estimate_tokens(self.reassemble())
 
         base_size = sum(sent.size(unit) for sent in self.sentences)
         if unit == TextUnit.bytes:
@@ -397,8 +397,8 @@ class TextDoc:
         if unit == TextUnit.sentences:
             return sum(len(para.sentences) for para in self.paragraphs)
 
-        if unit == TextUnit.tiktokens:
-            return tiktoken_len(self.reassemble())
+        if unit == TextUnit.tokens:
+            return estimate_tokens(self.reassemble())
 
         base_size = sum(para.size(unit) for para in self.paragraphs)
         n_para_breaks = max(len(self.paragraphs) - 1, 0)
@@ -425,7 +425,7 @@ class TextDoc:
                 f"{self.size(TextUnit.sentences)} sents, "
                 f"{self.size(TextUnit.words)} words, "
                 # f"{self.size(TextUnit.wordtoks)} wordtoks, "
-                f"{self.size(TextUnit.tiktokens)} tiktoks)"
+                f"~{self.size(TextUnit.tokens)} tok)"
             )
         else:
             return f"{nbytes} bytes"
