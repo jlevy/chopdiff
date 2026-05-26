@@ -86,7 +86,7 @@ def test_document_parse_reassemble():
     # Check offset of a paragraph towards the end of the document.
     last_para = doc.paragraphs[-1]
     last_para_char_offset = text.rindex(last_para.original_text)
-    assert last_para.char_offset == last_para_char_offset
+    assert last_para.offsets.doc_offset == last_para_char_offset
 
 
 def test_markup_detection():
