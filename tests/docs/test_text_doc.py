@@ -414,3 +414,22 @@ def test_tiktoken_len():
     print(len)
 
     assert len > 100
+
+
+def test_is_footnote_def_detection():
+    doc = TextDoc.from_text(
+        dedent(
+            """
+            Title.
+
+            Body with a ref[^a1].
+
+            [^a1]: The definition line
+            """
+        ).strip()
+    )
+
+    assert len(doc.paragraphs) == 3
+    assert not doc.paragraphs[0].is_footnote_def()
+    assert not doc.paragraphs[1].is_footnote_def()
+    assert doc.paragraphs[2].is_footnote_def()

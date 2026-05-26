@@ -91,7 +91,7 @@ More on what’s here:
 
 - [Word-level diffs](src/chopdiff/docs/token_diffs.py) that don’t work at the line level
   (like usual git-style diffs) but rather treat whitespace, sentence, and paragraph
-  breaks as indidivdual tokens.
+  breaks as individual tokens.
   It performs LCS-style token-based diffs with
   [cydifflib](https://github.com/rapidfuzz/cydifflib), which is significantly faster
   than Python’s built-in [difflib](https://docs.python.org/3.10/library/difflib.html).
@@ -347,11 +347,11 @@ chunks = doc.chunk_by_sections(
 
 ## Project Docs
 
-For how to install uv and Python, see [installation.md](installation.md).
+For how to install uv and Python, see [installation.md](docs/installation.md).
 
-For development workflows, see [development.md](development.md).
+For development workflows, see [development.md](docs/development.md).
 
-For instructions on publishing to PyPI, see [publishing.md](publishing.md).
+For instructions on publishing to PyPI, see [publishing.md](docs/publishing.md).
 
 * * *
 
