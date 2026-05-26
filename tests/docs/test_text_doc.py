@@ -20,6 +20,7 @@ from chopdiff.docs.wordtoks import (
     wordtok_len,
     wordtokenize,
 )
+from chopdiff.util.token_estimate import estimate_tokens
 
 _med_test_doc = dedent(
     """
@@ -189,7 +190,7 @@ def test_doc_sizes():
     size_summary = doc.size_summary()
     print(size_summary)
 
-    assert size_summary == "726 bytes (37 lines, 16 paras, 20 sents, 82 words, 215 tiktoks)"
+    assert size_summary == "726 bytes (37 lines, 16 paras, 20 sents, 82 words, ~190 tok)"
 
 
 def test_seek_doc():
@@ -406,14 +407,17 @@ def test_html_tokenization():
     ]
 
 
-def test_tiktoken_len():
+def test_token_estimate():
     doc = TextDoc.from_text(_med_test_doc)
 
-    len = doc.size(TextUnit.tiktokens)
-    print("--Tiktoken len:")
-    print(len)
+    n = doc.size(TextUnit.tokens)
+    print("--Estimated tokens:")
+    print(n)
 
-    assert len > 100
+    # Heuristic estimate (~3.8 chars/token); sanity-check the ballpark and that it
+    # matches the standalone estimator on the reassembled text.
+    assert n > 100
+    assert n == estimate_tokens(doc.reassemble())
 
 
 def test_is_footnote_def_detection():
