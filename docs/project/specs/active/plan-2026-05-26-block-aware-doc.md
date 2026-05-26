@@ -274,3 +274,51 @@ All additive:
 - flowmark (public `flowmark_markdown()`), and its internal
   `linewrapping/atomic_patterns.py` (link/code-span/URL regexes) and
   `transforms/doc_transforms.py` (inline traversal) — prior art for inline handling.
+
+## Addendum: Proposed upstream changes to flowmark
+
+Layer 4 (and the marko alignment generally) wants to reuse flowmark rather than
+re-implement Markdown inline handling. flowmark already has everything needed, but the
+useful pieces live in internal modules not in its public `__all__`. Since flowmark and
+chopdiff are both first-party, the cleanest path is a small, intentional public surface
+in flowmark. Concrete proposals, cross-referenced to flowmark v0.6.5 source:
+
+1. **Publish the atomic-construct patterns.** `src/flowmark/linewrapping/atomic_patterns.py`
+   defines `AtomicPattern` plus `MARKDOWN_LINK`, `INLINE_CODE_SPAN`, HTML/Jinja tag and
+   comment patterns, the ordered `ATOMIC_PATTERNS` tuple, and the combined
+   `ATOMIC_CONSTRUCT_PATTERN` regex. These encode exactly "what must not be split
+   mid-construct" — what chopdiff needs for link-safe sentence splitting and exact
+   link/code spans. Re-export them from the package (e.g. a public `flowmark.atomic`
+   submodule and `__all__` entries) so chopdiff uses one source of truth instead of a
+   drifting local copy.
+
+2. **Offer offset-preserving, atomic-aware sentence splitting.** The public
+   `src/flowmark/linewrapping/sentence_split_regex.py:split_sentences_regex` does
+   `text.split()` then `" ".join(...)`, so it loses whitespace and offsets and is not
+   atomic-aware (it can split inside a link). flowmark already tokenizes atomically for
+   wrapping. Propose a public, offset-preserving API:
+   - `iter_atomic_tokens(text) -> Iterable[(text, start, end, is_atomic)]` over
+     `ATOMIC_CONSTRUCT_PATTERN`, and/or
+   - `split_sentences_with_spans(text) -> list[(text, start, end)]` that applies the
+     existing end-of-sentence heuristic only between atomic tokens and never splits one.
+   flowmark is the natural home (it owns both sentence splitting and the atomic patterns);
+   chopdiff would consume these directly for exact, link-safe `Sentence` spans.
+
+3. **Publish AST traversal + link extraction.** `src/flowmark/transforms/doc_transforms.py`
+   has `transform_tree(element, transformer)` (a robust marko walk) and
+   `_collect_inline_segments(...)`, and `src/flowmark/formats/flowmark_markdown.py`
+   exposes the configured parser (GFM + footnote). Export a read-only inline iterator
+   (e.g. `iter_inline(element)`) and a convenience `extract_links(doc) ->
+   list[Link(text, url, title)]` built on the same traversal, so consumers don't
+   re-implement AST walks that must track GFM/footnote element types.
+
+4. **Commit to a stable, versioned public surface.** Because chopdiff will depend on the
+   above, the exported names should be an intentional API (a `flowmark.atomic` /
+   `flowmark.ast` submodule and `__all__`), not just de-underscored internals, so
+   chopdiff is not coupled to flowmark's internal refactors.
+
+Until these land, chopdiff keeps the Layer 4 fallback: use only the public
+`flowmark_markdown()` and hold a small local copy of the link/code-span/URL regexes.
+These proposals should be filed as flowmark issues (first-party) and, ideally, a small
+flowmark PR exporting (1) and (3) — which unblock most of Layer 4 — with (2) as the
+larger follow-up.
