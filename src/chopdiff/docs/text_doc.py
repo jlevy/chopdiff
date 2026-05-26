@@ -4,11 +4,25 @@ from collections import defaultdict
 from collections.abc import Callable, Generator, Iterable, Iterator
 from dataclasses import dataclass
 from enum import StrEnum
+from functools import cache
 from typing import TypeAlias
 
 import regex
-from flowmark import split_sentences_regex
+from flowmark import flowmark_markdown, split_sentences_regex
 from funlog import tally_calls
+from marko import Markdown
+from marko.block import (
+    BlankLine,
+    CodeBlock,
+    FencedCode,
+    Heading,
+    HTMLBlock,
+    List,
+    Quote,
+    SetextHeading,
+)
+from marko.ext.footnote import FootnoteDef
+from marko.ext.gfm.elements import Table
 from typing_extensions import override
 
 from chopdiff.docs.sizes import TextUnit, size, size_in_bytes
@@ -53,14 +67,17 @@ def is_markdown_header(markdown: str) -> bool:
 
 class BlockType(StrEnum):
     """
-    The kind of Markdown block a `Paragraph` represents, detected heuristically
-    from the block text.
+    The kind of Markdown block a `Paragraph` represents, determined by parsing the
+    block with flowmark's Markdown (marko) parser. This reuses the same parser
+    flowmark uses, so GFM tables, footnote definitions, and fenced code (including
+    `#` lines inside code) are recognized correctly.
 
     `TextDoc` splits a document on blank lines, so each block is one
     blank-line-separated unit. This means a fenced code block or a "loose" list
     that contains a blank line can be split across multiple blocks, and a list is
     a single block rather than one block per item. For exact block boundaries and
-    per-list-item granularity, a full Markdown block parse is required.
+    per-list-item granularity, a full Markdown block parse over the whole document
+    is required (see the BlockDoc plan spec).
     """
 
     paragraph = "paragraph"
@@ -73,37 +90,30 @@ class BlockType(StrEnum):
     footnote = "footnote"
 
 
-_LIST_ITEM_REGEX = regex.compile(r"^\s{0,3}([-*+]|\d+[.)])\s+")
-"""Matches the start of a Markdown list item (bulleted or ordered)."""
-
-_TABLE_DELIM_REGEX = regex.compile(r"^\s*\|?\s*:?-{1,}:?\s*(\|\s*:?-{1,}:?\s*)+\|?\s*$")
-"""Matches a GFM table delimiter row, e.g. `| --- | :--: |`."""
-
-
-def _is_code_fence(text: str) -> bool:
-    return text.startswith("```") or text.startswith("~~~")
+@cache
+def _markdown_parser() -> Markdown:
+    """Shared marko parser, configured the same way flowmark configures it."""
+    return flowmark_markdown()
 
 
-def _is_blockquote(text: str) -> bool:
-    lines = [ln for ln in text.splitlines() if ln.strip()]
-    return bool(lines) and all(ln.lstrip().startswith(">") for ln in lines)
-
-
-def _is_table(text: str) -> bool:
-    # A GFM table needs a header row followed by a delimiter row of dashes/pipes.
-    lines = text.splitlines()
-    return (
-        len(lines) >= 2
-        and "|" in lines[0]
-        and _TABLE_DELIM_REGEX.match(lines[1].strip()) is not None
-    )
-
-
-def _is_list(text: str) -> bool:
-    for ln in text.splitlines():
-        if ln.strip():
-            return _LIST_ITEM_REGEX.match(ln) is not None
-    return False
+def _classify_block(text: str) -> BlockType:
+    parsed = _markdown_parser().parse(text)
+    element = next((el for el in parsed.children if not isinstance(el, BlankLine)), None)
+    if isinstance(element, (Heading, SetextHeading)):
+        return BlockType.heading
+    if isinstance(element, FootnoteDef):
+        return BlockType.footnote
+    if isinstance(element, (FencedCode, CodeBlock)):
+        return BlockType.code
+    if isinstance(element, Quote):
+        return BlockType.blockquote
+    if isinstance(element, Table):
+        return BlockType.table
+    if isinstance(element, List):
+        return BlockType.list
+    if isinstance(element, HTMLBlock):
+        return BlockType.html
+    return BlockType.paragraph
 
 
 @dataclass(frozen=True, order=True)
@@ -270,21 +280,12 @@ class Paragraph:
         text = self.original_text.strip()
         if not text:
             return BlockType.paragraph
-        if self.is_header():
-            return BlockType.heading
-        if self.is_footnote_def():
-            return BlockType.footnote
-        if _is_code_fence(text):
-            return BlockType.code
-        if _is_blockquote(text):
-            return BlockType.blockquote
-        if _is_table(text):
-            return BlockType.table
-        if _is_list(text):
-            return BlockType.list
-        if self.is_markup():
+        block_type = _classify_block(text)
+        # marko treats a single-line HTML tag as an inline-HTML paragraph rather than
+        # an HTML block, so fall back to chopdiff's own markup check for those.
+        if block_type == BlockType.paragraph and self.is_markup():
             return BlockType.html
-        return BlockType.paragraph
+        return block_type
 
 
 @dataclass

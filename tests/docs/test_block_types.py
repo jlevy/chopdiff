@@ -71,6 +71,21 @@ def test_filtered_counts_paragraphs_only():
     assert paragraphs_only.size(TextUnit.words) == expected_words
 
 
+def test_setext_heading_classified_as_heading():
+    doc = TextDoc.from_text(
+        dedent(
+            """
+            Setext Heading One
+            ==================
+
+            Body paragraph.
+            """
+        ).strip()
+    )
+    assert doc.paragraphs[0].block_type == BlockType.heading
+    assert doc.paragraphs[1].block_type == BlockType.paragraph
+
+
 def test_code_fence_not_a_heading():
     doc = TextDoc.from_text(
         dedent(
