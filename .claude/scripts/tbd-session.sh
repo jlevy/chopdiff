@@ -23,16 +23,21 @@ ensure_tbd() {
         return 0
     fi
 
-    echo "[tbd] CLI not found, installing..."
+    # Pinned version. Supply-chain hardening: do not install "latest" at runtime;
+    # bump this deliberately. See SUPPLY-CHAIN-SECURITY.md.
+    TBD_VERSION="0.1.29"
+    TBD_PKG="get-tbd@${TBD_VERSION}"
+
+    echo "[tbd] CLI not found, installing ${TBD_PKG}..."
 
     # Try npm first (most common for Node.js tools)
     if command -v npm &> /dev/null; then
         echo "[tbd] Installing via npm..."
-        npm install -g get-tbd 2>/dev/null || {
+        npm install -g "${TBD_PKG}" 2>/dev/null || {
             # If global install fails (permissions), try local install
             echo "[tbd] Global npm install failed, trying user install..."
             mkdir -p ~/.local/bin
-            npm install --prefix ~/.local get-tbd
+            npm install --prefix ~/.local "${TBD_PKG}"
             # Create symlink if needed
             if [ -f ~/.local/node_modules/.bin/tbd ]; then
                 ln -sf ~/.local/node_modules/.bin/tbd ~/.local/bin/tbd
@@ -40,13 +45,13 @@ ensure_tbd() {
         }
     elif command -v pnpm &> /dev/null; then
         echo "[tbd] Installing via pnpm..."
-        pnpm add -g get-tbd
+        pnpm add -g "${TBD_PKG}"
     elif command -v yarn &> /dev/null; then
         echo "[tbd] Installing via yarn..."
-        yarn global add get-tbd
+        yarn global add "${TBD_PKG}"
     else
         echo "[tbd] ERROR: No package manager found (npm, pnpm, or yarn required)"
-        echo "[tbd] Please install Node.js and npm, then run: npm install -g get-tbd"
+        echo "[tbd] Please install Node.js and npm, then run: npm install -g ${TBD_PKG}"
         return 1
     fi
 

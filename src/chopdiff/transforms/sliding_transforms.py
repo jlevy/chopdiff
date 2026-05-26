@@ -9,7 +9,7 @@ from math import ceil
 from typing import Any, TypeAlias
 
 from flowmark import fill_markdown
-from prettyfmt import fmt_lines
+from prettyfmt.prettyfmt import fmt_lines
 
 from chopdiff.docs.sizes import TextUnit
 from chopdiff.docs.text_doc import Paragraph, TextDoc

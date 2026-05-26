@@ -4,7 +4,7 @@ from collections.abc import Callable
 from copy import copy
 from dataclasses import dataclass, field
 
-from prettyfmt import fmt_lines
+from prettyfmt.prettyfmt import fmt_lines
 from typing_extensions import override
 
 from chopdiff.docs.sizes import TextUnit
