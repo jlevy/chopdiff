@@ -1,169 +1,188 @@
-# Feature: Block-aware document model for chopdiff
+# Feature: Exact spans, sections, and structural blocks for TextDoc
 
-**Date:** 2026-05-26 (last updated 2026-05-26, revised after the v0.3.0 release)
+**Date:** 2026-05-26
 
 **Author:** chopdiff maintainers
 
-**Status:** Draft (revised)
+**Status:** Draft
 
 ## Overview
 
-Give chopdiff a Markdown-block-aware document model with exact source spans for every
-structural unit (block and sentence), a heading/section hierarchy, and per-list-item
-granularity.
+`TextDoc` is now block-aware (as of v0.3.0): it classifies each block by Markdown kind,
+filters/iterates by type, and records exact start offsets into the unmodified source.
+This feature builds on that to add the three capabilities still missing for full
+document-structure navigation:
 
-**This spec was substantially delivered, in pieces, by the v0.3.0 release.** The
-original "lightweight first step" (`BlockType`, `iter_blocks`/`filtered`) plus the exact
-offsets and the `Offsets` record all shipped on the existing `TextDoc` rather than a new
-class. This revision records what shipped, narrows the spec to the genuine remaining
-gaps, and — informed by how well the incremental approach worked — **recommends
-evolving `TextDoc` rather than building a parallel `BlockDoc` with adapters.**
+1. **Exact spans** — a start *and* end for every block and sentence, so any unit's
+   source text can be sliced exactly and any character offset can be mapped to the
+   block/sentence containing it (and back).
+2. **Sections** — a heading/section hierarchy and table of contents, derived from the
+   heading blocks already classified today.
+3. **Structural blocks** — an opt-in, whole-document parse that resolves what blank-line
+   splitting cannot: individual list items, list nesting, and code/list blocks whose
+   boundaries don't align to blank lines.
 
-## What shipped in v0.3.0
+All of this extends `TextDoc` in place. We are explicitly **not** introducing a parallel
+`BlockDoc`/`SectionDoc`/`FlexDoc`; the incremental v0.3.0 approach is the model.
 
-These were goals of the original spec and are now on `main`:
+## Goals
 
-- **Block classification** (`BlockType`: heading, paragraph, list, table, code,
-  blockquote, html, footnote) via `Paragraph.block_type`, determined by parsing each
-  block with flowmark's marko parser (not a regex heuristic). Correctly ignores `#`
-  inside fenced code and recognizes setext headings, GFM tables, and footnote defs.
-- **Filtered iteration / aggregation**: `TextDoc.iter_blocks(include=, exclude=)` and
-  `TextDoc.filtered(...)`, so callers can process only paragraphs and list items (or
-  skip headings/tables) and count sentences/words over a subset.
-- **Exact offsets**: `from_text` no longer strips the document; `Offsets(doc_offset,
-  block_offset)` on `Paragraph` and `Sentence` round-trips into the unmodified input
-  (`doc_offset` absolute, `block_offset` relative to the parent).
-- **Robust paragraph splitting**: blank line = two or more newlines, including
-  whitespace-only blank lines; runs collapse to one break.
-- **Token estimation**: `estimate_tokens` / `TextUnit.tokens` (no tokenizer, no
-  network); `tiktoken` removed.
-
-As a result, the core downstream needs (track paragraphs and sentences, see block
-structure, iterate/skip by block type, aggregate counts) are **already met** for the
-common cases.
-
-## Remaining gaps (the actual scope now)
-
-1. **Exact block/sentence spans.** `Offsets` carries only a start (`doc_offset`); there
-   is no `end`. Extracting "the exact source text of this block/sentence" or doing
-   bidirectional offset↔block↔sentence mapping needs a span `[start, end)`.
-2. **Per-list-item granularity and nesting.** A tight list is still a single `list`
-   block; loose lists yield one block per item but flatten nesting. There is no
-   first-class list item or nesting depth.
-3. **Exact block boundaries for code/loose lists.** Blank-line splitting still splits a
-   fenced code block that contains a blank line, and cannot see structure that does not
-   align to blank lines.
-4. **Heading/section hierarchy + TOC.** No tree over heading blocks (the PR #1
-   `SectionDoc` was not merged).
-5. **Exact sentence spans.** Sentence offsets are best-effort: the sentence splitter
-   normalizes whitespace, so a sentence inside a table is not a verbatim slice and its
-   offset falls back to a cursor position.
+- Every `Paragraph` and `Sentence` exposes an exact `[start, end)` span (document- and
+  parent-relative), with `block_at_offset` / `sentence_at_offset` lookups, round-tripping
+  against the original text.
+- A derived section hierarchy and TOC over heading blocks, correct for ATX and setext
+  headings and never tripped by `#` inside fenced code.
+- An opt-in structural block tree (`list_item` + nesting; code/table/blockquote as whole
+  blocks) for callers that need per-item granularity.
+- Strictly additive: `TextDoc`, `Paragraph`, `Sentence`, and the diff/window/wordtok
+  machinery keep their current behavior and APIs.
 
 ## Non-Goals
 
-- Replacing `TextDoc` or its sentence/wordtok/diff/sliding-window machinery.
-- Full CommonMark/GFM rendering or reformatting (flowmark covers that).
-- Replacing the HTML-div parser (`chopdiff.divs` / `TextNode`).
+- Replacing `TextDoc` or changing how diffs, sliding windows, or wordtoks work.
+- CommonMark/GFM rendering or reformatting (flowmark already covers normalization).
+- Replacing `TextNode` (the HTML-`<div>` view in `chopdiff.divs`).
+- Exact, provider-keyed token counts (tracked separately).
 - A concurrency/thread-safety layer.
 
-## Design (revised)
+## Background — current state (v0.3.0)
 
-**Recommendation: evolve `TextDoc` incrementally; do not introduce a parallel `BlockDoc`
-class with `to_text_doc()` adapters.** The v0.3.0 work showed that adding block-awareness
-directly to `TextDoc` is low-risk, additive, and avoids a second overlapping
-abstraction (the very problem the original spec set out to remove). The remaining gaps
-are best addressed as additive layers, smallest-first.
+`TextDoc.from_text` splits the document on blank lines (two or more newlines, including
+whitespace-only lines) into `Paragraph`s, each split into `Sentence`s. Relevant current
+surface:
 
-### Step 1 — spans (small, high value)
+- `Paragraph`: `original_text` (the exact block text), `sentences`, `offsets:
+  Offsets`, and a cached `block_type: BlockType` (heading, paragraph, list, table, code,
+  blockquote, html, footnote), classified by parsing the block with flowmark's marko.
+- `Sentence`: `text`, `offsets: Offsets`.
+- `Offsets(doc_offset, block_offset)`: **start only.** `doc_offset` is absolute in the
+  document; `block_offset` is relative to the parent (the document for a paragraph, the
+  paragraph for a sentence). Offsets are exact references into the unmodified input.
+- `TextDoc.iter_blocks(include=, exclude=)` and `filtered(...)` select blocks by type.
 
-Extend the shipped `Offsets` from a start-only record to a span. Either add `end` to
-`Offsets` or introduce a `Span(start, end)` with both a `doc`-relative and
-`block`-relative form, keeping backward-compatible accessors where practical. With end
-offsets:
+Limitations this feature addresses:
 
-- `block.text` / `sentence.text` can be sliced exactly from the source.
-- Implement bidirectional mapping: `TextDoc.block_at_offset(o)` /
-  `sentence_at_offset(o)`.
-- Make sentence spans exact where the sentence is a verbatim slice; keep a documented
-  best-effort fallback for splitter-normalized content (e.g. tables).
+- Offsets are start-only — no end, so you cannot slice a unit's source text by span or
+  map an arbitrary offset to its unit.
+- A *tight* list is one `list` block (no per-item access); a fenced code block
+  containing a blank line is split; loose nested lists flatten.
+- No section hierarchy (PR #1's `SectionDoc` was reviewed and not merged).
+- Sentence offsets are best-effort: the sentence splitter normalizes whitespace, so a
+  sentence inside e.g. a table is not a verbatim slice of the block.
 
-This is additive and unblocks the "track sentence spans within a document" use case
-fully.
+## Design
 
-### Step 2 — heading/section hierarchy (cheap, derived)
+Three additive layers, smallest and most valuable first. Layers 1 and 2 are cheap and
+reuse what already exists; Layer 3 is the only part needing real parsing work.
 
-Add a derived view that groups the existing `block_type == heading` paragraphs into a
-tree (`TextDoc.sections()` / `toc()`), with each section spanning from its heading to
-the next heading of equal-or-higher level. This reuses the already-correct,
-code-fence-safe heading classification and needs **no** re-parse — superseding the
-intent of PR #1's `SectionDoc` without its fragile hand-rolled offsets.
+### Layer 1 — Exact spans (compute, don't store)
 
-### Step 3 — true block structure (the genuinely new, harder part)
+A paragraph's `original_text` is already an exact slice of the source, so its end is
+simply `doc_offset + len(original_text)` — **no new stored state is needed.** Add
+computed accessors rather than new fields:
 
-For per-list-item granularity, nesting, and exact code/list boundaries, parse the
-**whole document once** into a structural block tree (list → items → nested lists; code
-as one block regardless of internal blank lines). Offer this as an **opt-in richer
-structure** (e.g. `TextDoc.blocks()` returning typed `Block`s with spans and children)
-rather than replacing the blank-line `Paragraph` model that diff/windowing depend on.
+- `Paragraph.span -> (start, end)` and `Paragraph.end_offset` (= `doc_offset +
+  len(original_text)`).
+- `Sentence` spans, both block-relative and absolute, from `offsets` + `len(text)`. For
+  verbatim sentences these round-trip exactly; for splitter-normalized sentences (e.g.
+  tables) the span is best-effort and documented as such.
+- `TextDoc.block_at_offset(o) -> Paragraph | None` and `sentence_at_offset(o) ->
+  SentIndex | None`, implemented by binary/linear search over the paragraph spans.
 
-Offsets remain the hard part. With spans from Step 1 in place, evaluate:
+Optionally introduce a small frozen `Span(start, end)` value type if it reads better
+than tuples, but keep `Offsets` as-is to avoid churn.
 
-- **marko line-numbers + a source-mapping pass** over the single parse, or
-- **a small line-oriented block scanner** (fenced code, ATX/setext headings, list
-  items, blockquotes, tables, thematic breaks, paragraphs), cross-checked against marko.
+### Layer 2 — Sections and TOC (derived, no reparse)
 
-A spike is still warranted, but it is now lower-stakes: paragraph-level exact offsets
-already work, so this only needs to be correct for sub-paragraph structure.
+Add a derived hierarchy over the existing heading blocks:
 
-### `BlockType` additions
+- `Section`: a heading `Paragraph`, its level, the contiguous blocks it owns (up to the
+  next heading of equal-or-higher level), and child `Section`s.
+- `TextDoc.sections() -> list[Section]` (tree) and `toc()` (flattened title/level/span).
 
-When Step 3 lands, extend `BlockType` with `list_item` (and `thematic_break` if needed).
-This is additive to the shipped enum.
+This reuses the already-correct, code-fence-safe, setext-aware heading classification and
+the Layer 1 spans; it needs **no** re-parse and supersedes the intent of `SectionDoc`
+without its fragile hand-rolled offsets.
 
-## Open questions — resolved or narrowed
+### Layer 3 — Structural block tree (opt-in, the hard part)
 
-- **`from_text` strip / exact offsets** — RESOLVED: strip removed in v0.3.0; paragraph
-  offsets are exact.
-- **Replace vs wrap `TextDoc`** — RESOLVED: do neither; evolve `TextDoc` in place.
-- **marko vs scanner for offsets** — NARROWED: only needed for sub-paragraph structure
-  (Step 3); spike before committing.
-- **List nesting / multi-paragraph items** — still open; decide representation in Step 3
-  (e.g. items hold child blocks).
-- **`FlexDoc` / `TextNode`** — keep `TextNode` (HTML-div view) separate; do not build
-  `FlexDoc`.
+For per-list-item granularity, nesting, and exact code/list boundaries, parse the whole
+document once into a structural tree, offered as an opt-in API that does **not** replace
+the blank-line `Paragraph` model:
+
+- `Block`: `type: BlockType`, span, optional `level`, and `children` (a list holds
+  `list_item`s; an item may hold nested blocks).
+- `TextDoc.blocks() -> list[Block]` (or a standalone `parse_blocks(text)`), lazily
+  computed and cached.
+- `BlockType` gains `list_item` and `thematic_break` (additive to the shipped enum).
+
+Exact sub-paragraph offsets are the open technical risk. Spike two approaches on a
+corpus before committing:
+
+- marko line-numbers plus a source-mapping pass over a single parse, or
+- a small line-oriented block scanner (fenced code, ATX/setext headings, list items,
+  blockquotes, tables, thematic breaks, paragraphs), cross-checked against marko.
+
+Document-level paragraph offsets are already exact, so this only needs to be correct for
+structure *within* and *across* blank-line boundaries.
+
+### API Changes
+
+All additive:
+
+- `Paragraph`/`Sentence`: computed span/end accessors; optional `Span` type.
+- `TextDoc`: `block_at_offset`, `sentence_at_offset`, `sections`, `toc`, and (Layer 3)
+  `blocks`.
+- `Section` and `Block` dataclasses; `BlockType.list_item` / `BlockType.thematic_break`.
 
 ## Implementation Plan
 
-### Phase 1: Spans
+### Phase 1 — Spans and mapping
 
-- [ ] Add end offsets (span) to `Offsets`; exact `block.text` / `sentence.text`.
+- [ ] Computed span/end accessors on `Paragraph` and `Sentence`.
+- [ ] `block_at_offset` / `sentence_at_offset` with round-trip tests.
 - [ ] Make sentence spans exact for verbatim sentences; documented fallback otherwise.
-- [ ] `block_at_offset` / `sentence_at_offset` bidirectional mapping + round-trip tests.
 
-### Phase 2: Sections
+### Phase 2 — Sections and TOC
 
-- [ ] Derived `sections()` / `toc()` over heading blocks (setext + code-fence safe).
-- [ ] Port the `read_time` util and an `analyze_doc`-style example onto this.
+- [ ] `Section` type; `TextDoc.sections()` / `toc()` over heading blocks.
+- [ ] Port a `read_time` util and an `analyze_doc`-style example onto this.
 
-### Phase 3: True block structure (opt-in)
+### Phase 3 — Structural block tree (opt-in)
 
 - [ ] Spike marko source-mapping vs a block scanner for sub-paragraph exact offsets.
-- [ ] `TextDoc.blocks()` structural tree with `list_item` + nesting; golden tests.
+- [ ] `Block` tree with `list_item` + nesting; `TextDoc.blocks()`; golden tests.
 
 ## Testing Strategy
 
-- Golden / corpus tests over diverse Markdown (reuse the rich corpus added in
-  `tests/docs/test_block_types.py`): block list with types and spans snapshotted.
-- Invariants: `original_text[block.start:block.end] == block.text`;
-  `original_text[s.start:s.end] == s.text` for verbatim sentences; blocks non-overlapping.
-- Heading hierarchy: ATX + setext levels; `#` in fenced code never a heading.
-- Cross-check structural parse against marko on the corpus.
+- Span invariants: `original_text[p.span] == p.original_text`; verbatim
+  `original_text[s.span] == s.text`; non-overlapping, ordered spans.
+- Mapping: `block_at_offset`/`sentence_at_offset` agree with the spans across the doc.
+- Sections: ATX + setext levels; `#` inside fenced code never starts a section; nesting.
+- Structural parse: cross-checked against marko on the corpus in
+  `tests/docs/test_block_types.py`; list-item and nesting cases.
+
+## Rollout Plan
+
+- Phases 1 and 2 are additive and backward-compatible; ship together as a minor release.
+- Phase 3 ships separately once the offset spike settles; `BlockType` additions are
+  additive.
+
+## Open Questions
+
+- Spans: computed accessors (recommended) vs a stored `end` on `Offsets`?
+- Sections: expose as a nested tree, a flat list with levels, or both?
+- Layer 3: marko source-mapping vs a custom scanner; how to represent nested and
+  multi-paragraph list items; should code blocks be reassembled across blank lines.
+- Should `TextDoc` retain the full original source string to support slicing by an
+  arbitrary external offset, or is per-unit `original_text` sufficient (it is for
+  `block_at_offset`)?
 
 ## References
 
-- v0.3.0 release — shipped `BlockType`, `Offsets`, exact offsets, `iter_blocks`/
-  `filtered`, blank-line splitting, `estimate_tokens` (PRs #7, #9, #10).
-- PR #1: `feature/extend-chopdiff-section-iteration` (`SectionDoc`/`FlexDoc`) — prior art
-  and review findings; not merged.
-- `src/chopdiff/docs/text_doc.py` — current `TextDoc` / `Paragraph` / `Sentence` /
+- v0.3.0 (PRs #7, #9, #10): shipped `BlockType`, `iter_blocks`/`filtered`, `Offsets`,
+  exact paragraph offsets, blank-line splitting, `estimate_tokens`.
+- PR #1 `feature/extend-chopdiff-section-iteration` (`SectionDoc`/`FlexDoc`): prior art,
+  reviewed and not merged.
+- `src/chopdiff/docs/text_doc.py`: current `TextDoc` / `Paragraph` / `Sentence` /
   `Offsets` / `BlockType`.
