@@ -34,6 +34,9 @@ All of this extends `TextDoc` in place. We are explicitly **not** introducing a 
   headings and never tripped by `#` inside fenced code.
 - Rolled-up size stats per section (chars, words, sentences, tokens, …) in tree form,
   reusing the existing `size` machinery rather than new rollup logic.
+- A rollup of inline links (link text, URL, title, span) per block, section, and document.
+- Link-aware sentences: sentence spans never bisect a link, code span, or inline HTML,
+  and each link maps to the sentence that contains it.
 - An opt-in structural block tree (`list_item` + nesting; code/table/blockquote as whole
   blocks) for callers that need per-item granularity.
 - Strictly additive: `TextDoc`, `Paragraph`, `Sentence`, and the diff/window/wordtok
@@ -76,6 +79,26 @@ Limitations this feature addresses:
 
 Three additive layers, smallest and most valuable first. Layers 1 and 2 are cheap and
 reuse what already exists; Layer 3 is the only part needing real parsing work.
+
+### Guiding architecture: align TextDoc with the Markdown parse
+
+The north star: **align `TextDoc`'s block/paragraph/sentence structure with the marko
+parse so `TextDoc` exposes everything a Markdown parser does — block and inline
+structure, links, headings — plus what a parser does not: sentences, exact spans, sizes,
+and rollups by section.** Each block knows (or holds a reference to) its marko node, so
+type, inline elements, and structure come straight from the parser while chopdiff adds
+the analytics on top. A consumer then has a single object that is a superset of a
+Markdown AST *and* a structure/stats engine.
+
+The layers below are the incremental, low-risk path toward this. Spans and sections are
+pure additions; the structural-block parse (Layer 3) is where `TextDoc`'s blocks become
+aligned with marko's blocks (a list is one block with item children; a fenced code block
+is one block regardless of internal blank lines). Alignment is introduced as an **overlay
+first** — the blank-line `Paragraph` list stays the unit the diff/window/wordtok code
+uses — so it can be validated against the existing model. Re-founding `TextDoc` on the
+single parse (making the aligned blocks the canonical unit) is the one change with real
+blast radius, because it shifts block boundaries for lists and code that diffs and
+sliding windows see; it stays gated behind the Layer 3 spike and explicit sign-off.
 
 ### Layer 1 — Exact spans (compute, don't store)
 
@@ -144,14 +167,43 @@ corpus before committing:
 Document-level paragraph offsets are already exact, so this only needs to be correct for
 structure *within* and *across* blank-line boundaries.
 
+### Layer 4 — Inline elements (links) and link-aware sentences
+
+The aligned marko parse already carries inline structure, so this is mostly exposure.
+Reuse flowmark's **public** `flowmark_markdown()` parser (already a dependency): a text
+block's inline AST exposes `inline.Link` (`dest` = URL, `title`, child `RawText` = link
+text), `inline.Url` (bare/autolinks), and `inline.CodeSpan`.
+
+- **Link rollup.** Collect a `Link(text, url, title, span)` for every link; expose
+  `block.links`, `TextDoc.links()`, and — composing with Layer 2 — `section.links` (the
+  union over the section's blocks). marko decides what *is* a link (handling reference
+  links, autolinks, and `[x](y)` inside code spans correctly); the exact source span is
+  recovered by locating the link in the block text, the same way blocks and sentences
+  are located, so links keep chopdiff's exact-reference guarantee.
+- **Link-aware sentences.** Today `split_sentences_regex` normalizes whitespace and is
+  not atomic-aware, so a sentence can bisect link text or be confused by URL
+  punctuation. Add an offset-preserving, atomic-aware splitter that treats links, code
+  spans, inline HTML, and bare URLs as unbreakable tokens, applies the existing
+  end-of-sentence heuristic only between tokens, and keeps source offsets. This makes
+  sentence spans exact *and* guarantees they never split a link; link↔sentence
+  association then falls out of the spans (a link belongs to the sentence whose span
+  contains it). It also resolves the best-effort sentence-span limitation from Layer 1.
+
+**Reuse boundary.** Only flowmark's public `flowmark_markdown()` is safe to import.
+`atomic_patterns` (the link/code-span/URL/tag regexes) and the inline-traversal helpers
+are flowmark *internals* (not in `__all__`); either export them from flowmark upstream
+(first-party, clean) or keep a small local copy of those regexes in chopdiff. Do not
+import flowmark internals directly.
+
 ### API Changes
 
 All additive:
 
 - `Paragraph`/`Sentence`: computed span/end accessors; optional `Span` type.
-- `TextDoc`: `block_at_offset`, `sentence_at_offset`, `sections`, `toc`, and (Layer 3)
-  `blocks`.
-- `Section` and `Block` dataclasses; `BlockType.list_item` / `BlockType.thematic_break`.
+- `TextDoc`: `block_at_offset`, `sentence_at_offset`, `sections`, `toc`, `links`, and
+  (Layer 3) `blocks`.
+- `Section` and `Block` dataclasses; `Link` record; `BlockType.list_item` /
+  `BlockType.thematic_break`; an atomic-aware sentence `Splitter`.
 
 ## Implementation Plan
 
@@ -170,6 +222,15 @@ All additive:
 
 - [ ] Spike marko source-mapping vs a block scanner for sub-paragraph exact offsets.
 - [ ] `Block` tree with `list_item` + nesting; `TextDoc.blocks()`; golden tests.
+- [ ] Align blocks with the marko parse as an overlay (each block references its node).
+
+### Phase 4 — Inline links and link-aware sentences
+
+- [ ] `Link(text, url, title, span)` rollup via `flowmark_markdown()` + span location;
+      `block.links` / `section.links` / `TextDoc.links()`.
+- [ ] Atomic-aware, offset-preserving sentence splitter (links/code/HTML/URLs atomic);
+      exact, link-safe sentence spans; link↔sentence association.
+- [ ] Decide flowmark atomic-pattern reuse (export upstream vs local copy).
 
 ## Testing Strategy
 
@@ -195,6 +256,12 @@ All additive:
 - Should `TextDoc` retain the full original source string to support slicing by an
   arbitrary external offset, or is per-unit `original_text` sufficient (it is for
   `block_at_offset`)?
+- Alignment: keep the marko-aligned blocks as an overlay indefinitely, or eventually
+  re-found `TextDoc`'s canonical unit on the single parse (changing list/code block
+  boundaries that diffs and sliding windows see)?
+- Reuse flowmark's `atomic_patterns` by exporting them from flowmark (first-party) or by
+  keeping a small local copy in chopdiff? Should the atomic-aware splitter become the
+  default `Splitter` or stay opt-in (the splitter is already pluggable)?
 
 ## References
 
@@ -204,3 +271,6 @@ All additive:
   reviewed and not merged.
 - `src/chopdiff/docs/text_doc.py`: current `TextDoc` / `Paragraph` / `Sentence` /
   `Offsets` / `BlockType`.
+- flowmark (public `flowmark_markdown()`), and its internal
+  `linewrapping/atomic_patterns.py` (link/code-span/URL regexes) and
+  `transforms/doc_transforms.py` (inline traversal) — prior art for inline handling.
