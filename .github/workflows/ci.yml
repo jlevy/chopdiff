@@ -21,7 +21,7 @@ jobs:
         # Update this as needed:
         # Common platforms: ["ubuntu-latest", "macos-latest", "windows-latest"]
         os: ["ubuntu-latest"]
-        python-version: ["3.11", "3.12", "3.13"]
+        python-version: ["3.11", "3.12", "3.13", "3.14"]
 
     # Linux only by default. Use ${{ matrix.os }} for other OSes.
     runs-on: ${{ matrix.os }}
@@ -32,7 +32,7 @@ jobs:
       # https://docs.astral.sh/uv/guides/integration/github/
 
       - name: Checkout (official GitHub action)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           # Important for versioning plugins:
           fetch-depth: 0
@@ -43,10 +43,13 @@ jobs:
         run: cmake --version
 
       - name: Install uv (official Astral action)
-        uses: astral-sh/setup-uv@v5
+        # Pinned to a full, immutable version tag. As of v8, setup-uv no longer
+        # publishes floating major/minor tags (e.g. `@v8`), so bump this exact
+        # version when updating.
+        uses: astral-sh/setup-uv@v8.1.0
         with:
           # Update this as needed:
-          version: "0.8.9"
+          version: "0.11.12"
           enable-cache: true
           python-version: ${{ matrix.python-version }}
 
@@ -59,11 +62,36 @@ jobs:
       #   with:
       #     python-version: ${{ matrix.python-version }}
 
+      # Supply-chain hardening: install exactly what the committed lockfile pins
+      # (fails if pyproject.toml and uv.lock have drifted). The cool-off cutoff lives
+      # in [tool.uv] exclude-newer in pyproject.toml, so it applies at lock, sync, and
+      # run time without a separate CI step. See SUPPLY-CHAIN-SECURITY.md.
       - name: Install all dependencies
-        run: uv sync --all-extras
+        run: uv sync --all-extras --locked
 
       - name: Run linting
-        run: uv run python devtools/lint.py
+        # Check-only mode so CI fails on unformatted code instead of fixing it.
+        run: uv run python devtools/lint.py --check
 
       - name: Run tests
         run: uv run pytest
+
+  # Supply-chain audit gate. See SUPPLY-CHAIN-SECURITY.md.
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (official GitHub action)
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Install uv (official Astral action)
+        uses: astral-sh/setup-uv@v8.1.0
+        with:
+          version: "0.11.12"
+          enable-cache: true
+
+      # --all-extras so optional dependencies (e.g. simplemma) are audited too,
+      # matching the all-extras environment the build job tests.
+      - name: Audit dependencies for known vulnerabilities
+        run: uv run --locked --all-extras --group audit pip-audit

@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from typing import TypeAlias
 
 from prettyfmt import abbrev_obj
-from strif import replace_multiple
+from strif import Replacement, replace_multiple
 from typing_extensions import override
 
 ValueRewriter: TypeAlias = Callable[[str], str | None]
@@ -304,7 +304,7 @@ def rewrite_html_tag_attr(
     matches = html_find_tag(html, tag_name=tag_name, attr_name=attr_name)
 
     # Collect all replacements to make using strif.replace_multiple
-    replacements: list[tuple[int, int, str]] = []  # (start, end, new_value)
+    replacements: list[Replacement] = []
 
     # Process each matched element
     for match in matches:
@@ -338,7 +338,9 @@ def rewrite_html_tag_attr(
                     # Calculate absolute positions
                     attr_value_start = match.start_offset + attr_match.start(2)
                     attr_value_end = match.start_offset + attr_match.end(2)
-                    replacements.append((attr_value_start, attr_value_end, escaped_new_value))
+                    replacements.append(
+                        Replacement(attr_value_start, attr_value_end, escaped_new_value)
+                    )
                 else:
                     # Try unquoted attribute pattern
                     # Unquoted values end at whitespace or >
@@ -353,7 +355,9 @@ def rewrite_html_tag_attr(
                         # Calculate absolute positions
                         attr_value_start = match.start_offset + attr_match.start(1)
                         attr_value_end = match.start_offset + attr_match.end(1)
-                        replacements.append((attr_value_start, attr_value_end, new_value))
+                        replacements.append(
+                            Replacement(attr_value_start, attr_value_end, new_value)
+                        )
 
     if replacements:
         return replace_multiple(html, replacements)
