@@ -112,9 +112,21 @@ Follow this checklist for each new release.
 
    - **Major** (e.g., `v0.6.0` → `v1.0.0`): Breaking changes
 
+   **Pre-1.0 convention:** while the version is still `0.x`, breaking changes bump the
+   **minor** version (e.g. `v0.2.6` → `v0.3.0`) rather than the major version, which is
+   reserved for the first stable `1.0.0`. Breaking changes are still called out
+   explicitly in the changelog and release notes.
+
+5. **Update the changelog:**
+
+   Add a section for the new version to [`CHANGELOG.md`](../CHANGELOG.md), grouped into
+   Breaking changes / New features / Infrastructure (see existing entries). The GitHub
+   release notes for the version should mirror this section. Commit the changelog (via a
+   short "prepare release" PR) so it is on `main` at the tagged commit.
+
 #### Create the Release
 
-5. **Generate release notes content:**
+6. **Generate release notes content:**
 
    Review changes since the last release:
 
@@ -129,7 +141,7 @@ Follow this checklist for each new release.
    git diff ${LAST_TAG}..HEAD
    ```
 
-6. **Create the release with `gh`:**
+7. **Create the release with `gh`:**
 
    ```shell
    NEW_TAG="vX.Y.Z"  # Replace with actual version
@@ -152,7 +164,7 @@ Follow this checklist for each new release.
    Alternatively, use `--generate-notes` for GitHub’s auto-generated notes, or
    `--notes-file FILENAME` to read from a file.
 
-7. **Verify the release published successfully:**
+8. **Verify the release published successfully:**
 
    ```shell
    # Check the release workflow:
