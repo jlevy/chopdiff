@@ -1,13 +1,29 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from collections.abc import Callable, Generator, Iterable
+from collections.abc import Callable, Generator, Iterable, Iterator
+from copy import deepcopy
 from dataclasses import dataclass
+from enum import StrEnum
+from functools import cache, cached_property
 from typing import TypeAlias
 
 import regex
-from flowmark import split_sentences_regex
+from flowmark import flowmark_markdown, split_sentences_regex
 from funlog import tally_calls
+from marko import Markdown
+from marko.block import (
+    BlankLine,
+    CodeBlock,
+    FencedCode,
+    Heading,
+    HTMLBlock,
+    List,
+    Quote,
+    SetextHeading,
+)
+from marko.ext.footnote import FootnoteDef
+from marko.ext.gfm.elements import Table
 from typing_extensions import override
 
 from chopdiff.docs.sizes import TextUnit, size, size_in_bytes
@@ -50,6 +66,66 @@ def is_markdown_header(markdown: str) -> bool:
     return regex.match(r"^#+ ", markdown) is not None
 
 
+class BlockType(StrEnum):
+    """
+    The kind of Markdown block a `Paragraph` represents, determined by parsing the
+    block with flowmark's Markdown (marko) parser. This reuses the same parser
+    flowmark uses, so GFM tables, footnote definitions, and fenced code (including
+    `#` lines inside code) are recognized correctly.
+
+    `TextDoc` splits a document on blank lines, so each block is one
+    blank-line-separated unit, and list handling depends on item spacing:
+
+    - A "tight" list (no blank lines between items) is a single `list` block
+      containing every item; nested sublists stay inside that one block.
+    - A "loose" list (blank lines between items) yields one `list` block per
+      item, and nesting is flattened (each item, parent or child, is its own
+      block).
+    - A continuation paragraph inside a list item (separated by a blank line) is
+      classified as `paragraph`, since on its own it carries no list marker.
+
+    Likewise, a fenced code block containing a blank line can be split across
+    blocks. For exact block boundaries, preserved nesting, and reliable
+    per-list-item granularity, a full-document Markdown parse is required (see
+    the BlockDoc plan spec, #8).
+    """
+
+    paragraph = "paragraph"
+    heading = "heading"
+    list = "list"
+    table = "table"
+    code = "code"
+    blockquote = "blockquote"
+    html = "html"
+    footnote = "footnote"
+
+
+@cache
+def _markdown_parser() -> Markdown:
+    """Shared marko parser, configured the same way flowmark configures it."""
+    return flowmark_markdown()
+
+
+def _classify_block(text: str) -> BlockType:
+    parsed = _markdown_parser().parse(text)
+    element = next((el for el in parsed.children if not isinstance(el, BlankLine)), None)
+    if isinstance(element, (Heading, SetextHeading)):
+        return BlockType.heading
+    if isinstance(element, FootnoteDef):
+        return BlockType.footnote
+    if isinstance(element, (FencedCode, CodeBlock)):
+        return BlockType.code
+    if isinstance(element, Quote):
+        return BlockType.blockquote
+    if isinstance(element, Table):
+        return BlockType.table
+    if isinstance(element, List):
+        return BlockType.list
+    if isinstance(element, HTMLBlock):
+        return BlockType.html
+    return BlockType.paragraph
+
+
 @dataclass(frozen=True, order=True)
 class SentIndex:
     """
@@ -74,12 +150,14 @@ SentenceMapping: TypeAlias = dict[SentIndex, list[int]]
 @dataclass
 class Sentence:
     """
-    A sentence in a `TextDoc`.
+    A sentence in a `TextDoc`. `text` is the editable content (used by
+    `reassemble()`); `char_offset` is a fixed reference to the source set at parse
+    time and is not updated by edits.
 
-    `char_offset` follows the convention used throughout `TextDoc`: it is the
-    offset relative to the immediate parent. For a sentence the parent is its
-    paragraph, so this is the offset within `Paragraph.original_text`. Use
-    `TextDoc.char_offset_in_doc` to get the absolute offset in the document.
+    `char_offset` follows the `TextDoc` convention: it is relative to the immediate
+    parent, which for a sentence is its paragraph (the offset within
+    `Paragraph.original_text`). Use `TextDoc.char_offset_in_doc` for the absolute
+    offset in the document. See `TextDoc` for the full contract.
     """
 
     text: str
@@ -117,12 +195,17 @@ class Sentence:
 @dataclass
 class Paragraph:
     """
-    A paragraph in a `TextDoc`.
+    A paragraph (one blank-line-separated block) in a `TextDoc`.
 
-    `char_offset` follows the convention used throughout `TextDoc`: it is the
-    offset relative to the immediate parent. For a paragraph the parent is the
-    document, so this is already the absolute offset of the paragraph in the
-    document text.
+    `original_text` and `char_offset` are fixed references to the source as parsed
+    and are not updated by edits; `sentences` holds the editable content used by
+    `reassemble()`. `block_type` is derived from `original_text` and cached, so it
+    assumes `original_text` is not reassigned after construction.
+
+    `char_offset` follows the `TextDoc` convention: it is relative to the immediate
+    parent, which for a paragraph is the document, so it is already the absolute
+    offset of the paragraph in the document text. See `TextDoc` for the full
+    contract.
     """
 
     original_text: str
@@ -220,6 +303,24 @@ class Paragraph:
         initial_text = self.sentences[0].text
         return FOOTNOTE_DEF_REGEX.match(initial_text) is not None
 
+    @cached_property
+    def block_type(self) -> BlockType:
+        """
+        Classify this block by its Markdown kind. See `BlockType` for caveats about
+        blank-line splitting (e.g. a list is one block, not one block per item).
+
+        Cached: derived from `original_text`, which does not change after parsing.
+        """
+        text = self.original_text.strip()
+        if not text:
+            return BlockType.paragraph
+        block_type = _classify_block(text)
+        # marko treats a single-line HTML tag as an inline-HTML paragraph rather than
+        # an HTML block, so fall back to chopdiff's own markup check for those.
+        if block_type == BlockType.paragraph and self.is_markup():
+            return BlockType.html
+        return block_type
+
 
 @dataclass
 class TextDoc:
@@ -228,11 +329,33 @@ class TextDoc:
     of text. Preserves original text, tracking offsets of each sentence and paragraph.
     Compatible with Markdown and Markown with HTML tags.
 
-    Offset convention: every `char_offset` is relative to the immediate parent.
-    A paragraph's parent is the document (so `Paragraph.char_offset` is absolute in
-    the document), and a sentence's parent is its paragraph. Offsets are exact
-    references into the text passed to `from_text` (the input is not normalized).
-    Use `char_offset_in_doc` for a sentence's absolute offset in the document.
+    Contract and intended use:
+
+    - A `TextDoc` is a snapshot of a *parsed source document*, meant for analysis
+      (sizing, classifying, diffing, windowing) and for generating *new* text via
+      `reassemble()`. It is not a live, self-updating DOM.
+
+    - Source references are fixed at parse time. `Paragraph.original_text` and the
+      `char_offset`s on paragraphs and sentences are exact references into the text
+      passed to `from_text` (the input is not normalized) and are not updated when
+      content is mutated, so they remain valid as references back to the source.
+
+    - Offset convention: every `char_offset` is relative to the immediate parent.
+      A paragraph's parent is the document (so `Paragraph.char_offset` is absolute
+      in the document), and a sentence's parent is its paragraph. Use
+      `char_offset_in_doc` for a sentence's absolute offset in the document.
+
+    - In-place editing is supported for *building transformed output*: mutate
+      sentence text (`replace_str`, `set_sent`) or restructure the paragraph and
+      sentence lists (`sub_doc`, `sub_paras`, `filtered`, `append_sent`), then call
+      `reassemble()`. This is safe as long as you do not rely on the source
+      references tracking your edits: after editing, `original_text`, the
+      `char_offset`s, and cached values like `Paragraph.block_type` still describe
+      the *original* blocks. To get offsets/classification for edited content,
+      re-parse with `TextDoc.from_text(doc.reassemble())`.
+
+    - `filtered()` returns an independent deep copy; `iter_blocks()` and the
+      `paragraphs`/`sentences` lists expose this document's live objects.
     """
 
     paragraphs: list[Paragraph]
@@ -401,6 +524,49 @@ class TextDoc:
         if end is None:
             end = len(self.paragraphs) - 1
         return TextDoc(self.paragraphs[start : end + 1])
+
+    def iter_blocks(
+        self,
+        *,
+        include: set[BlockType] | None = None,
+        exclude: set[BlockType] | None = None,
+    ) -> Iterator[Paragraph]:
+        """
+        Iterate over blocks (paragraphs), optionally filtering by `BlockType`.
+        `include` keeps only the given types; `exclude` drops the given types. If
+        both are given, a block must be in `include` and not in `exclude`.
+
+        Yields this document's own `Paragraph` objects (not copies), so in-place
+        edits such as `replace_str` affect this document. Use `filtered` for an
+        independent sub-document.
+        """
+        for para in self.paragraphs:
+            block_type = para.block_type
+            if include is not None and block_type not in include:
+                continue
+            if exclude is not None and block_type in exclude:
+                continue
+            yield para
+
+    def filtered(
+        self,
+        *,
+        include: set[BlockType] | None = None,
+        exclude: set[BlockType] | None = None,
+    ) -> TextDoc:
+        """
+        Return a new sub-document containing only the blocks matching the given
+        `BlockType` filter, e.g.
+        `doc.filtered(include={BlockType.paragraph}).size(TextUnit.words)` gives
+        the total words across all paragraph blocks.
+
+        The returned document deep-copies the matched blocks, so it is independent
+        of this document: editing one does not affect the other. (Use `iter_blocks`
+        to edit this document's blocks in place.)
+        """
+        return TextDoc(
+            [deepcopy(para) for para in self.iter_blocks(include=include, exclude=exclude)]
+        )
 
     def prev_sent(self, index: SentIndex) -> SentIndex:
         if index.sent_index > 0:
