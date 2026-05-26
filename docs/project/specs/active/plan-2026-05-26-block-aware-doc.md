@@ -32,6 +32,8 @@ All of this extends `TextDoc` in place. We are explicitly **not** introducing a 
   against the original text.
 - A derived section hierarchy and TOC over heading blocks, correct for ATX and setext
   headings and never tripped by `#` inside fenced code.
+- Rolled-up size stats per section (chars, words, sentences, tokens, …) in tree form,
+  reusing the existing `size` machinery rather than new rollup logic.
 - An opt-in structural block tree (`list_item` + nesting; code/table/blockquote as whole
   blocks) for callers that need per-item granularity.
 - Strictly additive: `TextDoc`, `Paragraph`, `Sentence`, and the diff/window/wordtok
@@ -103,6 +105,22 @@ Add a derived hierarchy over the existing heading blocks:
 This reuses the already-correct, code-fence-safe, setext-aware heading classification and
 the Layer 1 spans; it needs **no** re-parse and supersedes the intent of `SectionDoc`
 without its fragile hand-rolled offsets.
+
+**Rolled-up stats (the key reuse).** A `Section`'s size is just the sum of its blocks'
+sizes, so instead of new rollup logic a `Section` produces a sub-document view of its
+blocks and defers to the existing size machinery:
+
+- `Section.size(unit, subtree=True)` — size including all subsections (default),
+  computed by running `TextDoc.size` over the section's block subset, so separator and
+  whitespace accounting matches whole-document sizes. `subtree=False` reports own
+  content only (excluding child sections).
+- `Section.size_summary()` per node and a `TextDoc.section_size_tree(units=...)` renderer
+  for the readable rolled-up tree (mirroring `size_summary` and
+  `TextNode.structure_summary`). Every `TextUnit` (chars, words, sentences, tokens, …)
+  rolls up uniformly with no per-unit special-casing.
+
+This makes "sizes by section, as a tree" a one-call operation, and follows the existing
+precedent that `TextNode.size` sums its children.
 
 ### Layer 3 — Structural block tree (opt-in, the hard part)
 
