@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from collections.abc import Callable, Generator, Iterable, Iterator
+from copy import deepcopy
 from dataclasses import dataclass
 from enum import StrEnum
 from functools import cache
@@ -472,6 +473,10 @@ class TextDoc:
         Iterate over blocks (paragraphs), optionally filtering by `BlockType`.
         `include` keeps only the given types; `exclude` drops the given types. If
         both are given, a block must be in `include` and not in `exclude`.
+
+        Yields this document's own `Paragraph` objects (not copies), so in-place
+        edits such as `replace_str` affect this document. Use `filtered` for an
+        independent sub-document.
         """
         for para in self.paragraphs:
             block_type = para.block_type
@@ -488,12 +493,18 @@ class TextDoc:
         exclude: set[BlockType] | None = None,
     ) -> TextDoc:
         """
-        Return a sub-document containing only the blocks matching the given
-        `BlockType` filter. Useful for counting or transforming a subset, e.g.
+        Return a new sub-document containing only the blocks matching the given
+        `BlockType` filter, e.g.
         `doc.filtered(include={BlockType.paragraph}).size(TextUnit.words)` gives
         the total words across all paragraph blocks.
+
+        The returned document deep-copies the matched blocks, so it is independent
+        of this document: editing one does not affect the other. (Use `iter_blocks`
+        to edit this document's blocks in place.)
         """
-        return TextDoc(list(self.iter_blocks(include=include, exclude=exclude)))
+        return TextDoc(
+            [deepcopy(para) for para in self.iter_blocks(include=include, exclude=exclude)]
+        )
 
     def prev_sent(self, index: SentIndex) -> SentIndex:
         if index.sent_index > 0:

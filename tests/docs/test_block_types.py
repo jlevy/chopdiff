@@ -107,6 +107,14 @@ def test_empty_filter_returns_empty_doc():
     assert empty.size(TextUnit.sentences) == 0
 
 
+def test_filtered_returns_independent_copy():
+    doc = TextDoc.from_text(DOC)
+    before = doc.reassemble()
+    filtered = doc.filtered(include={BlockType.paragraph})
+    filtered.replace_str("paragraph", "XXXXX")
+    assert doc.reassemble() == before
+
+
 # The following tests document how list spacing affects blocking, since TextDoc
 # splits on blank lines (see BlockType docstring).
 
