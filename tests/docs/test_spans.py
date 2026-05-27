@@ -66,6 +66,21 @@ def test_from_wordtoks_has_reassembled_source_text():
     assert rebuilt.source_text == rebuilt.reassemble()
 
 
+def test_sentence_spans_exact_with_irregular_whitespace_and_links():
+    # Double space between sentences + an inline link: spans must round-trip exactly
+    # (verbatim) and a sentence boundary must never bisect the link.
+    text = "First sentence here.  Second [linked](http://x.com) sentence ends now."
+    doc = TextDoc.from_text(text)
+    sents = [sent for _index, sent in doc.sent_iter()]
+    assert len(sents) == 2
+    for sent in sents:
+        assert sent.original_text is not None
+        start, end = sent.span
+        assert text[start:end] == sent.original_text
+    assert sents[1].original_text is not None
+    assert "[linked](http://x.com)" in sents[1].original_text
+
+
 def test_spans_consistent_with_offsets_and_sizes():
     doc = TextDoc.from_text(_DOC)
     para = doc.paragraphs[1]

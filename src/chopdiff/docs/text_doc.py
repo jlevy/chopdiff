@@ -10,7 +10,7 @@ from typing import TypeAlias
 
 import regex
 from flowmark import flowmark_markdown, split_sentences_regex
-from flowmark.atomic_spans import iter_atomic_spans
+from flowmark.atomic_spans import iter_atomic_spans, split_sentences_with_spans
 from flowmark.markdown_ast import extract_links
 from funlog import tally_calls
 from marko import Markdown
@@ -244,15 +244,19 @@ class Sentence:
 
     text: str
     offsets: Offsets
+    original_text: str | None = None
 
     @property
     def span(self) -> tuple[int, int]:
         """
         Absolute `[start, end)` character offsets of this sentence in the document.
-        Exact (round-trips against the source) for verbatim sentences; best-effort
-        where the splitter normalized whitespace (see class docstring).
+        Exact when `original_text` (the verbatim source slice) is set — the default
+        splitter sets it via flowmark's offset-preserving splitter, so
+        `source_text[start:end] == original_text`. Falls back to `len(text)` for
+        sentences produced by a custom (non-span-aware) splitter or by editing.
         """
-        return self.offsets.doc_offset, self.offsets.doc_offset + len(self.text)
+        length = len(self.original_text if self.original_text is not None else self.text)
+        return self.offsets.doc_offset, self.offsets.doc_offset + length
 
     def size(self, unit: TextUnit) -> int:
         return size(self.text, unit)
@@ -321,20 +325,36 @@ class Paragraph:
         sentence_splitter: Splitter = default_sentence_splitter,
     ) -> Paragraph:
         # TODO: Lazily compute sentences for better performance.
-        sent_values = sentence_splitter(text)
         sentences: list[Sentence] = []
-        cursor = 0
-        for sent_str in sent_values:
-            # Locate each sentence's position within the paragraph. Sentence
-            # splitters may normalize whitespace (e.g. inside a table), so when the
-            # sentence is not a verbatim slice we fall back to the running cursor.
-            idx = text.find(sent_str, cursor)
-            if idx < 0:
-                idx = cursor
-            sentences.append(
-                Sentence(sent_str, Offsets(doc_offset=doc_offset + idx, block_offset=idx))
-            )
-            cursor = idx + len(sent_str)
+        if sentence_splitter is default_sentence_splitter:
+            # Default path: flowmark's offset-preserving, atomic-aware splitter gives
+            # exact verbatim spans (never bisecting a link/code span). Keep
+            # `Sentence.text` whitespace-normalized (as the regex splitter produced)
+            # for backward-compatible wordtok/diff/reassemble behavior; `original_text`
+            # holds the verbatim slice so `span` is exact.
+            for sent_span in split_sentences_with_spans(text):
+                normalized = " ".join(sent_span.text.split())
+                sentences.append(
+                    Sentence(
+                        normalized,
+                        Offsets(
+                            doc_offset=doc_offset + sent_span.start, block_offset=sent_span.start
+                        ),
+                        original_text=sent_span.text,
+                    )
+                )
+        else:
+            # Custom splitter (returns plain strings): locate each sentence by search;
+            # offsets are best-effort where the splitter normalized whitespace.
+            cursor = 0
+            for sent_str in sentence_splitter(text):
+                idx = text.find(sent_str, cursor)
+                if idx < 0:
+                    idx = cursor
+                sentences.append(
+                    Sentence(sent_str, Offsets(doc_offset=doc_offset + idx, block_offset=idx))
+                )
+                cursor = idx + len(sent_str)
         return cls(
             original_text=text,
             sentences=sentences,
