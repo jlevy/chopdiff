@@ -13,7 +13,7 @@ Run with: `uv run examples/doc_structure.py`
 
 from textwrap import dedent
 
-from chopdiff.docs import BlockType, TextDoc, TextUnit
+from chopdiff.docs import Block, BlockType, TextDoc, TextUnit
 
 _SAMPLE = dedent(
     """
@@ -32,6 +32,27 @@ _SAMPLE = dedent(
     # Usage
 
     Parse a document, then iterate or measure its blocks.
+    """
+).strip()
+
+
+_BLOCK_SAMPLE = dedent(
+    """
+    # Setup
+
+    Install, then configure.
+
+    - clone the repo
+    - install deps
+      - runtime
+      - dev
+    - run the tests
+
+    ```bash
+    uv sync
+
+    uv run pytest
+    ```
     """
 ).strip()
 
@@ -65,6 +86,17 @@ def main() -> None:
     print(
         f"  {paragraphs_only.size(TextUnit.words)} words in {len(paragraphs_only.paragraphs)} paragraphs"
     )
+
+    print("\n--- Structural block tree (whole-document view) ---")
+    block_doc = TextDoc.from_text(_BLOCK_SAMPLE)
+
+    def show_blocks(blocks: list[Block], depth: int = 0) -> None:
+        for block in blocks:
+            preview = _BLOCK_SAMPLE[block.span[0] : block.span[1]].splitlines()[0]
+            print(f"  {'  ' * depth}{block.type.value}: {preview!r}")
+            show_blocks(block.children, depth + 1)
+
+    show_blocks(block_doc.blocks())
 
     print("\n--- Links (text, url, span) and the sentence each is in ---")
     for link in doc.links():

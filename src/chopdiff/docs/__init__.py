@@ -1,9 +1,10 @@
 # flake8: noqa: F401
 
+from chopdiff.docs.block_tree import Block
+from chopdiff.docs.block_types import BlockType
 from chopdiff.docs.search_tokens import search_tokens
 from chopdiff.docs.sizes import TextUnit
 from chopdiff.docs.text_doc import (
-    BlockType,
     Link,
     Offsets,
     Paragraph,
@@ -56,6 +57,7 @@ from chopdiff.docs.wordtoks import (
 __all__ = [
     "search_tokens",
     "TextUnit",
+    "Block",
     "BlockType",
     "Offsets",
     "Link",

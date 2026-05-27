@@ -4,30 +4,18 @@ from collections import defaultdict
 from collections.abc import Callable, Generator, Iterable, Iterator
 from copy import deepcopy
 from dataclasses import dataclass
-from enum import StrEnum
-from functools import cache, cached_property
-from typing import TypeAlias
+from functools import cached_property
+from typing import TYPE_CHECKING, TypeAlias
 
 import regex
-from flowmark import flowmark_markdown, split_sentences_regex
+from flowmark import split_sentences_regex
 from flowmark.atomic_spans import iter_atomic_spans, split_sentences_with_spans
 from flowmark.markdown_ast import extract_links
 from funlog import tally_calls
-from marko import Markdown
-from marko.block import (
-    BlankLine,
-    CodeBlock,
-    FencedCode,
-    Heading,
-    HTMLBlock,
-    List,
-    Quote,
-    SetextHeading,
-)
-from marko.ext.footnote import FootnoteDef
-from marko.ext.gfm.elements import Table
+from marko.block import Heading, SetextHeading
 from typing_extensions import override
 
+from chopdiff.docs.block_types import BlockType, classify_block, markdown_parser
 from chopdiff.docs.sizes import TextUnit, size, size_in_bytes
 from chopdiff.docs.wordtoks import (
     BOF_TOK,
@@ -44,6 +32,9 @@ from chopdiff.docs.wordtoks import (
     wordtokenize,
 )
 from chopdiff.util.token_estimate import estimate_tokens
+
+if TYPE_CHECKING:
+    from chopdiff.docs.block_tree import Block
 
 SYMBOL_PARA = "¶"
 
@@ -75,68 +66,8 @@ def is_markdown_header(markdown: str) -> bool:
     return regex.match(r"^#+ ", markdown) is not None
 
 
-class BlockType(StrEnum):
-    """
-    The kind of Markdown block a `Paragraph` represents, determined by parsing the
-    block with flowmark's Markdown (marko) parser. This reuses the same parser
-    flowmark uses, so GFM tables, footnote definitions, and fenced code (including
-    `#` lines inside code) are recognized correctly.
-
-    `TextDoc` splits a document on blank lines, so each block is one
-    blank-line-separated unit, and list handling depends on item spacing:
-
-    - A "tight" list (no blank lines between items) is a single `list` block
-      containing every item; nested sublists stay inside that one block.
-    - A "loose" list (blank lines between items) yields one `list` block per
-      item, and nesting is flattened (each item, parent or child, is its own
-      block).
-    - A continuation paragraph inside a list item (separated by a blank line) is
-      classified as `paragraph`, since on its own it carries no list marker.
-
-    Likewise, a fenced code block containing a blank line can be split across
-    blocks. For exact block boundaries, preserved nesting, and reliable
-    per-list-item granularity, a full-document Markdown parse is required (see
-    the BlockDoc plan spec, #8).
-    """
-
-    paragraph = "paragraph"
-    heading = "heading"
-    list = "list"
-    table = "table"
-    code = "code"
-    blockquote = "blockquote"
-    html = "html"
-    footnote = "footnote"
-
-
-@cache
-def _markdown_parser() -> Markdown:
-    """Shared marko parser, configured the same way flowmark configures it."""
-    return flowmark_markdown()
-
-
-def _classify_block(text: str) -> BlockType:
-    parsed = _markdown_parser().parse(text)
-    element = next((el for el in parsed.children if not isinstance(el, BlankLine)), None)
-    if isinstance(element, (Heading, SetextHeading)):
-        return BlockType.heading
-    if isinstance(element, FootnoteDef):
-        return BlockType.footnote
-    if isinstance(element, (FencedCode, CodeBlock)):
-        return BlockType.code
-    if isinstance(element, Quote):
-        return BlockType.blockquote
-    if isinstance(element, Table):
-        return BlockType.table
-    if isinstance(element, List):
-        return BlockType.list
-    if isinstance(element, HTMLBlock):
-        return BlockType.html
-    return BlockType.paragraph
-
-
 def _heading_element(text: str) -> Heading | SetextHeading | None:
-    parsed = _markdown_parser().parse(text)
+    parsed = markdown_parser().parse(text)
     for element in parsed.children:
         if isinstance(element, (Heading, SetextHeading)):
             return element
@@ -217,7 +148,7 @@ def _block_links(block_text: str, doc_offset: int) -> list[Link]:
     from `iter_atomic_spans`. When the two lists disagree in count (reference links,
     images, shortcut refs), identity is kept and spans are left `None`.
     """
-    identities = extract_links(_markdown_parser().parse(block_text))
+    identities = extract_links(markdown_parser().parse(block_text))
     link_spans = [
         span
         for span in iter_atomic_spans(block_text)
@@ -441,7 +372,7 @@ class Paragraph:
         text = self.original_text.strip()
         if not text:
             return BlockType.paragraph
-        block_type = _classify_block(text)
+        block_type = classify_block(text)
         # marko treats a single-line HTML tag as an inline-HTML paragraph rather than
         # an HTML block, so fall back to chopdiff's own markup check for those.
         if block_type == BlockType.paragraph and self.is_markup():
@@ -630,6 +561,18 @@ class TextDoc:
         for para in self.paragraphs:
             result.extend(para.links())
         return result
+
+    def blocks(self) -> list[Block]:
+        """
+        The document's structural block tree (opt-in), with exact source spans. Unlike
+        the blank-line `paragraphs`, this keeps a fenced code block whole (even with
+        internal blank lines) and decomposes a tight list into `list_item`s with nested
+        sublists. Parsed from `source_text` (or the reassembled text if absent). See
+        `chopdiff.docs.block_tree`.
+        """
+        from chopdiff.docs.block_tree import parse_blocks
+
+        return parse_blocks(self.source_text or self.reassemble())
 
     def toc(self) -> list[tuple[int, str, tuple[int, int]]]:
         """Flat table of contents in document order: `(level, title, span)` per heading."""

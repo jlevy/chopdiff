@@ -1,7 +1,8 @@
 from textwrap import dedent
 
+from chopdiff.docs.block_types import BlockType
 from chopdiff.docs.sizes import TextUnit
-from chopdiff.docs.text_doc import BlockType, SentIndex, TextDoc
+from chopdiff.docs.text_doc import SentIndex, TextDoc
 
 _DOC = dedent(
     """
