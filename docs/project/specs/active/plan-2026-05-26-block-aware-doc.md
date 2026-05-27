@@ -108,9 +108,15 @@ computed accessors rather than new fields:
 
 - `Paragraph.span -> (start, end)` and `Paragraph.end_offset` (= `doc_offset +
   len(original_text)`).
-- `Sentence` spans, both block-relative and absolute, from `offsets` + `len(text)`. For
-  verbatim sentences these round-trip exactly; for splitter-normalized sentences (e.g.
-  tables) the span is best-effort and documented as such.
+- Give `Sentence` an `original_text` (the verbatim source slice) alongside `text` (the
+  normalized/working text), mirroring `Paragraph`. The span is then exact **by
+  construction** — `[offset, offset + len(original_text))` — rather than derived from the
+  whitespace-normalized `text`. `text` stays what wordtoks/diffs/reassemble use;
+  `original_text` is the immutable source reference (like `Paragraph.original_text`, and
+  consistent with the `set_sent` "edits don't move source references" contract).
+  Populating `original_text` exactly needs boundary-preserving sentence splitting
+  (Layer 4); until then it is exact for verbatim sentences and falls back for
+  splitter-normalized content (e.g. tables).
 - `TextDoc.block_at_offset(o) -> Paragraph | None` and `sentence_at_offset(o) ->
   SentIndex | None`, implemented by binary/linear search over the paragraph spans.
 
@@ -199,7 +205,9 @@ import flowmark internals directly.
 
 All additive:
 
-- `Paragraph`/`Sentence`: computed span/end accessors; optional `Span` type.
+- `Sentence` gains `original_text` (verbatim source slice; `text` stays normalized).
+- `Paragraph`/`Sentence`: computed span/end accessors (exact, from `original_text`);
+  optional `Span` type.
 - `TextDoc`: `block_at_offset`, `sentence_at_offset`, `sections`, `toc`, `links`, and
   (Layer 3) `blocks`.
 - `Section` and `Block` dataclasses; `Link` record; `BlockType.list_item` /
@@ -209,9 +217,11 @@ All additive:
 
 ### Phase 1 — Spans and mapping
 
+- [ ] Add `Sentence.original_text` (verbatim source slice; `text` stays normalized) so
+      spans are exact by construction.
 - [ ] Computed span/end accessors on `Paragraph` and `Sentence`.
 - [ ] `block_at_offset` / `sentence_at_offset` with round-trip tests.
-- [ ] Make sentence spans exact for verbatim sentences; documented fallback otherwise.
+- [ ] Exact for verbatim sentences now; full exactness lands with the Layer 4 splitter.
 
 ### Phase 2 — Sections and TOC
 
