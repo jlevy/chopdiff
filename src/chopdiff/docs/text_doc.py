@@ -184,6 +184,15 @@ class Sentence:
     text: str
     offsets: Offsets
 
+    @property
+    def span(self) -> tuple[int, int]:
+        """
+        Absolute `[start, end)` character offsets of this sentence in the document.
+        Exact (round-trips against the source) for verbatim sentences; best-effort
+        where the splitter normalized whitespace (see class docstring).
+        """
+        return self.offsets.doc_offset, self.offsets.doc_offset + len(self.text)
+
     def size(self, unit: TextUnit) -> int:
         return size(self.text, unit)
 
@@ -228,6 +237,19 @@ class Paragraph:
     original_text: str
     sentences: list[Sentence]
     offsets: Offsets
+
+    @property
+    def end_offset(self) -> int:
+        """Absolute end offset (exclusive) of this paragraph in the document."""
+        return self.offsets.doc_offset + len(self.original_text)
+
+    @property
+    def span(self) -> tuple[int, int]:
+        """
+        Absolute `[start, end)` character offsets of this paragraph in the document,
+        such that `source_text[start:end] == original_text`.
+        """
+        return self.offsets.doc_offset, self.end_offset
 
     @classmethod
     @tally_calls(level="warning", min_total_runtime=5)
@@ -379,9 +401,16 @@ class TextDoc:
 
     - `filtered()` returns an independent deep copy; `iter_blocks()` and the
       `paragraphs`/`sentences` lists expose this document's live objects.
+
+    - `source_text` is the document text the offsets index into. For a parsed doc it is
+      the unmodified input; `sub_doc`/`sub_paras`/`filtered` carry the same `source_text`
+      (their offsets still point into it). Docs built from synthetic content
+      (`from_wordtoks`) set it to the reassembled text. `block_at_offset` /
+      `sentence_at_offset` map an absolute offset back to the unit that contains it.
     """
 
     paragraphs: list[Paragraph]
+    source_text: str = ""
 
     @classmethod
     @tally_calls(level="warning", min_total_runtime=5)
@@ -409,7 +438,7 @@ class TextDoc:
                 # Doc offset of the stripped content within the original text.
                 doc_offset = span_start + (len(piece) - len(piece.lstrip()))
                 paragraphs.append(Paragraph.from_text(stripped, doc_offset, sentence_splitter))
-        return cls(paragraphs=paragraphs)
+        return cls(paragraphs=paragraphs, source_text=text)
 
     @classmethod
     def from_wordtoks(cls, wordtoks: list[str]) -> TextDoc:
@@ -442,6 +471,34 @@ class TextDoc:
         for para_index, para in self.para_iter(reverse=reverse):
             for sent_index, sent in para.sent_iter(reverse=reverse):
                 yield SentIndex(para_index, sent_index), sent
+
+    def block_at_offset(self, offset: int) -> Paragraph | None:
+        """
+        The paragraph whose span contains `offset` (an absolute character offset into
+        the source), or `None` if `offset` falls in inter-block whitespace or outside
+        the document.
+        """
+        for para in self.paragraphs:
+            start, end = para.span
+            if start <= offset < end:
+                return para
+        return None
+
+    def sentence_at_offset(self, offset: int) -> SentIndex | None:
+        """
+        The `SentIndex` of the sentence whose span contains `offset`, or `None` if none
+        does (inter-block/inter-sentence whitespace, or outside the document).
+        """
+        for para_index, para in enumerate(self.paragraphs):
+            p_start, p_end = para.span
+            if not (p_start <= offset < p_end):
+                continue
+            for sent_index, sent in enumerate(para.sentences):
+                start, end = sent.span
+                if start <= offset < end:
+                    return SentIndex(para_index, sent_index)
+            return None
+        return None
 
     def get_sent(self, index: SentIndex) -> Sentence:
         return self.paragraphs[index.para_index].sentences[index.sent_index]
@@ -536,7 +593,7 @@ class TextDoc:
             else:
                 sub_paras.append(para)
 
-        return TextDoc(sub_paras)
+        return TextDoc(sub_paras, source_text=self.source_text)
 
     def sub_paras(self, start: int, end: int | None = None) -> TextDoc:
         """
@@ -544,7 +601,7 @@ class TextDoc:
         """
         if end is None:
             end = len(self.paragraphs) - 1
-        return TextDoc(self.paragraphs[start : end + 1])
+        return TextDoc(self.paragraphs[start : end + 1], source_text=self.source_text)
 
     def iter_blocks(
         self,
@@ -586,7 +643,8 @@ class TextDoc:
         to edit this document's blocks in place.)
         """
         return TextDoc(
-            [deepcopy(para) for para in self.iter_blocks(include=include, exclude=exclude)]
+            [deepcopy(para) for para in self.iter_blocks(include=include, exclude=exclude)],
+            source_text=self.source_text,
         )
 
     def prev_sent(self, index: SentIndex) -> SentIndex:
