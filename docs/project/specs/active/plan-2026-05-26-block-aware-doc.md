@@ -100,28 +100,34 @@ single parse (making the aligned blocks the canonical unit) is the one change wi
 blast radius, because it shifts block boundaries for lists and code that diffs and
 sliding windows see; it stays gated behind the Layer 3 spike and explicit sign-off.
 
-### Layer 1 — Exact spans (compute, don't store)
+### Layer 1 — Exact spans, with `original_text` computed from one retained source
 
-A paragraph's `original_text` is already an exact slice of the source, so its end is
-simply `doc_offset + len(original_text)` — **no new stored state is needed.** Add
-computed accessors rather than new fields:
+Make the **offsets the single source of truth** and retain the document text once on
+`TextDoc`. Then `original_text` is a *computed* slice rather than a stored per-unit copy:
 
-- `Paragraph.span -> (start, end)` and `Paragraph.end_offset` (= `doc_offset +
-  len(original_text)`).
-- Give `Sentence` an `original_text` (the verbatim source slice) alongside `text` (the
-  normalized/working text), mirroring `Paragraph`. The span is then exact **by
-  construction** — `[offset, offset + len(original_text))` — rather than derived from the
-  whitespace-normalized `text`. `text` stays what wordtoks/diffs/reassemble use;
-  `original_text` is the immutable source reference (like `Paragraph.original_text`, and
-  consistent with the `set_sent` "edits don't move source references" contract).
-  Populating `original_text` exactly needs boundary-preserving sentence splitting
-  (Layer 4); until then it is exact for verbatim sentences and falls back for
-  splitter-normalized content (e.g. tables).
-- `TextDoc.block_at_offset(o) -> Paragraph | None` and `sentence_at_offset(o) ->
-  SentIndex | None`, implemented by binary/linear search over the paragraph spans.
+- `TextDoc` keeps the original `source_text`; each `Paragraph`/`Sentence` carries an
+  exact span (`offsets` + an end). `original_text` becomes a computed property
+  (`source_text[start:end]`) — exact by construction, unable to drift — and the
+  duplicated paragraph- and sentence-level string copies go away (a memory win on large
+  docs). `Sentence` still stores its normalized, *editable* `text` (what
+  wordtoks/diffs/reassemble use); only the verbatim `original_text` is computed.
+- Spans: `Paragraph.span` / `Sentence.span` `-> (start, end)`, plus
+  `TextDoc.block_at_offset(o)` / `sentence_at_offset(o)` over those spans.
+- Exactness needs an exact **end** per unit. A paragraph's end is already exact; a
+  sentence's end needs boundary-preserving splitting (Layer 4) — until then sentence
+  spans are exact for verbatim prose and fall back for irregular internal whitespace
+  (e.g. tables).
+- Derived/synthetic docs: `sub_doc` / `filtered` keep a reference to the same
+  `source_text` (their spans still point into it), so computed `original_text` keeps
+  working. Docs built from synthetic content (`from_wordtoks`, `append_sent`) have no
+  source backing, so there `source_text` is the reassembled working text (or
+  `original_text` is reported unavailable).
 
-Optionally introduce a small frozen `Span(start, end)` value type if it reads better
-than tuples, but keep `Offsets` as-is to avoid churn.
+Trade-off: this couples a unit to its document's `source_text` (a `Paragraph` is no
+longer fully self-contained), which matches a "unit is a view into its document" model.
+The alternative — keep `original_text` stored — is simpler but duplicates strings.
+Optionally add a small frozen `Span(start, end)` type. Decide the stored-vs-computed
+choice in Phase 1 (see Open Questions).
 
 ### Layer 2 — Sections and TOC (derived, no reparse)
 
@@ -205,9 +211,10 @@ import flowmark internals directly.
 
 All additive:
 
-- `Sentence` gains `original_text` (verbatim source slice; `text` stays normalized).
-- `Paragraph`/`Sentence`: computed span/end accessors (exact, from `original_text`);
-  optional `Span` type.
+- `TextDoc` retains `source_text`; `Paragraph.original_text` / `Sentence.original_text`
+  become computed slices of it (offsets are the source of truth). `Sentence.text`
+  (normalized, editable) stays stored.
+- `Paragraph`/`Sentence`: computed `span`/end accessors; optional `Span` type.
 - `TextDoc`: `block_at_offset`, `sentence_at_offset`, `sections`, `toc`, `links`, and
   (Layer 3) `blocks`.
 - `Section` and `Block` dataclasses; `Link` record; `BlockType.list_item` /
@@ -217,11 +224,12 @@ All additive:
 
 ### Phase 1 — Spans and mapping
 
-- [ ] Add `Sentence.original_text` (verbatim source slice; `text` stays normalized) so
-      spans are exact by construction.
-- [ ] Computed span/end accessors on `Paragraph` and `Sentence`.
-- [ ] `block_at_offset` / `sentence_at_offset` with round-trip tests.
+- [ ] Retain `TextDoc.source_text`; make `Paragraph`/`Sentence` `original_text` computed
+      slices (offsets as source of truth); keep `Sentence.text` editable.
+- [ ] Computed `span`/end accessors; `block_at_offset` / `sentence_at_offset` + round-trip tests.
 - [ ] Exact for verbatim sentences now; full exactness lands with the Layer 4 splitter.
+- [ ] Define `original_text` behavior for derived/synthetic docs (`sub_doc`/`filtered`/
+      `from_wordtoks`/`append_sent`).
 
 ### Phase 2 — Sections and TOC
 
@@ -263,9 +271,9 @@ All additive:
 - Sections: expose as a nested tree, a flat list with levels, or both?
 - Layer 3: marko source-mapping vs a custom scanner; how to represent nested and
   multi-paragraph list items; should code blocks be reassembled across blank lines.
-- Should `TextDoc` retain the full original source string to support slicing by an
-  arbitrary external offset, or is per-unit `original_text` sufficient (it is for
-  `block_at_offset`)?
+- `original_text` stored per unit vs computed from a retained `TextDoc.source_text`
+  (recommended: computed — exact and memory-efficient, at the cost of coupling units to
+  their document and needing a fallback policy for synthetic docs)?
 - Alignment: keep the marko-aligned blocks as an overlay indefinitely, or eventually
   re-found `TextDoc`'s canonical unit on the single parse (changing list/code block
   boundaries that diffs and sliding windows see)?
