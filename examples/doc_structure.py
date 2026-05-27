@@ -23,7 +23,7 @@ _SAMPLE = dedent(
 
     ## Goals
 
-    Be fast. Be accurate. Stay dependency-light.
+    Be fast. Be accurate. Stay dependency-light. See the [docs](https://example.com/docs).
 
     ## Non-goals
 
@@ -65,6 +65,15 @@ def main() -> None:
     print(
         f"  {paragraphs_only.size(TextUnit.words)} words in {len(paragraphs_only.paragraphs)} paragraphs"
     )
+
+    print("\n--- Links (text, url, span) and the sentence each is in ---")
+    for link in doc.links():
+        where = ""
+        if link.span is not None:
+            sent_index = doc.sentence_at_offset(link.span[0])
+            if sent_index is not None:
+                where = f" — in sentence {doc.get_sent(sent_index).text!r}"
+        print(f"  [{link.text}]({link.url})  @{link.span}{where}")
 
 
 if __name__ == "__main__":
