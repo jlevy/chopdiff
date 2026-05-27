@@ -10,6 +10,8 @@ from typing import TypeAlias
 
 import regex
 from flowmark import flowmark_markdown, split_sentences_regex
+from flowmark.atomic_spans import iter_atomic_spans
+from flowmark.markdown_ast import extract_links
 from funlog import tally_calls
 from marko import Markdown
 from marko.block import (
@@ -186,6 +188,47 @@ class Offsets:
 
     doc_offset: int
     block_offset: int
+
+
+@dataclass(frozen=True)
+class Link:
+    """
+    A link found in a document. `text`, `url`, and `title` are the parsed identity
+    (reference links resolved, autolinks and bare URLs included), via flowmark's
+    `markdown_ast.extract_links`. `span` is the link's absolute `[start, end)` offsets in
+    the source when they could be recovered (the common inline/autolink case), else
+    `None` — e.g. reference links, whose rendered text has no contiguous source span.
+    """
+
+    text: str
+    url: str
+    title: str | None
+    span: tuple[int, int] | None
+
+
+# Atomic-span pattern names (from flowmark.atomic_spans) that correspond to links.
+_LINK_ATOMIC_NAMES = frozenset({"markdown_link", "autolink", "bare_url"})
+
+
+def _block_links(block_text: str, doc_offset: int) -> list[Link]:
+    """
+    Links in a single block. Identity comes from `extract_links` (always correct);
+    spans are recovered by aligning, in document order, with the link-like atomic spans
+    from `iter_atomic_spans`. When the two lists disagree in count (reference links,
+    images, shortcut refs), identity is kept and spans are left `None`.
+    """
+    identities = extract_links(_markdown_parser().parse(block_text))
+    link_spans = [
+        span
+        for span in iter_atomic_spans(block_text)
+        if span.is_atomic and span.name in _LINK_ATOMIC_NAMES
+    ]
+    if len(identities) == len(link_spans):
+        return [
+            Link(idn.text, idn.url, idn.title, (doc_offset + sp.start, doc_offset + sp.end))
+            for idn, sp in zip(identities, link_spans, strict=True)
+        ]
+    return [Link(idn.text, idn.url, idn.title, None) for idn in identities]
 
 
 @dataclass
@@ -399,6 +442,10 @@ class Paragraph:
         element = _heading_element(self.original_text.strip())
         return _inline_text(element).strip() if element is not None else None
 
+    def links(self) -> list[Link]:
+        """Links in this block, in order (identity always; absolute span when recoverable)."""
+        return _block_links(self.original_text, self.offsets.doc_offset)
+
 
 @dataclass
 class TextDoc:
@@ -556,6 +603,13 @@ class TextDoc:
                 roots.append(section)
             stack.append(section)
         return roots
+
+    def links(self) -> list[Link]:
+        """All links in the document, in document order. See `Link`."""
+        result: list[Link] = []
+        for para in self.paragraphs:
+            result.extend(para.links())
+        return result
 
     def toc(self) -> list[tuple[int, str, tuple[int, int]]]:
         """Flat table of contents in document order: `(level, title, span)` per heading."""
@@ -878,3 +932,10 @@ class Section:
     def size_summary(self, subtree: bool = True) -> str:
         blocks = self.subtree_blocks() if subtree else self.own_blocks()
         return TextDoc(blocks).size_summary()
+
+    def links(self) -> list[Link]:
+        """All links in this section's subtree, in document order."""
+        result: list[Link] = []
+        for block in self.subtree_blocks():
+            result.extend(block.links())
+        return result

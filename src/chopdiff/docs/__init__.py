@@ -4,8 +4,10 @@ from chopdiff.docs.search_tokens import search_tokens
 from chopdiff.docs.sizes import TextUnit
 from chopdiff.docs.text_doc import (
     BlockType,
+    Link,
     Offsets,
     Paragraph,
+    Section,
     Sentence,
     SentIndex,
     TextDoc,
@@ -56,7 +58,9 @@ __all__ = [
     "TextUnit",
     "BlockType",
     "Offsets",
+    "Link",
     "Paragraph",
+    "Section",
     "Sentence",
     "SentIndex",
     "TextDoc",
