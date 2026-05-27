@@ -40,7 +40,7 @@ classifiers = [
 
 dependencies = [
     "prettyfmt>=0.3.0",
-    "flowmark>=0.5.3",
+    "flowmark>=0.7.0",
     "marko>=2.2.2",
     "strif>=3.1.0",
     "funlog>=0.2.1",
@@ -109,9 +109,11 @@ exclude-newer = "2026-05-11T00:00:00Z"
 # Cool-off exceptions (reviewed and recorded in SUPPLY-CHAIN-SECURITY.md):
 # - strif 3.1.0: first-party, zero-dependency package, full source diff reviewed.
 # - idna 3.15: fixes CVE-2026-45409 reported against the in-window 3.14.
+# - flowmark 0.7.0: first-party package (maintainer-reviewed), public inline API.
 [tool.uv.exclude-newer-package]
 strif = "2026-05-24T00:00:00Z"
 idna = "2026-05-13T00:00:00Z"
+flowmark = "2026-05-28T00:00:00Z"
 
 [tool.ruff]
 # Set as desired, typically 88 (black standard) or 100 (wide).

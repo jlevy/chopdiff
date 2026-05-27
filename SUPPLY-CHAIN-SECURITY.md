@@ -90,6 +90,13 @@ caught up), remove the override and re-lock.
   dependencies, build hooks, network calls, or install scripts. Reviewed and approved
   by the maintainer, 2026-05-25.
 
+- **flowmark 0.7.0** (published 2026-05-27, inside the window). First-party package,
+  authored and maintained by the same maintainer; the new public inline API
+  (`flowmark.atomic_spans`, `flowmark.markdown_ast`) is what chopdiff adopts for exact
+  sentence spans and link extraction. Adds one transitive dependency, `pathspec` (a
+  long-established, pure-Python package well outside the window). Reviewed and approved
+  by the maintainer, 2026-05-27. Remove this override once 0.7.0 clears the 14-day window.
+
 ## Untrusted Repositories
 
 Treat any freshly cloned third-party repo as untrusted. Don't run `install` / `build` /
