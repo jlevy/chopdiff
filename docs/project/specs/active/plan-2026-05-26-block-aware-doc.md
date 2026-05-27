@@ -114,9 +114,9 @@ Make the **offsets the single source of truth** and retain the document text onc
 - Spans: `Paragraph.span` / `Sentence.span` `-> (start, end)`, plus
   `TextDoc.block_at_offset(o)` / `sentence_at_offset(o)` over those spans.
 - Exactness needs an exact **end** per unit. A paragraph's end is already exact; a
-  sentence's end needs boundary-preserving splitting (Layer 4) — until then sentence
-  spans are exact for verbatim prose and fall back for irregular internal whitespace
-  (e.g. tables).
+  sentence's exact end now comes from `flowmark.atomic.split_sentences_with_spans`
+  (flowmark #47), which chopdiff adopts as its splitter — so sentence spans are exact for
+  *all* content (verbatim prose is already exact even with the current splitter).
 - Derived/synthetic docs: `sub_doc` / `filtered` keep a reference to the same
   `source_text` (their spans still point into it), so computed `original_text` keeps
   working. Docs built from synthetic content (`from_wordtoks`, `append_sent`) have no
@@ -181,31 +181,33 @@ structure *within* and *across* blank-line boundaries.
 
 ### Layer 4 — Inline elements (links) and link-aware sentences
 
-The aligned marko parse already carries inline structure, so this is mostly exposure.
-Reuse flowmark's **public** `flowmark_markdown()` parser (already a dependency): a text
-block's inline AST exposes `inline.Link` (`dest` = URL, `title`, child `RawText` = link
-text), `inline.Url` (bare/autolinks), and `inline.CodeSpan`.
+flowmark PR #47 (upcoming release) publishes the inline API this layer needs, so this is
+mostly *adoption*, not new code (see the Addendum for the exact surface):
 
-- **Link rollup.** Collect a `Link(text, url, title, span)` for every link; expose
-  `block.links`, `TextDoc.links()`, and — composing with Layer 2 — `section.links` (the
-  union over the section's blocks). marko decides what *is* a link (handling reference
-  links, autolinks, and `[x](y)` inside code spans correctly); the exact source span is
-  recovered by locating the link in the block text, the same way blocks and sentences
-  are located, so links keep chopdiff's exact-reference guarantee.
-- **Link-aware sentences.** Today `split_sentences_regex` normalizes whitespace and is
-  not atomic-aware, so a sentence can bisect link text or be confused by URL
-  punctuation. Add an offset-preserving, atomic-aware splitter that treats links, code
-  spans, inline HTML, and bare URLs as unbreakable tokens, applies the existing
-  end-of-sentence heuristic only between tokens, and keeps source offsets. This makes
-  sentence spans exact *and* guarantees they never split a link; link↔sentence
-  association then falls out of the spans (a link belongs to the sentence whose span
-  contains it). It also resolves the best-effort sentence-span limitation from Layer 1.
+- **Link rollup.** `flowmark.ast.extract_links(doc)` returns `Link(text, url, title)` in
+  document order with correct identity (reference links resolved, escapes honored,
+  autolinks/images handled). It deliberately carries **no span** — marko has no inline
+  offsets — so chopdiff recovers each link's exact `[start, end)` against its own source,
+  the same source-mapping role it plays for blocks and sentences. This is genuinely
+  nontrivial (duplicate link text, reference links with no inline span, code-embedded
+  `[x](y)`), so chopdiff owns a reconciliation step aligning the ordered `extract_links`
+  identities with located link spans (the `MARKDOWN_LINK` / `AUTOLINK` / `BARE_URL`
+  patterns via `flowmark.atomic.iter_atomic_spans`). Expose `block.links`,
+  `section.links` (union over the section's blocks, composing with Layer 2), and
+  `TextDoc.links()` — each a `(Link, span)` once chopdiff attaches the span.
+- **Link-aware sentences.** Adopt `flowmark.atomic.split_sentences_with_spans(text) ->
+  list[SentenceSpan]` (where `SentenceSpan.text == source[start:end]` verbatim, and a
+  boundary never bisects a link, code span, autolink, or URL) as chopdiff's splitter.
+  This makes `Sentence` spans exact for *all* content — folding the previously-deferred
+  "full exactness" into Layer 1 — and link↔sentence association falls out of the spans.
+  chopdiff's pluggable `Splitter` becomes span-aware: the verbatim `SentenceSpan` feeds
+  `Sentence.original_text`/offsets, and the normalized working `text` is derived as today.
 
-**Reuse boundary.** Only flowmark's public `flowmark_markdown()` is safe to import.
-`atomic_patterns` (the link/code-span/URL/tag regexes) and the inline-traversal helpers
-are flowmark *internals* (not in `__all__`); either export them from flowmark upstream
-(first-party, clean) or keep a small local copy of those regexes in chopdiff. Do not
-import flowmark internals directly.
+**Reuse boundary (resolved by flowmark #47).** flowmark now publishes `flowmark.atomic`
+(patterns + `iter_atomic_spans` + `split_sentences_with_spans`) and `flowmark.ast`
+(`walk_elements`, `extract_links`, `Link`) as a stable, intentional surface, so chopdiff
+imports those directly — no local regex copy and no internal imports. Requires bumping the
+flowmark dependency to the release containing #47 (under the cool-off policy).
 
 ### API Changes
 
@@ -217,8 +219,11 @@ All additive:
 - `Paragraph`/`Sentence`: computed `span`/end accessors; optional `Span` type.
 - `TextDoc`: `block_at_offset`, `sentence_at_offset`, `sections`, `toc`, `links`, and
   (Layer 3) `blocks`.
-- `Section` and `Block` dataclasses; `Link` record; `BlockType.list_item` /
-  `BlockType.thematic_break`; an atomic-aware sentence `Splitter`.
+- `Section` and `Block` dataclasses; a `(Link, span)` rollup type; `BlockType.list_item`
+  / `BlockType.thematic_break`.
+- Adopt `flowmark.atomic` / `flowmark.ast` (flowmark #47): span-aware sentence splitting
+  (`split_sentences_with_spans`), `extract_links`, atomic patterns. Bump the flowmark
+  dependency to the release containing #47.
 
 ## Implementation Plan
 
@@ -244,11 +249,12 @@ All additive:
 
 ### Phase 4 — Inline links and link-aware sentences
 
-- [ ] `Link(text, url, title, span)` rollup via `flowmark_markdown()` + span location;
-      `block.links` / `section.links` / `TextDoc.links()`.
-- [ ] Atomic-aware, offset-preserving sentence splitter (links/code/HTML/URLs atomic);
-      exact, link-safe sentence spans; link↔sentence association.
-- [ ] Decide flowmark atomic-pattern reuse (export upstream vs local copy).
+- [ ] Bump the flowmark dependency to the release containing #47 (under the cool-off).
+- [ ] Adopt `flowmark.atomic.split_sentences_with_spans` for exact, link-safe sentence
+      spans (folds into Layer 1); decide default-vs-opt-in `Splitter`.
+- [ ] Link rollup: reconcile `flowmark.ast.extract_links` identity with located link
+      spans (`flowmark.atomic` patterns) → `block.links` / `section.links` /
+      `TextDoc.links()`; link↔sentence association via spans.
 
 ## Testing Strategy
 
@@ -277,9 +283,12 @@ All additive:
 - Alignment: keep the marko-aligned blocks as an overlay indefinitely, or eventually
   re-found `TextDoc`'s canonical unit on the single parse (changing list/code block
   boundaries that diffs and sliding windows see)?
-- Reuse flowmark's `atomic_patterns` by exporting them from flowmark (first-party) or by
-  keeping a small local copy in chopdiff? Should the atomic-aware splitter become the
-  default `Splitter` or stay opt-in (the splitter is already pluggable)?
+- flowmark reuse: RESOLVED — flowmark #47 publishes `flowmark.atomic` and `flowmark.ast`;
+  chopdiff imports them (no local copy). Remaining: should
+  `flowmark.atomic.split_sentences_with_spans` become chopdiff's *default* `Splitter`, or
+  stay opt-in (the splitter is already pluggable)? Adopting it by default makes spans
+  exact everywhere but changes `Sentence.text` from normalized to verbatim unless
+  chopdiff re-normalizes.
 
 ## References
 
@@ -289,54 +298,46 @@ All additive:
   reviewed and not merged.
 - `src/chopdiff/docs/text_doc.py`: current `TextDoc` / `Paragraph` / `Sentence` /
   `Offsets` / `BlockType`.
-- flowmark (public `flowmark_markdown()`), and its internal
-  `linewrapping/atomic_patterns.py` (link/code-span/URL regexes) and
-  `transforms/doc_transforms.py` (inline traversal) — prior art for inline handling.
+- flowmark PR #47 — public inline API: `flowmark.atomic` (`ATOMIC_PATTERNS`,
+  `iter_atomic_spans`, `SentenceSpan`, `split_sentences_with_spans`) and `flowmark.ast`
+  (`walk_elements`, `extract_links`, `Link`), plus `flowmark_markdown()`. chopdiff adopts
+  these for Layer 4.
 
-## Addendum: Proposed upstream changes to flowmark
+## Addendum: flowmark inline API (implemented in flowmark PR #47)
 
-Layer 4 (and the marko alignment generally) wants to reuse flowmark rather than
-re-implement Markdown inline handling. flowmark already has everything needed, but the
-useful pieces live in internal modules not in its public `__all__`. Since flowmark and
-chopdiff are both first-party, the cleanest path is a small, intentional public surface
-in flowmark. Concrete proposals, cross-referenced to flowmark v0.6.5 source:
+The upstream changes this plan needed were proposed against flowmark and are implemented
+in flowmark **PR #47** (a new public, versioned surface). chopdiff adopts it directly;
+the proposals below are now realized as:
 
-1. **Publish the atomic-construct patterns.** `src/flowmark/linewrapping/atomic_patterns.py`
-   defines `AtomicPattern` plus `MARKDOWN_LINK`, `INLINE_CODE_SPAN`, HTML/Jinja tag and
-   comment patterns, the ordered `ATOMIC_PATTERNS` tuple, and the combined
-   `ATOMIC_CONSTRUCT_PATTERN` regex. These encode exactly "what must not be split
-   mid-construct" — what chopdiff needs for link-safe sentence splitting and exact
-   link/code spans. Re-export them from the package (e.g. a public `flowmark.atomic`
-   submodule and `__all__` entries) so chopdiff uses one source of truth instead of a
-   drifting local copy.
+1. **`flowmark.atomic`** — public atomic-construct patterns and offset-preserving
+   tokenizers: `AtomicPattern`, `ATOMIC_PATTERNS`, `ATOMIC_CONSTRUCT_PATTERN`,
+   `MARKDOWN_INLINE_PATTERNS` (Markdown-only prose subset), the named patterns
+   (`MARKDOWN_LINK`, `INLINE_CODE_SPAN`, `AUTOLINK`, `BARE_URL`, HTML/Jinja), and
+   `AtomicSpan` / `AtomicWord` / `iter_atomic_spans` / `iter_atomic_words`. These give
+   chopdiff exact link/code spans and atomic-aware tokenization with no local copy.
 
-2. **Offer offset-preserving, atomic-aware sentence splitting.** The public
-   `src/flowmark/linewrapping/sentence_split_regex.py:split_sentences_regex` does
-   `text.split()` then `" ".join(...)`, so it loses whitespace and offsets and is not
-   atomic-aware (it can split inside a link). flowmark already tokenizes atomically for
-   wrapping. Propose a public, offset-preserving API:
-   - `iter_atomic_tokens(text) -> Iterable[(text, start, end, is_atomic)]` over
-     `ATOMIC_CONSTRUCT_PATTERN`, and/or
-   - `split_sentences_with_spans(text) -> list[(text, start, end)]` that applies the
-     existing end-of-sentence heuristic only between atomic tokens and never splits one.
-   flowmark is the natural home (it owns both sentence splitting and the atomic patterns);
-   chopdiff would consume these directly for exact, link-safe `Sentence` spans.
+2. **`flowmark.atomic.split_sentences_with_spans(text) -> list[SentenceSpan]`** — the
+   offset-preserving, atomic-aware sentence splitter. `SentenceSpan(text, start, end)` is
+   verbatim (`text == source[start:end]`) and never bisects a link/code span/URL. This is
+   exactly what chopdiff's `Sentence` spans need for full exactness (Layer 1 + Layer 4).
 
-3. **Publish AST traversal + link extraction.** `src/flowmark/transforms/doc_transforms.py`
-   has `transform_tree(element, transformer)` (a robust marko walk) and
-   `_collect_inline_segments(...)`, and `src/flowmark/formats/flowmark_markdown.py`
-   exposes the configured parser (GFM + footnote). Export a read-only inline iterator
-   (e.g. `iter_inline(element)`) and a convenience `extract_links(doc) ->
-   list[Link(text, url, title)]` built on the same traversal, so consumers don't
-   re-implement AST walks that must track GFM/footnote element types.
+3. **`flowmark.ast`** — `walk_elements(element)` (generic read-only marko walk) and
+   `extract_links(doc) -> list[Link]`, `Link(text, url, title)`. Correct link *identity*
+   (reference links, escapes, autolinks, images).
 
-4. **Commit to a stable, versioned public surface.** Because chopdiff will depend on the
-   above, the exported names should be an intentional API (a `flowmark.atomic` /
-   `flowmark.ast` submodule and `__all__`), not just de-underscored internals, so
-   chopdiff is not coupled to flowmark's internal refactors.
+**Deliberate boundary chopdiff inherits.** flowmark documents that `extract_links` /
+`Link` carry **no span** by design (marko has no inline offsets), and that the
+`MARKDOWN_LINK` regex is a *heuristic* for "what must not be broken," **not** a link
+enumerator. So the one piece chopdiff still owns is *reconciling* link identity
+(`extract_links`) with located link spans (`iter_atomic_spans` on the link patterns) to
+produce `(Link, span)`. flowmark deliberately leaves this consumer-side; chopdiff names
+the same boundary in Layer 4.
 
-Until these land, chopdiff keeps the Layer 4 fallback: use only the public
-`flowmark_markdown()` and hold a small local copy of the link/code-span/URL regexes.
-These proposals should be filed as flowmark issues (first-party) and, ideally, a small
-flowmark PR exporting (1) and (3) — which unblock most of Layer 4 — with (2) as the
-larger follow-up.
+**Minor ergonomics note (raised on flowmark #47, non-blocking):** `AtomicSpan` exposes
+`is_atomic` but not the matched pattern *name*, so a consumer reconciling links must
+re-match the link patterns to tell a link span from a code span. An optional `name` (or a
+`patterns=` filter that tags matches) on `iter_atomic_spans` would make consumer-side
+link-span reconciliation cheaper, without crossing the identity-vs-span boundary.
+
+chopdiff therefore depends on the flowmark release containing #47 (added under the
+cool-off policy when Layer 4 is implemented).
