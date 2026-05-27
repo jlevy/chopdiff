@@ -133,6 +133,24 @@ def _classify_block(text: str) -> BlockType:
     return BlockType.paragraph
 
 
+def _heading_element(text: str) -> Heading | SetextHeading | None:
+    parsed = _markdown_parser().parse(text)
+    for element in parsed.children:
+        if isinstance(element, (Heading, SetextHeading)):
+            return element
+    return None
+
+
+def _inline_text(element: object) -> str:
+    """Concatenate the plain text of an inline (or heading) element subtree."""
+    children = getattr(element, "children", None)
+    if isinstance(children, str):
+        return children
+    if isinstance(children, list):
+        return "".join(_inline_text(child) for child in children)  # pyright: ignore[reportUnknownArgumentType]
+    return ""
+
+
 @dataclass(frozen=True, order=True)
 class SentIndex:
     """
@@ -367,6 +385,20 @@ class Paragraph:
             return BlockType.html
         return block_type
 
+    def heading_level(self) -> int | None:
+        """The Markdown heading level (1-6) if this block is a heading, else None."""
+        if self.block_type != BlockType.heading:
+            return None
+        element = _heading_element(self.original_text.strip())
+        return element.level if element is not None else None
+
+    def heading_title(self) -> str | None:
+        """The heading text without `#` markers if this block is a heading, else None."""
+        if self.block_type != BlockType.heading:
+            return None
+        element = _heading_element(self.original_text.strip())
+        return _inline_text(element).strip() if element is not None else None
+
 
 @dataclass
 class TextDoc:
@@ -499,6 +531,59 @@ class TextDoc:
                     return SentIndex(para_index, sent_index)
             return None
         return None
+
+    def sections(self) -> list[Section]:
+        """
+        The heading hierarchy as a tree of top-level `Section`s. A section owns the
+        blocks from its heading up to the next heading of equal-or-higher level; deeper
+        headings become nested `children`. Content before the first heading (preamble)
+        belongs to no section. Derived from heading levels; no whole-document re-parse.
+        """
+        roots: list[Section] = []
+        stack: list[Section] = []
+        for para in self.paragraphs:
+            level = para.heading_level()
+            if level is None:
+                if stack:
+                    stack[-1].blocks.append(para)
+                continue
+            section = Section(heading=para, level=level, blocks=[], children=[])
+            while stack and stack[-1].level >= level:
+                stack.pop()
+            if stack:
+                stack[-1].children.append(section)
+            else:
+                roots.append(section)
+            stack.append(section)
+        return roots
+
+    def toc(self) -> list[tuple[int, str, tuple[int, int]]]:
+        """Flat table of contents in document order: `(level, title, span)` per heading."""
+        entries: list[tuple[int, str, tuple[int, int]]] = []
+
+        def walk(sections: list[Section]) -> None:
+            for section in sections:
+                entries.append((section.level, section.title, section.span))
+                walk(section.children)
+
+        walk(self.sections())
+        return entries
+
+    def section_size_tree(self, units: tuple[TextUnit, ...] = (TextUnit.words,)) -> str:
+        """
+        Render the section hierarchy as an indented tree with rolled-up sizes per
+        section (each line covers the section and all its subsections).
+        """
+        lines: list[str] = []
+
+        def walk(sections: list[Section], depth: int) -> None:
+            for section in sections:
+                sizes = ", ".join(f"{section.size(unit)} {unit.value}" for unit in units)
+                lines.append(f"{'  ' * depth}{'#' * section.level} {section.title}  ({sizes})")
+                walk(section.children, depth + 1)
+
+        walk(self.sections(), 0)
+        return "\n".join(lines)
 
     def get_sent(self, index: SentIndex) -> Sentence:
         return self.paragraphs[index.para_index].sentences[index.sent_index]
@@ -743,3 +828,53 @@ class TextDoc:
     @override
     def __str__(self):
         return f"TextDoc({self.size_summary()})"
+
+
+@dataclass
+class Section:
+    """
+    A document section: a heading plus the content it owns, with nested subsections.
+
+    `blocks` are this section's own content blocks (excluding the heading line and any
+    subsections); `children` are nested `Section`s. Built by `TextDoc.sections()`. Sizes
+    are rolled up by reusing `TextDoc.size` over the section's blocks, so every
+    `TextUnit` aggregates uniformly.
+    """
+
+    heading: Paragraph
+    level: int
+    blocks: list[Paragraph]
+    children: list[Section]
+
+    @property
+    def title(self) -> str:
+        return self.heading.heading_title() or ""
+
+    def own_blocks(self) -> list[Paragraph]:
+        """The heading plus this section's own content blocks (no subsections)."""
+        return [self.heading, *self.blocks]
+
+    def subtree_blocks(self) -> list[Paragraph]:
+        """All blocks of this section and its subsections, in document order."""
+        result = self.own_blocks()
+        for child in self.children:
+            result.extend(child.subtree_blocks())
+        return result
+
+    @property
+    def span(self) -> tuple[int, int]:
+        """`[start, end)` covering the heading through the end of the last subtree block."""
+        blocks = self.subtree_blocks()
+        return blocks[0].span[0], blocks[-1].span[1]
+
+    def size(self, unit: TextUnit, subtree: bool = True) -> int:
+        """
+        Size in `unit`, rolled up over the whole subtree by default (`subtree=True`) or
+        the section's own content only (`subtree=False`). Reuses `TextDoc.size`.
+        """
+        blocks = self.subtree_blocks() if subtree else self.own_blocks()
+        return TextDoc(blocks).size(unit)
+
+    def size_summary(self, subtree: bool = True) -> str:
+        blocks = self.subtree_blocks() if subtree else self.own_blocks()
+        return TextDoc(blocks).size_summary()
