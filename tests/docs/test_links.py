@@ -62,3 +62,25 @@ def test_link_to_sentence_association():
 def test_no_links():
     doc = TextDoc.from_text("Just text. No links here at all.")
     assert doc.links() == []
+
+
+def test_reference_link_resolved_across_blocks():
+    # The reference definition lives in a separate block from the use; flowmark
+    # resolves it only with the full document, so TextDoc.links() must parse
+    # source_text once, not per-paragraph.
+    text = 'See [Docs][d].\n\n[d]: https://example.com/docs "Docs"\n'
+    doc = TextDoc.from_text(text)
+    links = doc.links()
+    assert len(links) == 1
+    link = links[0]
+    assert link.text == "Docs"
+    assert link.url == "https://example.com/docs"
+    assert link.title == "Docs"
+
+
+def test_shortcut_reference_link_resolved_across_blocks():
+    # Shortcut reference: `[Docs]` with separate `[Docs]: url` definition.
+    text = "See [Docs].\n\n[Docs]: https://example.com/docs\n"
+    doc = TextDoc.from_text(text)
+    urls = {link.url for link in doc.links()}
+    assert urls == {"https://example.com/docs"}

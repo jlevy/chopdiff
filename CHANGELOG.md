@@ -42,13 +42,37 @@ contains several intentional breaking changes for a cleaner API.
 ### New features
 
 - **Markdown block-type classification.** `BlockType` (heading, paragraph, list, table,
-  code, blockquote, html, footnote) and `Paragraph.block_type`, classified by parsing
-  each block with flowmark's Markdown (marko) parser. `TextDoc.iter_blocks(include=,
-  exclude=)` and `TextDoc.filtered(include=, exclude=)` iterate or sub-select blocks by
-  type (e.g. process only paragraphs and list items, skipping headings and tables), and
-  aggregate counts such as sentences/words across paragraph blocks.
-- **Exact source references.** Paragraph and sentence `Offsets` round-trip into the
-  original text; `TextDoc` documents a clear contract for offsets and in-place editing.
+  code, blockquote, html, footnote, plus `list_item` and `thematic_break`) and
+  `Paragraph.block_type`, classified by parsing each block with flowmark's Markdown
+  (marko) parser. `TextDoc.iter_blocks(include=, exclude=)` and `TextDoc.filtered(...)`
+  iterate or sub-select blocks by type.
+- **Exact `[start, end)` spans.** Every `Paragraph` and `Sentence` exposes a
+  document-relative `span`; `TextDoc.source_text` is retained so each unit's
+  `original_text` round-trips into the source. `TextDoc.block_at_offset(o)` and
+  `sentence_at_offset(o)` invert spans.
+- **Sections, TOC, and rolled-up size stats.** `TextDoc.sections()` returns a tree of
+  `Section`s over the heading hierarchy; `TextDoc.toc()` returns a flat
+  `(level, title, span)` list. `Section.size(unit, subtree=True|False)`,
+  `Section.size_summary()`, and `TextDoc.section_size_tree(units=…)` roll up sizes per
+  section in any `TextUnit`, reusing the existing `size` machinery.
+- **Opt-in structural block tree.** `TextDoc.blocks()` returns a `Block(type, span,
+  children)` tree that keeps a fenced code block whole even with internal blank lines
+  and decomposes a tight list into `list_item`s with nested sublists. Block boundaries
+  recognize ATX headings, fenced code, thematic breaks, setext underlines, and
+  paragraph→list transitions without requiring blank-line separators.
+- **Inline-link rollups + link-aware sentence spans.** `Link(text, url, title, span)`
+  via `Paragraph.links()`, `Section.links()`, and `TextDoc.links()` — identity from
+  flowmark's `extract_links` (reference links resolve across the whole document), spans
+  recovered from `iter_atomic_spans`. The default sentence splitter is now
+  `flowmark.atomic_spans.split_sentences_with_spans`, so sentence spans are exact for
+  all content and never bisect a link, code span, or autolink.
+- **New public exports:** `Block`, `BlockType`, `Link`, `Offsets`, `Section`.
+
+### Dependencies
+
+- Requires `flowmark>=0.7.0` (public inline API: `flowmark.atomic_spans` +
+  `flowmark.markdown_ast`). Pulls in `pathspec` transitively; recorded as a reviewed
+  first-party cool-off exception in `SUPPLY-CHAIN-SECURITY.md`.
 
 ### Infrastructure
 

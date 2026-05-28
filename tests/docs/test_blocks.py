@@ -97,3 +97,59 @@ def test_no_source_text_falls_back_to_reassembled():
     doc = TextDoc.from_wordtoks(list(TextDoc.from_text("A para. Two.").as_wordtoks()))
     # Still parses (uses reassembled text as the backing source).
     assert _types(doc.blocks()) == [BlockType.paragraph]
+
+
+def test_heading_then_paragraph_without_blank_line():
+    # ATX heading immediately followed by a paragraph (no blank line between) must
+    # split into two distinct blocks, not one heading-classified region.
+    text = "# Title\nParagraph immediately after.\n\n## Next\nBody."
+    doc = TextDoc.from_text(text)
+    assert _types(doc.blocks()) == [
+        BlockType.heading,
+        BlockType.paragraph,
+        BlockType.heading,
+        BlockType.paragraph,
+    ]
+
+
+def test_paragraph_then_heading_without_blank_line():
+    text = "Some paragraph text.\n# Heading"
+    doc = TextDoc.from_text(text)
+    assert _types(doc.blocks()) == [BlockType.paragraph, BlockType.heading]
+
+
+def test_paragraph_then_thematic_break_without_blank_line():
+    text = "Some paragraph.\n---"
+    doc = TextDoc.from_text(text)
+    # CommonMark: a `---` right after a paragraph is a setext H2, not a thematic break.
+    # Just ensure we agree with marko's call (it's one block).
+    from marko.block import BlankLine
+
+    from chopdiff.docs.block_types import markdown_parser
+
+    parsed = markdown_parser().parse(text)
+    marko_top = [c for c in parsed.children if not isinstance(c, BlankLine)]
+    assert len(doc.blocks()) == len(marko_top)
+
+
+def test_block_types_parity_with_marko_for_no_blank_transitions():
+    # The structural block tree must agree with marko's top-level block count for
+    # documents where blocks are adjacent without blank-line separators.
+    from marko.block import BlankLine
+
+    from chopdiff.docs.block_types import markdown_parser
+
+    cases = [
+        "# H1\nPara after.",
+        "Para before.\n# H1",
+        "# H1\n# H2",
+        "# H1\n## H2\n### H3",
+        "Para before fence.\n```\ncode\n```",
+        "```\ncode\n```\nPara after fence.",
+        "Para before break.\n\n***\n\nPara after break.",
+    ]
+    for text in cases:
+        parsed = markdown_parser().parse(text)
+        marko_top = [c for c in parsed.children if not isinstance(c, BlankLine)]
+        ours = TextDoc.from_text(text).blocks()
+        assert len(ours) == len(marko_top), f"block count mismatch on: {text!r}"

@@ -24,6 +24,23 @@ from chopdiff.docs.block_types import BlockType, classify_block
 _LIST_MARKER_RE = regex.compile(r"^(\s*)([-*+]|\d+[.)])\s")
 _FENCE_RE = regex.compile(r"^\s{0,3}(```+|~~~+)")
 _THEMATIC_BREAK_RE = regex.compile(r"^\s{0,3}([-*_])(\s*\1){2,}\s*$")
+_ATX_HEADING_RE = regex.compile(r"^\s{0,3}#{1,6}([ \t]|$)")
+_SETEXT_UNDERLINE_RE = regex.compile(r"^\s{0,3}(=+|-+)\s*$")
+_HARD_STARTERS = frozenset({"atx", "fence", "thematic"})
+
+
+def _line_kind(line: str) -> str:
+    if not line.strip():
+        return "blank"
+    if _FENCE_RE.match(line):
+        return "fence"
+    if _ATX_HEADING_RE.match(line):
+        return "atx"
+    if _THEMATIC_BREAK_RE.match(line):
+        return "thematic"
+    if _LIST_MARKER_RE.match(line):
+        return "list"
+    return "text"
 
 
 @dataclass
@@ -80,11 +97,13 @@ def _parse_region(text: str, lines: list[tuple[int, str]], start_i: int, end_i: 
     i = start_i
     while i < end_i:
         line = lines[i][1]
-        if not line.strip():
+        kind = _line_kind(line)
+        if kind == "blank":
             i += 1
             continue
-        fence = _FENCE_RE.match(line)
-        if fence:
+        if kind == "fence":
+            fence = _FENCE_RE.match(line)
+            assert fence is not None
             marker = fence.group(1)[0] * 3
             j = i + 1
             while j < end_i and not lines[j][1].lstrip().startswith(marker):
@@ -94,14 +113,35 @@ def _parse_region(text: str, lines: list[tuple[int, str]], start_i: int, end_i: 
             blocks.append(Block(BlockType.code, _region_span(text, lines, i, j)))
             i = j
             continue
-        # Otherwise, accumulate until the next blank line.
-        j = i
+        if kind == "atx":
+            blocks.append(Block(BlockType.heading, _region_span(text, lines, i, i + 1)))
+            i += 1
+            continue
+        if kind == "thematic":
+            blocks.append(Block(BlockType.thematic_break, _region_span(text, lines, i, i + 1)))
+            i += 1
+            continue
+        # Accumulate until blank line, hard block-starter, setext underline (for text
+        # regions), or a list-marker transition (for non-list regions).
+        is_list_region = kind == "list"
+        j = i + 1
+        setext = False
         while j < end_i and lines[j][1].strip():
+            nxt = lines[j][1]
+            if not is_list_region and _SETEXT_UNDERLINE_RE.match(nxt):
+                setext = True
+                j += 1  # include the underline
+                break
+            kind_j = _line_kind(nxt)
+            if kind_j in _HARD_STARTERS:
+                break
+            if kind_j == "list" and not is_list_region:
+                break
             j += 1
         span = _region_span(text, lines, i, j)
         block_text = text[span[0] : span[1]]
-        if _THEMATIC_BREAK_RE.match(block_text):
-            blocks.append(Block(BlockType.thematic_break, span))
+        if setext:
+            blocks.append(Block(BlockType.heading, span))
         else:
             btype = classify_block(block_text)
             block = Block(btype, span)

@@ -143,10 +143,11 @@ _LINK_ATOMIC_NAMES = frozenset({"markdown_link", "autolink", "bare_url"})
 
 def _block_links(block_text: str, doc_offset: int) -> list[Link]:
     """
-    Links in a single block. Identity comes from `extract_links` (always correct);
+    Links in a text region. Identity comes from `extract_links` (always correct,
+    including reference links resolved against definitions anywhere in the region);
     spans are recovered by aligning, in document order, with the link-like atomic spans
-    from `iter_atomic_spans`. When the two lists disagree in count (reference links,
-    images, shortcut refs), identity is kept and spans are left `None`.
+    from `iter_atomic_spans`. Reference links and other identities `iter_atomic_spans`
+    cannot locate keep their identity but get `span=None`.
     """
     identities = extract_links(markdown_parser().parse(block_text))
     link_spans = [
@@ -154,12 +155,30 @@ def _block_links(block_text: str, doc_offset: int) -> list[Link]:
         for span in iter_atomic_spans(block_text)
         if span.is_atomic and span.name in _LINK_ATOMIC_NAMES
     ]
-    if len(identities) == len(link_spans):
-        return [
-            Link(idn.text, idn.url, idn.title, (doc_offset + sp.start, doc_offset + sp.end))
-            for idn, sp in zip(identities, link_spans, strict=True)
-        ]
-    return [Link(idn.text, idn.url, idn.title, None) for idn in identities]
+    # Walk both lists in document order, pairing each identity with the next atomic
+    # span whose text contains the identity's URL. Spans for ref links / shortcut refs
+    # / autolinks not surfaced by iter_atomic_spans in multi-block text stay unpaired.
+    result: list[Link] = []
+    span_idx = 0
+    for idn in identities:
+        located = None
+        if span_idx < len(link_spans):
+            sp = link_spans[span_idx]
+            if idn.url and idn.url in sp.text:
+                located = sp
+                span_idx += 1
+        if located is not None:
+            result.append(
+                Link(
+                    idn.text,
+                    idn.url,
+                    idn.title,
+                    (doc_offset + located.start, doc_offset + located.end),
+                )
+            )
+        else:
+            result.append(Link(idn.text, idn.url, idn.title, None))
+    return result
 
 
 @dataclass
@@ -556,11 +575,13 @@ class TextDoc:
         return roots
 
     def links(self) -> list[Link]:
-        """All links in the document, in document order. See `Link`."""
-        result: list[Link] = []
-        for para in self.paragraphs:
-            result.extend(para.links())
-        return result
+        """
+        All links in the document, in document order. Parsed from `source_text` once so
+        that reference-style links (`[text][ref]` with `[ref]: url` in a separate block)
+        resolve correctly. See `Link`.
+        """
+        text = self.source_text or self.reassemble()
+        return _block_links(text, 0)
 
     def blocks(self) -> list[Block]:
         """
