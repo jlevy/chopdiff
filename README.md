@@ -8,24 +8,22 @@ Basically, it lets you parse, diff, and transform text at the level of words, se
 paragraphs, and "chunks" (paragraphs grouped in an HTML tag like a `<div>`). It aims to
 have minimal dependencies.
 
-At its core is `TextDoc`, a single in-memory data structure that consolidates several
-views of a document at once:
+At its core is `TextDoc`, an in-memory data structure that consolidates several views of
+a document:
 
-- **Markdown block structure** (headings, lists, tables, code, blockquotes, …)
-- **Markdown inline structure** (links and other inline elements)
-- **Language structure** (paragraphs, sentences, words, and the inline and paragraph
-  spacing between them)
-- **Document structure** (the section hierarchy and table of contents)
+- **Markdown block structure** — headings, lists, tables, code, blockquotes, …
+- **Markdown inline structure** — links and other inline elements
+- **Language structure** — paragraphs, sentences, words, and the spacing between them
+- **Document structure** — section hierarchy and TOC
 
-Every one of these is anchored back to the original text by exact character offset, so
-nothing is copied and nothing drifts. This combination is unusual: Markdown parsers give
-you a block/inline tree but not sentences, sizes, or rollups; NLP tools give you sentences
-but not Markdown structure or exact source mapping. `TextDoc` is both, which makes it good
-for **textual analysis of a fixed document** (spans, sizes, sections, link rollups) and as
-an **editable model** you can modify in place and then reassemble into a clean, normalized
-new document.
+Every unit is anchored back to the original text by exact character offset, so nothing is
+copied and nothing drifts. Markdown parsers give you a block/inline tree but not
+sentences, sizes, or rollups; NLP tools give you sentences but not Markdown structure or
+exact source mapping. `TextDoc` is both — good for **textual analysis of a fixed
+document** (spans, sizes, sections, link rollups) and as an **editable model** you can
+modify in place and then reassemble into a clean, normalized new document.
 
-See [docs/textdoc-spec.md](docs/textdoc-spec.md) for the definitive design of `TextDoc`.
+See [docs/textdoc-spec.md](docs/textdoc-spec.md) for the definitive `TextDoc` design.
 
 Example use cases:
 
@@ -471,6 +469,8 @@ For development workflows, see [development.md](docs/development.md).
 For instructions on publishing to PyPI, see [publishing.md](docs/publishing.md).
 
 * * *
+
+*This document follows the tbd [writing style guidelines](https://github.com/jlevy/tbd).*
 
 *This project was built from
 [simple-modern-uv](https://github.com/jlevy/simple-modern-uv).*
