@@ -282,10 +282,24 @@ Files: `src/chopdiff/docs/text_doc.py`, `sizes.py`; tests in `tests/docs/test_of
 - [ ] Link↔sentence association via spans. Tests: identity+span rollup; sentence spans
       never bisect a link; reconciliation on reference links and code-embedded brackets.
 
-### Phase 5 — Normalized form: block-type model + derived views
+### Phase 5 — Adopt flowmark block spans, drop chopdiff's scanner (upstream dependency)
+
+**Status:** blocked on the next flowmark release with [jlevy/flowmark#52](https://github.com/jlevy/flowmark/pull/52) merged. The PR adds an authoritative `element.span = (start, end)` to every block element produced by `flowmark_markdown().parse(text)`, reading offsets straight from marko's own `Source.pos` — no regex, no heuristic, propagated to every nesting level. Once that ships:
+
+- [ ] Bump the flowmark dependency to the release that includes block spans (next post-0.7.0).
+- [ ] Delete `chopdiff/docs/block_tree.py`'s regex scanner and `_line_kind` / `_HARD_STARTERS` machinery. Replace with a thin walk over `flowmark_markdown().parse(text)` that builds `Block(type, span, children)` by mapping marko classes to `BlockType` via a single table.
+- [ ] Delete `chopdiff/docs/block_types.py::classify_block` and the singleton `markdown_parser`. `BlockType` collapses to the enum plus one `dict[type[BlockElement], BlockType]` mapping table.
+- [ ] Rewrite `Paragraph.block_type` to parse the paragraph fragment with flowmark and look up the first non-`BlankLine` child's class in the mapping table — no regex, no `classify_block`.
+- [ ] Tests: confirm `tests/docs/test_blocks.py` parity-against-marko cases still pass; `test_block_types.py` still passes; full suite green; lint clean. The two correctness bugs caught in PR #12's senior review (reference-link drop + no-blank-line block boundaries) become structurally impossible because chopdiff no longer makes block-boundary decisions.
+
+This phase is mechanical once the upstream release is in: the goal is **net negative code in chopdiff**.
+
+### Phase 6 — Normalized form: block-type model + derived views
 
 Folds the structural block tree and the section/element rollups into one normalized form,
-closing the gaps that made the views non-trivial.
+closing the gaps that made the views non-trivial. Many items become trivial after Phase 5
+(marko's parse already carries ordered-ness on `List`, decomposes lists into items at
+every density, etc.).
 
 - [ ] Block types correspond to Markdown kinds: add `BlockType.ordered_list`; `list`
       becomes bullet-only. Carry ordered-ness from marko's `List.ordered`. Minor-version
@@ -318,10 +332,16 @@ closing the gaps that made the views non-trivial.
 
 - Phases 1–4 shipped together on PR #12 (additive; `BlockType` gained `list_item` /
   `thematic_break`).
-- Phase 5 ships as a minor release. Adding `BlockType.ordered_list` and making `list`
-  bullet-only is the one semi-breaking note (callers matching `BlockType.list` for *both*
-  list kinds now miss ordered lists); everything else — density-invariant lists, per-
-  section blocks, derived rollups — is additive.
+- Phase 5 (flowmark-span adoption) is **blocked on the next flowmark release** including
+  [jlevy/flowmark#52](https://github.com/jlevy/flowmark/pull/52). The PR itself is in
+  draft and green; once it merges and is published, we bump and complete the
+  chopdiff-side refactor. The refactor is additive at the API level (`TextDoc.blocks()`
+  same shape, same `Block` dataclass, same `BlockType` values) — internal-only change
+  with two correctness bugs fixed for free.
+- Phase 6 ships as a minor release after Phase 5. Adding `BlockType.ordered_list` and
+  making `list` bullet-only is the one semi-breaking note (callers matching
+  `BlockType.list` for *both* list kinds now miss ordered lists); everything else —
+  density-invariant lists, per-section blocks, derived rollups — is additive.
 
 ## Open Questions
 
