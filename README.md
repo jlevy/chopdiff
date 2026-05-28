@@ -8,6 +8,25 @@ Basically, it lets you parse, diff, and transform text at the level of words, se
 paragraphs, and "chunks" (paragraphs grouped in an HTML tag like a `<div>`). It aims to
 have minimal dependencies.
 
+At its core is `TextDoc`, a single in-memory data structure that consolidates several
+views of a document at once:
+
+- **Markdown block structure** (headings, lists, tables, code, blockquotes, …)
+- **Markdown inline structure** (links and other inline elements)
+- **Language structure** (paragraphs, sentences, words, and the inline and paragraph
+  spacing between them)
+- **Document structure** (the section hierarchy and table of contents)
+
+Every one of these is anchored back to the original text by exact character offset, so
+nothing is copied and nothing drifts. This combination is unusual: Markdown parsers give
+you a block/inline tree but not sentences, sizes, or rollups; NLP tools give you sentences
+but not Markdown structure or exact source mapping. `TextDoc` is both, which makes it good
+for **textual analysis of a fixed document** (spans, sizes, sections, link rollups) and as
+an **editable model** you can modify in place and then reassemble into a clean, normalized
+new document.
+
+See [docs/textdoc-spec.md](docs/textdoc-spec.md) for the definitive design of `TextDoc`.
+
 Example use cases:
 
 - **Filter diffs:** Diff two documents and only accept changes that fit a specific
@@ -441,6 +460,9 @@ $
 * * *
 
 ## Project Docs
+
+For the definitive design of the `TextDoc` data structure, see
+[textdoc-spec.md](docs/textdoc-spec.md).
 
 For how to install uv and Python, see [installation.md](docs/installation.md).
 

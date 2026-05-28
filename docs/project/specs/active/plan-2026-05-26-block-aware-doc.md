@@ -1,29 +1,65 @@
-# Feature: Exact spans, sections, and structural blocks for TextDoc
+# Feature: A normalized document form for TextDoc — spans, sections, structural blocks, and derived views
 
-**Date:** 2026-05-26
+**Date:** 2026-05-26 (revised 2026-05-27 to add the normalized-form view model)
 
 **Author:** chopdiff maintainers
 
-**Status:** Approved (verified against flowmark v0.7.0)
+**Status:** Approved (verified against flowmark v0.7.0); revised with the normalized-form
+direction (Phases 1–4 implemented on PR #12)
+
+> **Design of record:** the definitive front-to-back design of the `TextDoc` data
+> structure lives in [`docs/textdoc-spec.md`](../../../textdoc-spec.md). This document is
+> the *implementation plan* (phases, beads, file-level steps) that builds toward it.
 
 ## Overview
 
-`TextDoc` is now block-aware (as of v0.3.0): it classifies each block by Markdown kind,
-filters/iterates by type, and records exact start offsets into the unmodified source.
-This feature builds on that to add the three capabilities still missing for full
-document-structure navigation:
+`TextDoc` is block-aware as of v0.3.0 (it classifies each block by Markdown kind,
+filters/iterates by type, and records exact start offsets), and PR #12 added exact spans,
+a section hierarchy, an opt-in structural block tree, and inline-link rollups. This spec
+consolidates those into one end-to-end design and makes explicit the model they are
+converging on: a single **normalized form** of the document from which every other shape
+is a **derived view**.
 
-1. **Exact spans** — a start *and* end for every block and sentence, so any unit's
-   source text can be sliced exactly and any character offset can be mapped to the
-   block/sentence containing it (and back).
-2. **Sections** — a heading/section hierarchy and table of contents, derived from the
-   heading blocks already classified today.
-3. **Structural blocks** — an opt-in, whole-document parse that resolves what blank-line
-   splitting cannot: individual list items, list nesting, and code/list blocks whose
-   boundaries don't align to blank lines.
+The normalized form is one representation — everything aligned by span into the retained
+`source_text` — that captures the document's four structures at once:
+
+1. **Original structure** — the verbatim `source_text` and exact `[start, end)` spans;
+   every unit is a *view into it* (nothing is copied).
+2. **Markdown structure** — the block tree (each block's top-level type, nesting, list
+   items) and the inline elements (links, code spans, …) it contains, taken from the
+   marko parse and *referenced*, not duplicated.
+3. **Language structure** — paragraphs, sentences, words/wordtoks, and the inline and
+   paragraph spacing between them, all with spans.
+4. **Section structure** — the heading hierarchy and table of contents over the blocks.
+
+From this one form, the shapes a caller wants are **calculated fields**, not stored state:
+
+- a hierarchical document whose hierarchy *is* the section outline (governed by headings);
+- that same content sliced by block type;
+- all links (and other inline/block elements) rolled up per block, per section, and per
+  document;
+- tallies of any of the above — counts are `len()`/`Counter` over the *referenced items*,
+  never a stored field.
+
+**Design principle.** The normalized form must be clean and flexible enough that these
+views are obvious one- or two-line derivations. If a view needs a lot of calculation or
+is not obvious, that is the signal to refine the normalized form — *not* to add a bespoke
+stored field or a parallel structure.
+
+**Why this matters (the broader goal of `TextDoc`).** Consolidating Markdown block
+structure, Markdown inline structure (links and other inline elements), language structure
+(paragraphs, sentences, words, and the spacing between them), and document structure
+(section headings, TOC) in *one* data structure — each piece a reference into the original
+text by exact offset — is unusual: parsers give you an AST but not sentences, spans, or
+rollups; NLP tools give you sentences but not Markdown structure or exact source mapping.
+`TextDoc` is both at once, and because every unit is an offset-anchored view rather than a
+copy, it is efficient on large documents. This makes it good for **textual analysis of a
+fixed document** (spans, sizes, sections, link/element rollups, density-invariant tallies)
+*and* as an **editable model**: edit units in place, then reassemble/serialize a clean,
+normalized new document. Analysis and edit-then-serialize are two uses of the same form.
 
 All of this extends `TextDoc` in place. We are explicitly **not** introducing a parallel
-`BlockDoc`/`SectionDoc`/`FlexDoc`; the incremental v0.3.0 approach is the model.
+`BlockDoc`/`SectionDoc`/`FlexDoc`; the normalized form lives on `TextDoc`.
 
 ## Goals
 
@@ -39,6 +75,17 @@ All of this extends `TextDoc` in place. We are explicitly **not** introducing a 
   and each link maps to the sentence that contains it.
 - An opt-in structural block tree (`list_item` + nesting; code/table/blockquote as whole
   blocks) for callers that need per-item granularity.
+- **Markdown-correspondent block types:** `BlockType` maps one-to-one to Markdown block
+  kinds, including **separate types for bullet (itemized) and ordered (enumerated)
+  lists**.
+- **A single top-level block type per block:** every blank-line/structural block has
+  exactly one top-level classification (its outer element). Nesting is a secondary
+  nuance that matters mainly for rollups, where a nested element is attributed to its
+  enclosing top-level block by default (e.g. a table inside a blockquote counts as a
+  blockquote, not a table). Descending into nested types is opt-in.
+- **Derived views, not stored state:** the section-hierarchical document, block-type
+  slices, and inline/block element rollups are all calculated fields over the normalized
+  form; no view stores counts or duplicates content.
 - Strictly additive: `TextDoc`, `Paragraph`, `Sentence`, and the diff/window/wordtok
   machinery keep their current behavior and APIs.
 
@@ -80,25 +127,101 @@ Limitations this feature addresses:
 Three additive layers, smallest and most valuable first. Layers 1 and 2 are cheap and
 reuse what already exists; Layer 3 is the only part needing real parsing work.
 
-### Guiding architecture: align TextDoc with the Markdown parse
+### The normalized form and derived views (central design)
 
-The north star: **align `TextDoc`'s block/paragraph/sentence structure with the marko
-parse so `TextDoc` exposes everything a Markdown parser does — block and inline
-structure, links, headings — plus what a parser does not: sentences, exact spans, sizes,
-and rollups by section.** Each block knows (or holds a reference to) its marko node, so
-type, inline elements, and structure come straight from the parser while chopdiff adds
-the analytics on top. A consumer then has a single object that is a superset of a
-Markdown AST *and* a structure/stats engine.
+The north star: **one normalized form on `TextDoc` that aligns the original, Markdown,
+textual, and section structures by span, so `TextDoc` exposes everything a Markdown
+parser does — block and inline structure, links, headings — plus what a parser does not:
+sentences, exact spans, sizes, and rollups by section.** A consumer then has a single
+object that is a superset of a Markdown AST *and* a structure/stats engine, where every
+other shape is a derivation.
 
-The layers below are the incremental, low-risk path toward this. Spans and sections are
-pure additions; the structural-block parse (Layer 3) is where `TextDoc`'s blocks become
-aligned with marko's blocks (a list is one block with item children; a fenced code block
-is one block regardless of internal blank lines). Alignment is introduced as an **overlay
-first** — the blank-line `Paragraph` list stays the unit the diff/window/wordtok code
-uses — so it can be validated against the existing model. Re-founding `TextDoc` on the
-single parse (making the aligned blocks the canonical unit) is the one change with real
-blast radius, because it shifts block boundaries for lists and code that diffs and
-sliding windows see; it stays gated behind the Layer 3 spike and explicit sign-off.
+**What the normalized form holds (all aligned by span into one `source_text`):**
+
+- the **structural block tree** (marko-aligned): each block's top-level `BlockType`,
+  its span, and its children (list → `list_item`s; an item may hold nested blocks); a
+  block references its inline elements (links, code spans) rather than copying them;
+- the **paragraph/sentence** breakdown with spans (the textual structure);
+- the retained `source_text` so any `original_text` is a computed slice.
+
+The block tree and the paragraph/sentence breakdown are **two views of the same form**,
+both indexing the same `source_text`. They are not competing canonical models: the
+blank-line `Paragraph`/`Sentence` view remains what the diff/window/wordtok code edits,
+while the structural block tree is the Markdown-structure backbone for slicing and
+rollups. Because both are views, no diff/window boundaries have to change — this resolves
+the earlier "overlay vs. re-found" tension (see Open Questions): keep both as views; do
+**not** force a re-founding of `TextDoc`'s editing unit on the structural parse.
+
+**Views derived from the form (calculated, never stored):**
+
+- **Section-hierarchical document** — group blocks by the heading hierarchy (Layer 2).
+  `Section` references its blocks; its content, span, and sizes are computed.
+- **Slice by block type** — filter blocks/sections by top-level `BlockType`
+  (`iter_blocks`/`filtered`, and the same predicate over `blocks()` / a section's blocks).
+- **Element rollups** — links (and, in general, any inline or block element) gathered per
+  block, per section (union over the section's blocks), and per document, by referencing
+  the same located elements; `link → sentence` falls out of overlapping spans.
+- **Tallies** — `len(...)` / `Counter(b.block_type for b in …)` over whichever referenced
+  collection (a section's blocks, the whole-doc block tree, a block's links). Counts are
+  always derived; the data model stores items, not totals.
+
+This is the bar for "easy to drive": each of the above is a one- or two-line derivation.
+Where it is not (e.g. structural items were only reachable for the whole document, not a
+section), that is a normalized-form gap to close, not a place for a stored count.
+
+### Block-type model
+
+`BlockType` corresponds one-to-one to Markdown block kinds, so a `TextDoc` classification
+reads like the Markdown structure it came from.
+
+- **Bullet vs. ordered lists are distinct types.** marko's `List` carries `ordered`, so
+  an itemized list and an enumerated list classify differently. Chosen, additive shape:
+  keep `list` meaning the **bullet/unordered** list (its current value) and add
+  `ordered_list` for the enumerated list; `list_item` is shared by both (an item's
+  ordered-ness is a property of its parent list). This is a behavior change for callers
+  who matched `BlockType.list` expecting *both* kinds — called out as a minor-version
+  note. (Symmetric rename to `bullet_list`/`ordered_list` is the alternative but breaks
+  the shipped `list` name; not chosen.)
+- **One top-level type per block.** Each blank-line/structural block has exactly one
+  top-level `BlockType`, taken from its **outer** element — already how `classify_block`
+  works (a blockquote wrapping a table classifies as `blockquote`). This single
+  classification is what `iter_blocks`/`filtered`/section slicing and the default rollups
+  key on.
+- **Nesting is a secondary nuance, for rollups.** Inside the structural tree a block keeps
+  its own type (the table inside the blockquote is still a `table` `Block` in the tree),
+  but a *tally or element rollup* attributes nested content to its enclosing top-level
+  block **by default** — a table inside a blockquote counts as a blockquote. Descending
+  into nested types (counting that inner table, or its links, separately) is an explicit,
+  opt-in traversal of `children`, not the default. This keeps the common case (counts by
+  top-level kind) trivial while leaving the rare nested case reachable.
+
+Enum (Markdown-correspondent): `heading`, `paragraph`, `list` (bullet), `ordered_list`,
+`list_item`, `table`, `code`, `blockquote`, `html`, `footnote`, `thematic_break`.
+
+**List density (tight vs. loose) must not change tallies.** A list written densely (no
+blank lines between items) and the same list written sparsely (blank lines between items)
+are semantically the same list; counts of lists and items must be identical either way.
+Today they are not: blank-line splitting makes a tight list one `list` block with no
+per-item access, while a loose list becomes several single-item `list` blocks. The
+normalized form removes this difference:
+
+- In the structural tree, a list **always decomposes into `list_item` children
+  regardless of density** — a loose list is *one* `list`/`ordered_list` block whose items
+  happen to be blank-line-separated, not N separate lists. So `len(list.children)` and
+  any block-type tally are density-invariant. (This supersedes the current "loose list
+  splits / nesting flattens" limitation, which lived in the blank-line view.)
+- Density is recorded as metadata, not structure. Chosen approach: a `tight: bool` flag
+  (CommonMark's notion — a list is loose if any of its items are blank-line-separated or
+  contain multiple block children). The per-item variant the requirement suggests —
+  flagging each `list_item` as dense/loose relative to its siblings — is the same
+  information at finer grain; we carry it on the **list** by default (simpler,
+  CommonMark-aligned) and can expose a derived `list_item.tight` if a mixed-density list
+  ever needs exact round-tripping. Either way the flag never enters a tally.
+
+Note this lives in the **structural tree** (the normalized Markdown view). The blank-line
+`Paragraph` editing view still sees loose-list items as separate paragraphs — that is the
+editing unit, not the tally unit — which is why density-invariant counting belongs to the
+block tree, not to `paragraphs`.
 
 ### Layer 1 — Exact spans, with `original_text` computed from one retained source
 
@@ -167,7 +290,9 @@ the blank-line `Paragraph` model:
   `list_item`s; an item may hold nested blocks).
 - `TextDoc.blocks() -> list[Block]` (or a standalone `parse_blocks(text)`), lazily
   computed and cached.
-- `BlockType` gains `list_item` and `thematic_break` (additive to the shipped enum).
+- `BlockType` gains `list_item`, `thematic_break`, and `ordered_list` (see Block-type
+  model); a `list` block holds `list_item` children, and ordered-ness is the parent
+  list's type.
 
 Exact sub-paragraph offsets are the open technical risk. Spike two approaches on a
 corpus before committing:
@@ -220,7 +345,10 @@ All additive:
 - `TextDoc`: `block_at_offset`, `sentence_at_offset`, `sections`, `toc`, `links`, and
   (Layer 3) `blocks`.
 - `Section` and `Block` dataclasses; a `(Link, span)` rollup type; `BlockType.list_item`
-  / `BlockType.thematic_break`.
+  / `BlockType.thematic_break` / `BlockType.ordered_list`.
+- Derived-view helpers (all computed, no stored counts): per-section structural blocks so
+  block-type slices and element rollups scope to a section; `Counter`-style tallies over
+  referenced items at block/section/document level.
 - Adopt `flowmark.atomic_spans` / `flowmark.markdown_ast` (flowmark v0.7.0): span-aware sentence splitting
   (`split_sentences_with_spans`), `extract_links`, atomic patterns. Bump the flowmark
   dependency to flowmark v0.7.0.
@@ -229,6 +357,12 @@ All additive:
 
 Each phase is independently shippable and additive. Phases 1–2 need no new dependency;
 Phase 4 (and the splitter adoption) needs the flowmark v0.7.0 bump (see Addendum).
+
+**Status:** Phases 1–4 are implemented on PR #12 (exact spans, sections/TOC/size rollups,
+the opt-in structural block tree with `list_item`/`thematic_break`, and inline-link
+rollups with link-aware sentence spans). Phase 5 below is the new normalized-form
+consolidation work (Markdown-correspondent block types, density-invariant lists, and the
+derived element/tally views).
 
 ### Phase 1 — Exact spans + offset mapping  (bead `chopdiff-0tgl`)
 
@@ -289,6 +423,29 @@ Files: `src/chopdiff/docs/text_doc.py`, `sizes.py`; tests in `tests/docs/test_of
 - [ ] Link↔sentence association via spans. Tests: identity+span rollup; sentence spans
       never bisect a link; reconciliation on reference links and code-embedded brackets.
 
+### Phase 5 — Normalized form: block-type model + derived views
+
+Folds the structural block tree and the section/element rollups into one normalized form,
+closing the gaps that made the views non-trivial.
+
+- [ ] Block types correspond to Markdown kinds: add `BlockType.ordered_list`; `list`
+      becomes bullet-only. Carry ordered-ness from marko's `List.ordered`. Minor-version
+      note for callers matching `BlockType.list` for both kinds.
+- [ ] Density-invariant lists in the structural tree: a list always decomposes into
+      `list_item` children regardless of blank-line spacing (loose list = one list block,
+      not N); record `tight: bool` on the list (CommonMark semantics). Tallies of lists
+      and items become identical for dense vs. sparse input. Tests: dense and loose
+      variants of the same list produce identical block/item counts.
+- [ ] Per-section structural blocks: scope `blocks()` to a section (e.g.
+      `Section.blocks()`) so block-type slices and element rollups work per section, not
+      only whole-document.
+- [ ] Derived rollups/tallies (no stored counts): a helper that gathers any block-type
+      slice or inline-element set at block/section/document level, and counts as
+      `len()`/`Counter` over the referenced items. Default rollups attribute nested
+      content to the enclosing top-level block; descending into `children` is opt-in.
+- [ ] End-to-end example exercising every view over one document: section tree,
+      slice-by-block-type, links/elements per section, and density-invariant tallies.
+
 ## Testing Strategy
 
 - Span invariants: `original_text[p.span] == p.original_text`; verbatim
@@ -300,28 +457,44 @@ Files: `src/chopdiff/docs/text_doc.py`, `sizes.py`; tests in `tests/docs/test_of
 
 ## Rollout Plan
 
-- Phases 1 and 2 are additive and backward-compatible; ship together as a minor release.
-- Phase 3 ships separately once the offset spike settles; `BlockType` additions are
-  additive.
+- Phases 1–4 shipped together on PR #12 (additive; `BlockType` gained `list_item` /
+  `thematic_break`).
+- Phase 5 ships as a minor release. Adding `BlockType.ordered_list` and making `list`
+  bullet-only is the one semi-breaking note (callers matching `BlockType.list` for *both*
+  list kinds now miss ordered lists); everything else — density-invariant lists, per-
+  section blocks, derived rollups — is additive.
 
 ## Open Questions
 
-- Spans: computed accessors (recommended) vs a stored `end` on `Offsets`?
-- Sections: expose as a nested tree, a flat list with levels, or both?
-- Layer 3: marko source-mapping vs a custom scanner; how to represent nested and
-  multi-paragraph list items; should code blocks be reassembled across blank lines.
-- `original_text` stored per unit vs computed from a retained `TextDoc.source_text`
-  (recommended: computed — exact and memory-efficient, at the cost of coupling units to
-  their document and needing a fallback policy for synthetic docs)?
-- Alignment: keep the marko-aligned blocks as an overlay indefinitely, or eventually
-  re-found `TextDoc`'s canonical unit on the single parse (changing list/code block
-  boundaries that diffs and sliding windows see)?
-- flowmark reuse: RESOLVED — flowmark v0.7.0 publishes `flowmark.atomic_spans` and `flowmark.markdown_ast`;
-  chopdiff imports them (no local copy). Remaining: should
-  `flowmark.atomic_spans.split_sentences_with_spans` become chopdiff's *default* `Splitter`, or
-  stay opt-in (the splitter is already pluggable)? Adopting it by default makes spans
-  exact everywhere but changes `Sentence.text` from normalized to verbatim unless
-  chopdiff re-normalizes.
+Most of the original questions are now decided (implemented on PR #12 or resolved by the
+normalized-form direction):
+
+- Spans: RESOLVED — computed accessors; `original_text` is a computed slice of the
+  retained `source_text` (exact and memory-efficient). Synthetic docs fall back to the
+  reassembled text.
+- Sections: RESOLVED — both a nested tree (`sections()`) and a flat list (`toc()`).
+- Counts / tallies: RESOLVED — never stored. The data model references items; every count
+  is a derived `len()`/`Counter`. A view that is hard to derive signals a normalized-form
+  gap to close, not a stored field to add.
+- Block types: RESOLVED — Markdown-correspondent, with `ordered_list` distinct from `list`
+  (bullet); one top-level type per block; nested content rolls up under its enclosing
+  top-level block by default.
+- Alignment (overlay vs. canonical): RESOLVED — the structural block tree and the
+  blank-line `Paragraph`/`Sentence` breakdown are **both views** of one normalized form.
+  The `Paragraph`/`Sentence` view stays the diff/window/wordtok editing unit, so no block
+  boundaries change and there is no forced re-founding/blast-radius event.
+- flowmark reuse: RESOLVED — chopdiff imports `flowmark.atomic_spans` /
+  `flowmark.markdown_ast` (flowmark v0.7.0). `split_sentences_with_spans` is the default
+  splitter; `Sentence.text` stays normalized while `original_text`/spans are verbatim.
+
+Still open:
+
+- List density: confirm `tight` belongs on the **list** (default, CommonMark-aligned) vs.
+  a per-`list_item` dense flag for exact round-tripping of mixed-density lists.
+- Multi-paragraph / loose list items: how to represent an item that contains several
+  block children (the item's `children` are blocks; spans cover the whole item).
+- Rollup ergonomics: a single generic element-rollup helper vs. typed accessors
+  (`links()`, future `tables()`, …) layered over it.
 
 ## References
 
