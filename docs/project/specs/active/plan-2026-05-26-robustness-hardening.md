@@ -1,10 +1,12 @@
 # Feature: Robustness Hardening And Regression Coverage
 
-**Date:** 2026-05-26 (last updated 2026-05-26)
+**Date:** 2026-05-26 (last updated 2026-05-29)
 
 **Author:** Codex
 
-**Status:** Draft
+**Status:** Draft — open. Some findings were resolved in v0.3.0 (see Overview); the rest
+remain. The earlier tracking beads (`chopdiff-3o4e`/`-ptf0`/`-2cgj`/`-z3js`) are no longer
+in the synced store and should be recreated when this is picked up.
 
 ## Overview
 
@@ -20,7 +22,7 @@ the docs, call out the compatibility risk in release notes.
 ## Goals
 
 - Fix the concrete P1/P2 robustness bugs identified in
-  `docs/review/senior-engineering-review.md`.
+  `docs/project/review/senior-engineering-review-chopdiff-pre-v0.3.0.md`.
 - Add focused regression tests for each fixed behavior.
 - Make failure behavior explicit and actionable for library users.
 - Improve downstream safety around transforms, chunking, offsets, token mapping, and
@@ -267,8 +269,8 @@ uv run --locked --all-extras --group audit pip-audit
 
 ## References
 
-- `docs/review/senior-engineering-review.md`
-- `docs/project/specs/active/plan-2026-05-26-markdown-block-segmentation.md`
+- `docs/project/review/senior-engineering-review-chopdiff-pre-v0.3.0.md`
+- `docs/project/specs/archive/plan-2026-05-26-markdown-block-segmentation.md`
 - `SUPPLY-CHAIN-SECURITY.md`
 - `AGENTS.md`
 - tbd guidelines applied:

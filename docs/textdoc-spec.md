@@ -114,13 +114,18 @@ flag never enters a tally.
 
 `TextDoc.blocks() -> list[Block]` parses the whole document once (lazy, cached):
 
-- `Block(type, span, children)` — `span` is trimmed so `source[start:end]` is the exact
-  text; `children` holds nested blocks (a `list` block's children are its `list_item`s).
+- `Block(type, span, children, tight)` — `span` is trimmed so `source[start:end]` is the
+  exact text; `children` holds nested blocks (a `list`/`ordered_list` block's children are
+  its `list_item`s). `tight` carries CommonMark list density on list blocks (`None`
+  elsewhere).
 - Resolves what blank-line splitting cannot: a fenced code block stays whole even with
-  internal blank lines; a tight list decomposes into items with nested sublists.
+  internal blank lines; a list decomposes into items with nested sublists.
 
-Offsets come from a line scanner (marko exposes no source positions); the top-level
-structure is cross-checked against marko in tests.
+Block boundaries and spans come straight from flowmark's parser — every block element
+carries an authoritative `element.span = (start, end)` read from marko's own source
+positions (`flowmark.markdown_ast.block_span`), so chopdiff runs no block-detection regex
+of its own and makes no block-boundary decisions. The top-level structure is cross-checked
+against marko in tests.
 
 ## 7. Sections and TOC
 
@@ -156,8 +161,9 @@ All calculated over the form; none store counts:
   rollups work per section, not only whole-document.
 - **Element rollups** — links (and future elements) gathered per block, section,
   document.
-- **Tallies** — `len(...)` / `Counter(b.block_type for b in …)` over the referenced
-  collection; nested content rolls up under its top-level block by default.
+- **Tallies** — `len(...)` / `Counter(b.type for b in …)` over the referenced collection
+  (e.g. `TextDoc.block_type_counts()`, `Section.block_type_counts()`); nested content
+  rolls up under its top-level block by default, descending into `children` is opt-in.
 
 ## 10. Editing and serialization
 
@@ -178,14 +184,16 @@ provider-keyed token counts (`estimate_tokens` is a heuristic); a thread-safety 
 
 ## 12. References
 
-- Implementation plan: `docs/project/specs/active/plan-2026-05-26-block-aware-doc.md`.
-  Phases 1–4 (exact spans, sections/TOC/size rollups, opt-in structural block tree,
-  inline-link rollups + link-aware sentences) are implemented on PR #12; Phase 5
-  (`ordered_list`, density-invariant lists, per-section blocks, derived rollups)
-  consolidates toward this design.
-- flowmark v0.7.0 inline API: `flowmark.atomic_spans` (`iter_atomic_spans`,
+- Implementation plan (completed):
+  `docs/project/specs/archive/plan-2026-05-26-block-aware-doc.md`. All phases are
+  implemented and shipped in v0.4.0: exact spans, sections/TOC/size rollups, the opt-in
+  structural block tree, inline-link rollups + link-aware sentences (Phases 1–4), flowmark
+  block-span adoption that removed chopdiff's regex scanner (Phase 5), and the
+  normalized-form view set — `ordered_list`, density-invariant lists, per-section blocks,
+  derived rollups (Phase 6).
+- flowmark v0.7.1 API: `flowmark.atomic_spans` (`iter_atomic_spans`,
   `split_sentences_with_spans`, named `AtomicSpan`s) and `flowmark.markdown_ast`
-  (`walk_elements`, `extract_links`, `Link`).
+  (`block_span`, `walk_elements`, `extract_links`, `Link`).
 - Source: `src/chopdiff/docs/text_doc.py`, `block_tree.py`, `block_types.py`.
 
 * * *

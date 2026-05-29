@@ -4,19 +4,23 @@
 
 **Author:** chopdiff maintainers
 
-**Status:** Approved (verified against flowmark v0.7.0); revised with the normalized-form
-direction (Phases 1–4 implemented on PR #12)
+**Status:** Completed (2026-05-29). All phases (1–6) are implemented and shipped in
+v0.4.0 on PR #12, verified against flowmark v0.7.1.
 
-> **Design of record:** the definitive front-to-back design of the `TextDoc` data
-> structure lives in [`docs/textdoc-spec.md`](../../../textdoc-spec.md). This document is
-> the *implementation plan* (phases, beads, file-level steps) that builds toward it.
+> **Completed and archived.** The living design of record is
+> [`docs/textdoc-spec.md`](../../../textdoc-spec.md); this implementation plan is kept for
+> historical reference. Phase numbering below reflects the final 6-phase split (Phases
+> 1–4 shipped first on PR #12, then Phase 5 = flowmark block-span adoption, Phase 6 =
+> the normalized-form view set).
 
 ## Overview
 
-`TextDoc` is block-aware as of v0.3.0; PR #12 added exact spans, a section hierarchy, the
-opt-in structural block tree, and inline-link rollups. This plan tracks the work toward
-the design in [`textdoc-spec.md`](../../../textdoc-spec.md): Phases 1–4 (shipped) and
-Phase 5 (`ordered_list`, density-invariant lists, per-section blocks, derived rollups).
+`TextDoc` is block-aware as of v0.3.0; PR #12 then added exact spans, a section
+hierarchy, the opt-in structural block tree, and inline-link rollups (Phases 1–4),
+adopted flowmark's authoritative block spans to remove chopdiff's regex scanner (Phase
+5), and added the normalized-form view set — `ordered_list`, density-invariant lists,
+per-section blocks, and derived rollups (Phase 6). All of it realizes the design in
+[`textdoc-spec.md`](../../../textdoc-spec.md).
 
 Extends `TextDoc` in place — no parallel `BlockDoc`/`SectionDoc`/`FlexDoc`.
 
@@ -217,11 +221,14 @@ All additive:
 Each phase is independently shippable and additive. Phases 1–2 need no new dependency;
 Phase 4 (and the splitter adoption) needs the flowmark v0.7.0 bump (see Addendum).
 
-**Status:** Phases 1–4 are implemented on PR #12 (exact spans, sections/TOC/size rollups,
-the opt-in structural block tree with `list_item`/`thematic_break`, and inline-link
-rollups with link-aware sentence spans). Phase 5 below is the new normalized-form
-consolidation work (Markdown-correspondent block types, density-invariant lists, and the
-derived element/tally views).
+**Status:** All phases complete, shipped in v0.4.0 on PR #12. Phases 1–4 (exact spans,
+sections/TOC/size rollups, the opt-in structural block tree with
+`list_item`/`thematic_break`, and inline-link rollups with link-aware sentence spans)
+shipped first; Phase 5 adopted flowmark's block spans (removing chopdiff's regex scanner);
+Phase 6 added the normalized-form views (Markdown-correspondent block types incl.
+`ordered_list`, density-invariant lists, per-section blocks, derived element/tally views).
+The unchecked boxes below are preserved as the historical plan; see `textdoc-spec.md` and
+the v0.4.0 changelog for the as-shipped result.
 
 ### Phase 1 — Exact spans + offset mapping  (bead `chopdiff-0tgl`)
 
@@ -284,7 +291,7 @@ Files: `src/chopdiff/docs/text_doc.py`, `sizes.py`; tests in `tests/docs/test_of
 
 ### Phase 5 — Adopt flowmark block spans, drop chopdiff's scanner (upstream dependency)
 
-**Status:** blocked on the next flowmark release with [jlevy/flowmark#52](https://github.com/jlevy/flowmark/pull/52) merged. The PR adds an authoritative `element.span = (start, end)` to every block element produced by `flowmark_markdown().parse(text)`, reading offsets straight from marko's own `Source.pos` — no regex, no heuristic, propagated to every nesting level. Once that ships:
+**Status:** Done (flowmark 0.7.1, merged [jlevy/flowmark#52](https://github.com/jlevy/flowmark/pull/52)). flowmark now attaches an authoritative `element.span = (start, end)` to every block element produced by `flowmark_markdown().parse(text)`, read straight from marko's own `Source.pos`. chopdiff's regex scanner, `classify_block`, and the `markdown_parser` singleton are deleted; `block_tree` walks the annotated tree (net negative code). Delivered steps:
 
 - [ ] Bump the flowmark dependency to the release that includes block spans (next post-0.7.0).
 - [ ] Delete `chopdiff/docs/block_tree.py`'s regex scanner and `_line_kind` / `_HARD_STARTERS` machinery. Replace with a thin walk over `flowmark_markdown().parse(text)` that builds `Block(type, span, children)` by mapping marko classes to `BlockType` via a single table.
@@ -296,10 +303,10 @@ This phase is mechanical once the upstream release is in: the goal is **net nega
 
 ### Phase 6 — Normalized form: block-type model + derived views
 
-Folds the structural block tree and the section/element rollups into one normalized form,
-closing the gaps that made the views non-trivial. Many items become trivial after Phase 5
-(marko's parse already carries ordered-ness on `List`, decomposes lists into items at
-every density, etc.).
+**Status:** Done (shipped in v0.4.0). Folds the structural block tree and the
+section/element rollups into one normalized form. Most items fell out of Phase 5 (marko's
+parse already carries ordered-ness on `List` and decomposes lists into items at every
+density). Delivered:
 
 - [ ] Block types correspond to Markdown kinds: add `BlockType.ordered_list`; `list`
       becomes bullet-only. Carry ordered-ness from marko's `List.ordered`. Minor-version
@@ -332,12 +339,11 @@ every density, etc.).
 
 - Phases 1–4 shipped together on PR #12 (additive; `BlockType` gained `list_item` /
   `thematic_break`).
-- Phase 5 (flowmark-span adoption) is **blocked on the next flowmark release** including
-  [jlevy/flowmark#52](https://github.com/jlevy/flowmark/pull/52). The PR itself is in
-  draft and green; once it merges and is published, we bump and complete the
-  chopdiff-side refactor. The refactor is additive at the API level (`TextDoc.blocks()`
-  same shape, same `Block` dataclass, same `BlockType` values) — internal-only change
-  with two correctness bugs fixed for free.
+- Phase 5 (flowmark-span adoption) shipped once flowmark 0.7.1 landed with
+  [jlevy/flowmark#52](https://github.com/jlevy/flowmark/pull/52). The refactor was
+  additive at the API level (`TextDoc.blocks()` same shape, same `Block` dataclass — now
+  with an added `tight` field — same `BlockType` values) and fixed two correctness bugs
+  for free (cross-block reference links, no-blank-line boundaries).
 - Phase 6 ships as a minor release after Phase 5. Adding `BlockType.ordered_list` and
   making `list` bullet-only is the one semi-breaking note (callers matching
   `BlockType.list` for *both* list kinds now miss ordered lists); everything else —

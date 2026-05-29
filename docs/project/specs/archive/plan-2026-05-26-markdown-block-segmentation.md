@@ -6,7 +6,7 @@
 
 **Status:** Superseded (archived 2026-05-28)
 
-> **Superseded by [`../active/plan-2026-05-26-block-aware-doc.md`](../active/plan-2026-05-26-block-aware-doc.md).**
+> **Superseded by [`plan-2026-05-26-block-aware-doc.md`](plan-2026-05-26-block-aware-doc.md).**
 > This draft proposed a separate parallel module (`MarkdownDoc`/`MarkdownBlock`)
 > alongside `TextDoc`. After v0.3.0 made `TextDoc` block-aware, the maintainers chose
 > to add spans, sections, and structural blocks *in place on `TextDoc`* rather than
@@ -580,7 +580,7 @@ Avoid golden snapshots for the entire Marko AST; the public contract is the
 
 - PR #7: `https://github.com/jlevy/chopdiff/pull/7`
 - `docs/project/specs/active/plan-2026-05-26-robustness-hardening.md`
-- `docs/review/senior-engineering-review.md`
+- `docs/project/review/senior-engineering-review-chopdiff-pre-v0.3.0.md`
 - `SUPPLY-CHAIN-SECURITY.md`
 - Marko local version inspected: 2.2.2
 - Marko modules inspected:
