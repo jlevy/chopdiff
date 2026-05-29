@@ -41,8 +41,8 @@ tree — all in place on `TextDoc`, not a parallel model.
   [docs/review/senior-engineering-review-chopdiff-pre-v0.3.0.md](docs/review/senior-engineering-review-chopdiff-pre-v0.3.0.md)
   — origin of the robustness findings.
 - Research survey:
-  [docs/project/research/research-2026-05-29-grounded-document-model.md](docs/project/research/research-2026-05-29-grounded-document-model.md)
-  — source-grounded structural document model; informs the block-aware plan.
+  [docs/project/research/research-2026-05-29-document-model.md](docs/project/research/research-2026-05-29-document-model.md)
+  — source-grounded, cross-language document model; informs the block-aware plan.
 
 ## Known gaps not yet in any plan
 
