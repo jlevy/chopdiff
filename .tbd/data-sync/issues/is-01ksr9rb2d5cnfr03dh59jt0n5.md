@@ -3,9 +3,9 @@ type: is
 id: is-01ksr9rb2d5cnfr03dh59jt0n5
 title: "Phase 6: Density-invariant TextDoc.blocks() (tight flag on list, no spacing-driven decomposition)"
 kind: feature
-status: open
+status: closed
 priority: 2
-version: 4
+version: 5
 spec_path: docs/project/specs/active/plan-2026-05-26-block-aware-doc.md
 labels: []
 dependencies:
@@ -13,7 +13,9 @@ dependencies:
     target: is-01ksr9rbyvszrytbtv8c1t97kg
 parent_id: is-01kshh1bwwdg57dx0yybgm8b9m
 created_at: 2026-05-28T22:02:23.693Z
-updated_at: 2026-05-28T22:03:42.956Z
+updated_at: 2026-05-29T06:31:32.788Z
+closed_at: 2026-05-29T06:31:32.788Z
+close_reason: "Phase 6: blocks() is density-invariant (one list with N list_items for tight and loose); Block.tight records CommonMark density. Test added."
 ---
 Density-invariant lists: tight vs. loose markdown must produce identical tallies.
 

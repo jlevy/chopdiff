@@ -3,9 +3,9 @@ type: is
 id: is-01ksqrs8wnrxdgyp0ezdbphfaj
 title: "Phase 5: Refactor chopdiff to consume flowmark block spans (delete classify_block, block_tree regex scanner)"
 kind: task
-status: open
+status: closed
 priority: 1
-version: 8
+version: 9
 spec_path: docs/project/specs/active/plan-2026-05-26-block-aware-doc.md
 labels: []
 dependencies:
@@ -19,7 +19,9 @@ dependencies:
     target: is-01ksr9rbn9bh3t5tjjy1m9eyyj
 parent_id: is-01kshh1bwwdg57dx0yybgm8b9m
 created_at: 2026-05-28T17:05:48.437Z
-updated_at: 2026-05-28T22:03:12.989Z
+updated_at: 2026-05-29T06:31:32.277Z
+closed_at: 2026-05-29T06:31:32.277Z
+close_reason: "Phase 5 done: deleted regex block scanner/classify_block/markdown_parser singleton; block_tree walks flowmark's annotated tree via block_span; net -103 LOC. 144 tests green, lint clean. Reference-link + no-blank-line bugs fixed by construction."
 ---
 Mechanical refactor once flowmark ships block spans. Goal: net negative code in chopdiff.
 

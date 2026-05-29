@@ -3,9 +3,9 @@ type: is
 id: is-01kshh1bwwdg57dx0yybgm8b9m
 title: "[epic] Document structure: exact spans, sections, and structural blocks for TextDoc"
 kind: epic
-status: open
+status: closed
 priority: 2
-version: 21
+version: 22
 spec_path: docs/project/specs/active/plan-2026-05-26-block-aware-doc.md
 labels: []
 dependencies: []
@@ -28,5 +28,7 @@ child_order_hints:
   - is-01ksr9rbn9bh3t5tjjy1m9eyyj
   - is-01ksr9rbyvszrytbtv8c1t97kg
 created_at: 2026-05-26T06:54:58.460Z
-updated_at: 2026-05-29T04:22:39.301Z
+updated_at: 2026-05-29T06:31:34.051Z
+closed_at: 2026-05-29T06:31:34.051Z
+close_reason: "All phases (1-6) shipped in v0.4.0 on PR #12: exact spans, sections/TOC/rollups, structural block tree, inline links (1-4); flowmark block-span adoption (5); normalized-form views (6)."
 ---

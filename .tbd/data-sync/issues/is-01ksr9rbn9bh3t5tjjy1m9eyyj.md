@@ -3,9 +3,9 @@ type: is
 id: is-01ksr9rbn9bh3t5tjjy1m9eyyj
 title: "Phase 6: Derived element/tally rollups (no stored counts; flexible block/section/doc level)"
 kind: feature
-status: open
+status: closed
 priority: 2
-version: 4
+version: 5
 spec_path: docs/project/specs/active/plan-2026-05-26-block-aware-doc.md
 labels: []
 dependencies:
@@ -13,7 +13,9 @@ dependencies:
     target: is-01ksr9rbyvszrytbtv8c1t97kg
 parent_id: is-01kshh1bwwdg57dx0yybgm8b9m
 created_at: 2026-05-28T22:02:24.296Z
-updated_at: 2026-05-28T22:03:43.564Z
+updated_at: 2026-05-29T06:31:33.467Z
+closed_at: 2026-05-29T06:31:33.466Z
+close_reason: "Phase 6: Section.block_type_counts()/TextDoc.block_type_counts() derived Counter rollups, no stored counts. Tests added."
 ---
 Derived element/tally rollups — calculated fields, never stored counts.
 

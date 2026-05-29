@@ -3,9 +3,9 @@ type: is
 id: is-01ksr9rbbqj317g4q4nsmkw65n
 title: "Phase 6: Section.blocks() for per-section structural slicing"
 kind: feature
-status: open
+status: closed
 priority: 2
-version: 4
+version: 5
 spec_path: docs/project/specs/active/plan-2026-05-26-block-aware-doc.md
 labels: []
 dependencies:
@@ -13,7 +13,9 @@ dependencies:
     target: is-01ksr9rbyvszrytbtv8c1t97kg
 parent_id: is-01kshh1bwwdg57dx0yybgm8b9m
 created_at: 2026-05-28T22:02:23.991Z
-updated_at: 2026-05-28T22:03:43.266Z
+updated_at: 2026-05-29T06:31:33.040Z
+closed_at: 2026-05-29T06:31:33.040Z
+close_reason: "Phase 6: Section.blocks() scopes the structural tree to a section (span containment, document-absolute spans). Section.blocks field renamed to Section.content. Tests added."
 ---
 Per-section structural blocks: scope blocks() to a section.
 

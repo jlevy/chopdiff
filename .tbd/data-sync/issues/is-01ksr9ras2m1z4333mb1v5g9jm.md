@@ -3,9 +3,9 @@ type: is
 id: is-01ksr9ras2m1z4333mb1v5g9jm
 title: "Phase 6: Add BlockType.ordered_list; carry List.ordered through to TextDoc"
 kind: feature
-status: open
+status: closed
 priority: 2
-version: 4
+version: 5
 spec_path: docs/project/specs/active/plan-2026-05-26-block-aware-doc.md
 labels: []
 dependencies:
@@ -13,7 +13,9 @@ dependencies:
     target: is-01ksr9rbyvszrytbtv8c1t97kg
 parent_id: is-01kshh1bwwdg57dx0yybgm8b9m
 created_at: 2026-05-28T22:02:23.393Z
-updated_at: 2026-05-28T22:03:42.670Z
+updated_at: 2026-05-29T06:31:32.534Z
+closed_at: 2026-05-29T06:31:32.533Z
+close_reason: "Phase 6: BlockType.ordered_list added, carried from marko List.ordered via block_type_for(); list is bullet-only. Tests added."
 ---
 After Phase 5 refactor, BlockType.ordered_list falls out as a trivial addition: the mapping table separates marko's List(ordered=True) from List(ordered=False).
 
