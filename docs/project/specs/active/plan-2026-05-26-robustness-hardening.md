@@ -1,26 +1,27 @@
 # Feature: Robustness Hardening And Regression Coverage
 
-**Date:** 2026-05-26 (last updated 2026-05-26)
+**Date:** 2026-05-26 (last updated 2026-05-29)
 
 **Author:** Codex
 
-**Status:** Draft
+**Status:** Draft (post-v0.3.0 reconciliation updated)
 
 ## Overview
 
-Harden `chopdiff` for downstream consumers by fixing concrete robustness issues found
-in the senior engineering review, adding missing regression tests, and making safe,
-clear implementation and documentation improvements before the next release.
+Harden `chopdiff` for downstream consumers by fixing concrete robustness issues found in
+the senior engineering review, adding missing regression tests, and making safe, clear
+implementation and documentation improvements before the next release.
 
 The emphasis is correctness and API contract clarity, not new feature expansion.
 Existing public behavior should remain compatible where it is already documented and
-working. When a fix corrects behavior that was previously undocumented or contradicts
-the docs, call out the compatibility risk in release notes.
+working.
+When a fix corrects behavior that was previously undocumented or contradicts the
+docs, call out the compatibility risk in release notes.
 
 ## Goals
 
 - Fix the concrete P1/P2 robustness bugs identified in
-  `docs/review/senior-engineering-review.md`.
+  `docs/review/senior-engineering-review-chopdiff-pre-v0.3.0.md`.
 - Add focused regression tests for each fixed behavior.
 - Make failure behavior explicit and actionable for library users.
 - Improve downstream safety around transforms, chunking, offsets, token mapping, and
@@ -40,19 +41,19 @@ the docs, call out the compatibility risk in release notes.
   the old behavior or documenting the compatibility impact.
 - Do not broaden dependency scope unless a specific fix cannot be done cleanly with the
   current stack.
-- Do not create long-term backward-compatibility shims unless the user confirms they
-  are necessary.
+- Do not create long-term backward-compatibility shims unless the user confirms they are
+  necessary.
 
 ## Background
 
 The review found that `chopdiff` has a strong core design for LLM-oriented text
-transforms, but several implementation details currently undercut the library's
-promises around safety and source mapping:
+transforms, but several implementation details currently undercut the library’s promises
+around safety and source mapping:
 
 - The package declares a broken `chopdiff` console script.
 - `filtered_transform()` enforces `diff_filter` only when windowing is enabled.
 - Sub-document APIs alias mutable `Paragraph` and `Sentence` objects, allowing
-  transforms to mutate the caller's original document.
+  transforms to mutate the caller’s original document.
 - If PR #7 lands first, its new `TextDoc.filtered()` API has the same copy-semantics
   risk unless it is fixed before merge.
 - `Sentence.char_offset` is documented as an original-text offset but is currently
@@ -70,6 +71,37 @@ promises around safety and source mapping:
 This plan fixes the safe and clear issues first and records any remaining API-policy
 choices explicitly.
 
+### Post-v0.3.0 Reconciliation (2026-05-29)
+
+Several review findings were addressed before this plan was revisited:
+
+- The broken console script was removed; `chopdiff` is library-only for now.
+- `TextDoc` now uses an `Offsets(doc_offset, block_offset)` record, and sentence
+  `doc_offset` is absolute.
+- Paragraph splitting no longer strips the whole document before offset calculation.
+- `TextDoc.filtered()` deep-copies matched paragraphs.
+- `tiktoken` was replaced by a dependency-free token estimate, reducing install and
+  network risk.
+- `.github/workflows/publish.yml` now installs with `uv sync --all-extras --locked`,
+  matching CI.
+
+Important remaining corrections after local probes on this branch:
+
+- `TextDoc.from_text()` still does not byte-for-byte preserve the whole input when
+  reassembled: leading/trailing whitespace outside stored blocks and runs of blank lines
+  normalize away. The docs should distinguish exact source references from exact
+  full-document reassembly.
+- `sub_doc()` and `sub_paras()` still alias live `Sentence`/`Paragraph` objects and can
+  mutate the source document.
+- `filtered_transform()` still ignores `diff_filter` when `windowing is None` or
+  `WINDOW_NONE`.
+- `html_find_tag()` still mishandles nested self-closing tags of the same name; the
+  prior TODO status saying this was fixed was incorrect.
+- `TextDoc.as_wordtoks(bof_eof=True)` still raises `IndexError` on an empty document.
+- A first docs cleanup pass corrected README token-estimate examples, the
+  `docs/development.md` dependency list, publishing placeholders, and two source
+  docstring typos. A broader preservation-language audit is still needed.
+
 ## Design
 
 ### Approach
@@ -79,8 +111,8 @@ Use regression tests as the driver:
 1. Add failing tests that capture the review findings.
 2. Fix the smallest implementation area that owns each behavior.
 3. Replace ambiguous failure modes with clear exceptions or documented behavior.
-4. Update docs where the safe fix is contract clarification rather than default
-   behavior change.
+4. Update docs where the safe fix is contract clarification rather than default behavior
+   change.
 5. Run full validation after each phase.
 
 The code should continue to follow the project Python rules:
@@ -97,7 +129,6 @@ The code should continue to follow the project Python rules:
 - Packaging and release:
   - `pyproject.toml`
   - `src/chopdiff/__init__.py`
-  - Optional new `src/chopdiff/cli.py`
   - `.github/workflows/publish.yml`
 - Document model:
   - `src/chopdiff/docs/text_doc.py`
@@ -125,19 +156,20 @@ The code should continue to follow the project Python rules:
 
 ### API Changes
 
-- Fix the existing console entry point by either:
-  - adding a minimal `chopdiff.cli:main` with help/version behavior, or
-  - removing the broken script if the package is intended to stay library-only.
-  The safer default is a minimal CLI because the package already publishes the command.
+- The broken console entry point has already been removed.
+  Keep `chopdiff` library-only unless a real CLI use case is designed; if a CLI returns
+  later, add an installed-command smoke test at the same time.
 - Make `filtered_transform()` enforce `diff_filter` consistently with and without
   windowing.
-- Make subdocument/window APIs avoid accidental mutation of the source document. This
-  corrects undocumented behavior and should be noted in release notes.
-- Make `Sentence.char_offset` match its documented original-text meaning, or rename and
-  document relative-offset behavior if a compatibility decision says not to change it.
-- Clarify `TextDoc.from_text()` normalization. Do not silently change the default unless
-  tests and docs are updated together. If exact preservation is needed now, add a new
-  explicit API rather than overloading implicit behavior.
+- Make subdocument/window APIs avoid accidental mutation of the source document.
+  This corrects undocumented behavior and should be noted in release notes.
+- Keep `Sentence.offsets.doc_offset` absolute.
+  Future span work should add `[start, end)` accessors rather than reopening the old
+  `char_offset` API.
+- Clarify `TextDoc.from_text()` normalization.
+  Do not silently change the default unless tests and docs are updated together.
+  If exact preservation is needed now, add a new explicit API rather than overloading
+  implicit behavior.
 - Tighten validation in `WindowSettings`, token diff application, token mapping, and
   HTML helpers.
 
@@ -145,80 +177,91 @@ The code should continue to follow the project Python rules:
 
 ### Phase 1: Correct Release Blockers And Transform/Chunking Bugs
 
-- [ ] Add an installed-command regression test for `uv run chopdiff` or an equivalent
-      subprocess smoke test.
-- [ ] Fix the broken console script by adding a minimal CLI or removing the entry point.
+- [x] Remove the broken console script entry point; `chopdiff` is library-only for now.
+- [ ] Add a wheel install/import smoke test for key APIs.
+  An installed-command test is only needed if a CLI is reintroduced.
 - [ ] Add tests proving `filtered_transform()` applies `diff_filter` for `None`,
-      `WINDOW_NONE`, and normal window settings.
+  `WINDOW_NONE`, and normal window settings.
 - [ ] Refactor filtering so whole-document and windowed transforms share the same
-      enforcement path.
-- [ ] Add a regression test proving word-window transforms do not mutate the caller's
-      original `TextDoc`.
+  enforcement path.
+- [ ] Add a regression test proving word-window transforms do not mutate the caller’s
+  original `TextDoc`.
 - [ ] Fix subdocument/window mutation by copying paragraph and sentence objects where a
-      returned subdocument may be mutated.
-- [ ] If PR #7 has landed, add `TextDoc.filtered()` to the same copy-semantics
-      regression tests and fix path.
+  returned subdocument may be mutated.
+- [x] If PR #7 has landed, fix `TextDoc.filtered()` copy semantics.
+  It now deep-copies matched blocks; keep it in regression coverage while fixing
+  `sub_doc()` and `sub_paras()`.
 - [ ] Add multi-sentence paragraph-window tests with a no-op normalizer.
 - [ ] Fix `sliding_para_window()` to include full paragraphs.
 - [ ] Add div-leading chunking tests with multiple top-level divs.
 - [ ] Fix `chunk_children()`/`chunk_generator()` slice semantics and empty-slice size
-      behavior.
+  behavior.
 
 ### Phase 2: Harden Core Contracts And Error Handling
 
-- [ ] Add tests for `Sentence.char_offset` across paragraphs and leading whitespace.
-- [ ] Fix sentence offsets to be absolute, or update the API/docs if preserving
-      relative offsets is chosen.
+- [x] Add tests for sentence offsets across paragraphs and leading whitespace.
+- [x] Replace `Sentence.char_offset` with `Sentence.offsets.doc_offset` and make it
+  absolute.
+- [ ] Add tests documenting exact source references versus normalized `reassemble()`
+  behavior for leading/trailing whitespace and blank-line runs.
+- [ ] Decide whether to add exact full-document source retention now or clarify the
+  README/docstrings around current normalization.
 - [ ] Add empty-document tests for `as_wordtoks(bof_eof=True)`, `first_index()`, and
-      `last_index()`.
+  `last_index()`.
 - [ ] Define and implement clear empty-document behavior.
 - [ ] Add tests proving `TokenMapping` rejects large replacements.
 - [ ] Validate `TokenMapping` using changed-token counts or a documented confidence
-      score instead of diff operation count.
+  score instead of diff operation count.
 - [ ] Add tests proving `TokenDiff.apply_to()` rejects same-length but mismatched source
-      tokens.
+  tokens.
 - [ ] Validate consumed source tokens in `TokenDiff.apply_to()`.
 - [ ] Replace runtime `assert` checks in public/library validation paths with clear
-      exceptions.
+  exceptions.
 - [ ] Add `WindowSettings.__post_init__()` validation while preserving `WINDOW_NONE`.
 - [ ] Preserve exception causes in wrapped errors such as
-      `TimestampExtractor.extract_preceding()`.
+  `TimestampExtractor.extract_preceding()`.
 
 ### Phase 3: Harden HTML Helpers, Docs, And Release Workflow
 
 - [ ] Add tests for nested self-closing same-name tags in `html_find_tag()`.
 - [ ] Fix same-name self-closing tag handling in balanced tag matching.
 - [ ] Add validation tests for invalid HTML tag names, invalid attribute names, and
-      class names supplied directly to `tag_with_attrs()`.
+  class names supplied directly to `tag_with_attrs()`.
 - [ ] Validate tag names, attribute names, and class names at the HTML helper boundary.
 - [ ] Add or document strict/best-effort behavior for `html_find_tag()` and rewrite
-      helpers.
+  helpers.
 - [ ] Improve class parsing for div helpers where safe: handle multi-class attributes
-      and common quote styles.
+  and common quote styles.
 - [ ] Add tests for empty attribute values in `html_extract_attribute_value()`.
 - [ ] Preserve missing versus empty attribute values.
 - [ ] Update README and docstrings to distinguish exact preservation from normalized
-      parsing.
-- [ ] Fix stale docs and typos called out in the review.
-- [ ] Update examples to use `Path`; implement or remove the unused `--output` option
-      in `examples/insert_para_breaks.py`.
-- [ ] Align publish workflow dependency installation with CI by using the committed
-      lockfile unless there is a documented reason not to.
+  parsing.
+- [ ] Fix stale docs and typos called out in the review; continue auditing preservation
+  language so docs say “source-referenced” where `reassemble()` is normalized.
+- [ ] Update examples to use `Path`; implement or remove the unused `--output` option in
+  `examples/insert_para_breaks.py`.
+- [x] Align publish workflow dependency installation with CI by using the committed
+  lockfile unless there is a documented reason not to.
 - [ ] Run final validation: `make lint`, `make test`, `make build`, and
-      `uv run --locked --all-extras --group audit pip-audit`.
+  `uv run --locked --all-extras --group audit pip-audit`.
 
 ## Testing Strategy
 
 Add focused tests rather than broad snapshots:
 
-- CLI smoke test:
-  - The installed command exits successfully for `--help` or `--version`.
+- Packaging smoke test:
+  - The built wheel installs and imports key APIs from `chopdiff.docs`,
+    `chopdiff.transforms`, `chopdiff.divs`, and `chopdiff.html`.
+  - If a CLI is reintroduced later, the installed command exits successfully for
+    `--help` or `--version`.
 - Transform tests:
   - Illegal transforms are filtered in no-window and windowed modes.
   - Identity transforms leave original input documents unchanged.
   - Alignment and min-overlap failures produce explicit behavior.
 - Text model tests:
   - Offsets are absolute or explicitly documented otherwise.
+  - Exact source references and normalized `reassemble()` behavior are both documented
+    and covered.
   - Empty documents have stable behavior.
   - Subdocuments do not mutate parents unless an explicit view API is added.
 - Chunking tests:
@@ -256,19 +299,17 @@ uv run --locked --all-extras --group audit pip-audit
 
 ## Open Questions
 
-- Should the existing `chopdiff` console command become a minimal utility command, or
-  should the entry point be removed because this is library-only?
-- Should `TextDoc.from_text()` remain a normalizing parser with clearer docs, or should
-  exact preservation become the default in a breaking release?
-- If `Sentence.char_offset` changes from relative to absolute, should release notes
-  treat that as a bug fix or a compatibility-impacting API change?
-- Should subdocument views remain available for performance under an explicit
-  `view_*` API, or should all public subdocument APIs return independent values?
+- Should `TextDoc.from_text()` remain a source-referenced but normalizing parser with
+  clearer docs, or should exact full-document preservation become the default in a
+  breaking release?
+- Should `sub_doc()`/`sub_paras()` copy by default, or should explicit `view_*` APIs be
+  added for callers that want aliasing for performance?
 
 ## References
 
-- `docs/review/senior-engineering-review.md`
-- `docs/project/specs/active/plan-2026-05-26-markdown-block-segmentation.md`
+- `docs/review/senior-engineering-review-chopdiff-pre-v0.3.0.md`
+- `docs/project/specs/archive/plan-2026-05-26-markdown-block-segmentation.md`
+- `docs/project/specs/active/plan-2026-05-26-block-aware-doc.md`
 - `SUPPLY-CHAIN-SECURITY.md`
 - `AGENTS.md`
 - tbd guidelines applied:

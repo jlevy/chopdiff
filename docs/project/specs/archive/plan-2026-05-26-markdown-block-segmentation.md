@@ -13,6 +13,13 @@
 > introduce a parallel model. Kept for reference: the Marko parser-subclass span
 > attachment technique and GFM table handling here inform the structural-block layer of
 > the active spec.
+>
+> **2026-05-29 reconciliation:** the document-model research uses `DocumentOverview` for
+> a future language-neutral serialized graph/schema projection. That does not revive this
+> archived plan's proposed parallel Python runtime API. Any implementation work should
+> happen through the active block-aware `TextDoc` plan first, then serialize that structure
+> into `DocumentOverview`. Mentions of `TextUnit.tiktokens` below reflect the old draft;
+> v0.3.0 renamed that unit to `TextUnit.tokens`.
 
 ## Overview
 
@@ -580,9 +587,11 @@ Avoid golden snapshots for the entire Marko AST; the public contract is the
 
 - PR #7: `https://github.com/jlevy/chopdiff/pull/7`
 - `docs/project/specs/active/plan-2026-05-26-robustness-hardening.md`
-- `docs/review/senior-engineering-review.md`
+- `docs/review/senior-engineering-review-chopdiff-pre-v0.3.0.md`
 - `SUPPLY-CHAIN-SECURITY.md`
 - Marko local version inspected: 2.2.2
+- 2026-05-29 PyPI fact check: Marko 2.2.3 is current but inside the cool-off window; do
+  not upgrade without the supply-chain review path.
 - Marko modules inspected:
   - `marko.parser.Parser`
   - `marko.source.Source`

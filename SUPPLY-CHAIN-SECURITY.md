@@ -90,6 +90,12 @@ caught up), remove the override and re-lock.
   dependencies, build hooks, network calls, or install scripts. Reviewed and approved
   by the maintainer, 2026-05-25.
 
+- **flowmark 0.7.1** (published 2026-05-29, inside the window). First-party package.
+  The maintainer requested this upgrade and approved the cool-off exception on
+  2026-05-29 after validating the release and its dependencies. This release provides
+  the public `flowmark.atomic_spans` and `flowmark.markdown_ast` APIs needed by the
+  block-aware document plan. Remove this override once 0.7.1 clears the 14-day window.
+
 ## Untrusted Repositories
 
 Treat any freshly cloned third-party repo as untrusted. Don't run `install` / `build` /

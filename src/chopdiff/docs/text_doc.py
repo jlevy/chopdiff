@@ -93,8 +93,8 @@ class BlockType(StrEnum):
 
     Likewise, a fenced code block containing a blank line can be split across
     blocks. For exact block boundaries, preserved nesting, and reliable
-    per-list-item granularity, a full-document Markdown parse is required (see
-    the BlockDoc plan spec, #8).
+    per-list-item granularity, a full-document Markdown parse is required; see
+    the active block-aware document plan.
     """
 
     paragraph = "paragraph"
@@ -349,9 +349,9 @@ class Paragraph:
 @dataclass
 class TextDoc:
     """
-    A class for parsing and handling documents consisting of sentences and paragraphs
-    of text. Preserves original text, tracking offsets of each sentence and paragraph.
-    Compatible with Markdown and Markown with HTML tags.
+    A source-referenced parser for documents made of sentences and paragraph-like
+    blocks. Tracks offsets for parsed blocks and sentences, including Markdown
+    documents that contain HTML tags.
 
     Contract and intended use:
 
@@ -359,10 +359,11 @@ class TextDoc:
       (sizing, classifying, diffing, windowing) and for generating *new* text via
       `reassemble()`. It is not a live, self-updating DOM.
 
-    - Source references are fixed at parse time. `Paragraph.original_text` and the
-      `offsets` on paragraphs and sentences are exact references into the text
-      passed to `from_text` (the input is not normalized) and are not updated when
-      content is mutated, so they remain valid as references back to the source.
+    - Source references are fixed at parse time. `Paragraph.original_text` and
+      offsets point back into the text passed to `from_text`, but `from_text`
+      stores stripped block text and `reassemble()` normalizes paragraph
+      separators. Use these references for source mapping, not as a byte-for-byte
+      full-document preservation model.
 
     - Offsets: every paragraph and sentence carries an `Offsets` record with both
       `doc_offset` (absolute in the document) and `block_offset` (relative to the
@@ -391,9 +392,11 @@ class TextDoc:
         """
         Parse a document from a string. Paragraphs are split on blank lines (two or
         more newlines, including blank lines that contain only whitespace). The
-        input is not normalized, so every offset is an exact reference into `text`;
-        e.g. `text[p.offsets.doc_offset : p.offsets.doc_offset + len(p.original_text)]`
-        round-trips to `p.original_text`.
+        stored block strips surrounding whitespace, so offsets point to the stored
+        block content inside `text`. For each paragraph, the slice starting at
+        `p.offsets.doc_offset` with length `len(p.original_text)` round-trips to
+        `p.original_text`. `reassemble()` produces normalized editable text, not a
+        byte-for-byte copy of the full input.
         """
         paragraphs: list[Paragraph] = []
         spans: list[tuple[int, int]] = []

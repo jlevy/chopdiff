@@ -112,15 +112,15 @@ it is here:
 
 - [strif](https://github.com/jlevy/strif) — Zero-dependency string and file utilities
   (atomic writes, hashing, `replace_multiple`).
-- [flowmark](https://github.com/jlevy/flowmark) — Markdown line-wrapping and
-  auto-formatting.
+- [flowmark](https://github.com/jlevy/flowmark) — Markdown line-wrapping,
+  auto-formatting, atomic spans, and Markdown AST helpers.
+- [marko](https://github.com/frostming/marko) — CommonMark/GFM parser used for Markdown
+  block classification.
 - [prettyfmt](https://github.com/jlevy/prettyfmt) — Human-friendly object and value
   formatting (used in `__repr__`s).
 - [funlog](https://github.com/jlevy/funlog) — Logging and timing decorators.
 - [cydifflib](https://github.com/rapidfuzz/CyDifflib) — Fast drop-in replacement for the
   standard library `difflib`, used for token-level diffing.
-- [tiktoken](https://github.com/openai/tiktoken) — OpenAI BPE tokenizer, used for token
-  counting.
 - [regex](https://github.com/mrabarnett/mrab-regex) — Regex engine with Unicode features
   beyond the standard library `re`.
 - [selectolax](https://github.com/rushter/selectolax) — Fast HTML parser (lexbor), used

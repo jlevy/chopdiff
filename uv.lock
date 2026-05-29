@@ -7,6 +7,7 @@ exclude-newer = "2026-05-11T00:00:00Z"
 
 [options.exclude-newer-package]
 strif = "2026-05-24T00:00:00Z"
+flowmark = "2026-05-30T00:00:00Z"
 idna = "2026-05-13T00:00:00Z"
 
 [[package]]
@@ -182,7 +183,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "cydifflib", specifier = ">=1.2.0" },
-    { name = "flowmark", specifier = ">=0.5.3" },
+    { name = "flowmark", specifier = ">=0.7.1" },
     { name = "funlog", specifier = ">=0.2.1" },
     { name = "marko", specifier = ">=2.2.2" },
     { name = "prettyfmt", specifier = ">=0.3.0" },
@@ -318,7 +319,7 @@ wheels = [
 
 [[package]]
 name = "flowmark"
-version = "0.6.5"
+version = "0.7.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "marko" },
@@ -327,9 +328,9 @@ dependencies = [
     { name = "strif" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/4e/cc/eac8218c043842af17e7bab947ee653712b8335be572b074d0a5cc5f7e5a/flowmark-0.6.5.tar.gz", hash = "sha256:f4136cd176a5fa2346c0bff5f84d2f757228c51e164a75682daee4bb2df5578b", size = 454443, upload-time = "2026-02-26T05:23:23.673Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/cd/30/747d36d6636550b7c325d760e2a3744b668aedd53901bad31027cf838161/flowmark-0.7.1.tar.gz", hash = "sha256:ddd64c71e49533b9a02b235d18464acb6d9c8f35e1e229e40b72814c375d894f", size = 549045, upload-time = "2026-05-29T03:35:19.625Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/3e/3e/92367d19bd97df6fee87f6f58df19fea42c02573a0713a217e4dc56d3b84/flowmark-0.6.5-py3-none-any.whl", hash = "sha256:984f4fc70f8a237658936bb4b05371d9de001960ecff2f90eac3662828e79c9f", size = 64331, upload-time = "2026-02-26T05:23:22.264Z" },
+    { url = "https://files.pythonhosted.org/packages/83/bd/78167bec4f04d1825c523c01b4e9ee442ca9bb63b0cc3aa3780fd39f8b4d/flowmark-0.7.1-py3-none-any.whl", hash = "sha256:6566a358cb29fa89f1ea791e50c5f6fa3f317af60f09c7ec0a7f8110fc3974d6", size = 83675, upload-time = "2026-05-29T03:35:20.744Z" },
 ]
 
 [[package]]

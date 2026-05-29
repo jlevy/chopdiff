@@ -18,6 +18,34 @@ This review covers the full `chopdiff` package as currently checked out at commi
 This was a review pass, not a fix pass. I did not intentionally change implementation
 code.
 
+## Post-v0.3.0 Reconciliation (2026-05-29)
+
+This file remains the historical review of commit `0ad8288`; line references and probes
+below intentionally describe that pre-v0.3.0 state. Current `origin/main` has since
+resolved some findings and left others open.
+
+Resolved or materially changed:
+
+- The broken console script was removed; `chopdiff` is library-only for now.
+- `Paragraph.char_offset` / `Sentence.char_offset` were replaced by
+  `Offsets(doc_offset, block_offset)`, with sentence `doc_offset` now absolute.
+- `TextDoc.filtered()` deep-copies matched blocks.
+- The mandatory `tiktoken` dependency was removed and replaced by a token estimate.
+- The publish workflow now installs with `uv sync --all-extras --locked`.
+
+Still open after local probes on 2026-05-29:
+
+- `filtered_transform()` still ignores `diff_filter` when windowing is disabled.
+- `sub_doc()` and `sub_paras()` still alias live paragraph/sentence objects.
+- `TextDoc.from_text("  hello  ").reassemble()` still returns `"hello"`, so exact source
+  references should not be documented as exact full-document reassembly.
+- `html_find_tag()` still truncates an outer same-name tag when a nested same-name tag is
+  self-closing.
+- `TextDoc.from_text("").as_wordtoks(bof_eof=True)` still raises `IndexError`.
+- `TokenMapping`, `TokenDiff.apply_to()`, runtime `assert`s, HTML attribute/name
+  validation, strict HTML parsing diagnostics, empty attribute handling, and
+  `WindowSettings` validation still need hardening.
+
 ## Validation Performed
 
 Commands run:
