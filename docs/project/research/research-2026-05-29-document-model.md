@@ -456,6 +456,30 @@ humans add more. **Recommendation:** make stand-off layering the conceptual core
 W3C selectors so a layer can reattach after a reparse or edit (store node id *and* source
 span *and* text-quote).
 
+### Dual addressing: source-canonical references, tree-convenient handles
+
+A reference to "a piece of the document" must work in four contexts — reading the source,
+editing the parsed tree (possibly via a bridged editor), saving, and interacting with
+rendered output — and those contexts disagree about what is stable:
+
+- The **source** is canonical and is what persists; a saved reference must be
+  source-grounded (span + quote), because node ids are meaningful only within one parse.
+- The **parsed tree** is the convenient handle while editing ("annotate this table"), but
+  its node ids are per-parse / transient.
+- **Rendered output** needs to map a selection back to an element and thence to source.
+
+The resolution is asymmetric. **Model → source is total**: every node carries a
+`source_span`, so attaching at the model level (a table, a link) is automatically grounded
+in the original document. **Source → model is re-resolution**: after a (re)parse, match by
+span, then by text-quote, then by a structural path. That yields one rule set — edit
+against tree handles, **persist source-grounded**, re-resolve to nodes on load, and emit
+`data-node-id` / `data-source-span` in rendered HTML so UI selections round-trip. An
+editor-bridge path (ProseMirror/block-JSON in memory) then serializes annotations *through*
+the model to *original document + source-grounded targets*, so the saved artifact never
+depends on a transient editor or parse identity. This is W3C multi-selector targeting plus
+persistence discipline: name which selector is *canonical* (source span), which is
+*convenient* (node id), and which is *robust* (quote / structural path).
+
 ### Source Maps And Transform Provenance
 
 Source maps are not a document model, but they are a useful pattern for normalized
@@ -531,6 +555,11 @@ direction.)
   parser-internal class names; parser specifics live in `metadata`.
 - **Annotations should be separate from the parse** — portable across reparses, many
   independent layers over the same model.
+- **References are dual-addressed, source-canonical.** Reference parsed elements by node id
+  in memory, but persist source-grounded (span + quote): model→source resolution is total
+  (every node has a span), source→model is robust re-resolution, and rendered output carries
+  node id + source span so selections round-trip. Save keeps the original document plus
+  source-grounded annotations; the tree is the editing convenience, not the durable anchor.
 - **Visual analysis is an overlay** — visual geometry is not document structure; for
   Markdown, source structure drives the model and geometry attaches to nodes separately.
   For PDFs/OCR, geometry may be the only reliable initial grounding.
@@ -912,7 +941,10 @@ overlay keyed by node ids when alignment is possible.
 - [ ] Add section and link indexes on top of parser-backed blocks.
 - [ ] Define the model→views projection contract and confirm O(n) derivation per view.
 - [ ] Decide the annotation target shape: node id + source span + text-quote (+ optional
-      opaque anchor for future CRDT).
+      structural path; + optional opaque anchor for future CRDT). Make `source_span` the
+      persisted canonical (drop transient `node_id` on save); specify model→source (total)
+      and source→model (re-resolution) rules. See
+      `plan-2026-05-29-unified-document-model.md` (E8/D5).
 - [ ] Build one small UI fixture that renders HTML with `data-node-id` and a zoomable
       section/block/link outline.
 - [ ] Define operation records for move-section and replace-block transforms.

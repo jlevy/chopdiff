@@ -93,6 +93,13 @@ one requirement."
 6. Likely a **single unified JSON schema** for the fully processed document, reusable and
    **serializable to frontend UIs**.
 7. **A few optional levels of detail** so it is not always large.
+8. **A consistent reference/annotation model across source, parsed model, and rendered
+   output.** It must be easy to reference a piece of the document — a line/span in the
+   original source, a *parsed element* (a table, a link), or a region in *rendered*
+   content — using one scheme. References made against parsed elements must resolve down
+   to the original source; **persisted** references must be **source-grounded** (the saved
+   form references the original document); **in-memory/editor** references may use the tree
+   but must round-trip to source on save and re-resolve to nodes on load/reparse.
 
 ---
 
@@ -247,6 +254,58 @@ Carried from the tallies analysis and E2/E3: the node table derives from immutab
 - **Stability:** annotations (later) target node id **and** source span **and** text-quote,
   per W3C, so they survive a reparse.
 
+## E8. Reference and annotation targeting (dual addressing)
+
+One scheme must let a caller reference the document while **reading** (a source line/span),
+while **editing in memory** (a parsed element — a table, a link — possibly via a bridged
+editor model), while **saving** (source-grounded, since the original document is what
+persists), and in **rendered output** (click a region → element → source). The pivotal
+question is *what anchors a reference*, and which anchor is canonical for persistence.
+
+- **Option 8a — source-span only.** A reference is just a `source_span` (+ maybe a quote).
+  - *Pros:* trivially persistent and source-canonical; no per-parse identity to track;
+    survives model rebuilds.
+  - *Cons:* awkward to *create* against "the table node" or "this link" while editing the
+    tree; brittle as a live handle under in-memory edits (offsets shift); rendered-UI
+    selections must be span-mapped by hand.
+- **Option 8b — node-id only.** A reference is a node `id` in the current model.
+  - *Pros:* ergonomic in memory and in an editor bridge; O(1) lookup; natural for "annotate
+    this table."
+  - *Cons:* node ids are **per-parse / per-session transient** — not stable across reparse
+    or reopen, so they **cannot** be the persisted canonical; a saved id is meaningless to
+    the next parse.
+- **Option 8c — multi-selector reference, source-canonical (recommended).** A reference
+  carries coordinated selectors: a transient `node_id` (in-memory handle), the canonical
+  `source_span`, a `text_quote` (prefix/exact/suffix for robustness), an optional
+  reparse-stable structural path, and a reserved opaque `anchor` (future CRDT/editor edge).
+  Resolution is asymmetric and total in the useful direction:
+  - **model → source is total:** every node has a `source_span`, so attaching at the model
+    level (table/link) *automatically* yields a source-grounded reference. This is exactly
+    the request: "attach at the document-model level … allows us to also attach at the
+    grounded original level."
+  - **source → model is re-resolution:** after a (re)parse, find the node whose span
+    matches/contains the reference; if the source moved, fall back to `text_quote` then the
+    structural path. Robust, not guaranteed — which is why the *persisted* form keeps the
+    source-grounded selectors, not the transient id.
+  - *Pros:* one scheme for all four contexts; source stays canonical for save; tree stays
+    ergonomic for edit; degrades gracefully after edits/reparses.
+  - *Cons:* a small selector record to define and test; resolution rules to specify.
+
+**Leaning: 8c.** It is the research's W3C multi-selector targeting made concrete, plus the
+explicit **save = source-grounded / edit = tree-handle** split the request calls for.
+
+Two consequences to design in:
+
+- **Persistence rule.** On **save**, a reference is normalized to its source-grounded
+  selectors (drop the transient `node_id`); the saved artifact is *original document +
+  source-grounded annotations*. Future on-disk formats store annotations this way.
+- **Editor-bridge round-trip.** When editing in memory (optionally bridged to a ProseMirror
+  /block-JSON editor model), annotations attach to model nodes; on serialize they resolve
+  to source spans and ride out through `DocumentOverview` to *original document + annotations
+  that reference original-document structures*; on reopen, a reparse re-resolves them to
+  nodes. Rendered HTML carries `data-node-id` / `data-source-span` so a UI selection maps
+  back to a node and thence to source.
+
 ---
 
 # Proposed design
@@ -321,6 +380,51 @@ include-flags (`text`, `sentences`, `tokens`, `annotations`, `layout`) for preci
 | Tree → exact structure or any rollup | containment tree view + rollup projections of one node set |
 | Single serializable JSON for UIs | `DocumentOverview` schema, id-addressed, parser-agnostic |
 | Optional levels of detail | `Detail` ladder + include-flags |
+| Reference anything (source / element / rendered) | one `Reference` with coordinated selectors (D5) |
+| Persist source-grounded; edit by tree | save normalizes to source selectors; in-memory uses `node_id` |
+
+## D5. References, annotations, and persistence
+
+A single `Reference` (annotation target) underlies all addressing (E8, 8c):
+
+```
+Reference = {
+  node_id?,                       # transient in-memory handle (NOT persisted)
+  source_span?: {start, end},     # CANONICAL anchor (Unicode code points); persisted
+  text_quote?: {prefix, exact, suffix},   # robustness across edits/reparse
+  structural_path?,               # optional reparse-stable path (e.g. section>block index)
+  anchor?                         # reserved opaque id for a future CRDT/editor edge
+}
+Annotation = { id, kind, target: Reference, body, metadata? }
+```
+
+Rules:
+
+- **model → source is total.** Constructing a `Reference` from any node fills `source_span`
+  from that node, so attaching at the model level (table, link) is automatically grounded
+  in the original source.
+- **source → model is re-resolution.** Given a `Reference`, find the node by `source_span`,
+  else `text_quote`, else `structural_path`. Used on load/reparse and when bridging from a
+  rendered selection.
+- **Persistence is source-grounded.** Saving drops the transient `node_id`; the saved
+  artifact is the **original document plus source-grounded annotations**. `DocumentOverview`
+  serializes annotations in its `annotations` layer with source-grounded targets; node ids
+  appear only in an in-memory/transport projection, never as the durable anchor.
+- **Rendered output references back.** HTML/render helpers emit `data-node-id` and
+  `data-source-span`, so a click/selection resolves to a node and thence to source.
+
+Annotations are a **stand-off layer** (research's conceptual core): parsed structure
+(sections, blocks, links) and added structure (summaries, notes, rewrite suggestions) are
+the same kind of thing — typed layers of grounded targets — so "annotate this table" and
+"give me the TOC" use one mechanism. Building the annotation layer is a later phase; this
+plan fixes the **`Reference` contract and resolution rules now** so the node model, the
+schema, and any editor bridge are designed around it from the start.
+
+Worked use case (read → edit → save): open a Markdown doc; build the in-memory model (and
+optionally bridge to an editor); a user/AI annotates the parsed table and a link (model
+nodes); on save, those references resolve to source spans and serialize as *original
+Markdown + annotations targeting the original document's table/link spans*; reopening
+reparses and re-resolves the annotations back to nodes.
 
 ## Open decisions
 
@@ -336,6 +440,10 @@ include-flags (`text`, `sentences`, `tokens`, `annotations`, `layout`) for preci
    standalone JSON Schema once the shape stabilizes?
 6. **Scope of phase 1.** Smallest useful slice (see plan) — confirm it excludes
    annotations/operations/provenance/layout (schema-reserved, built later).
+7. **Reference selector set (E8/D5).** Persisted canonical = `source_span` + `text_quote`;
+   also include a reparse-stable `structural_path` now, or add it only when reattachment
+   robustness proves insufficient? And do we define the opaque `anchor` slot now (reserved,
+   unused) or defer it entirely? Confirm `node_id` is never persisted.
 
 ## Implementation plan
 
@@ -351,14 +459,21 @@ starts until "Open decisions" is settled.)
       slice the cached tree (remove per-section reparse).
 - [ ] Add the `collect` / `counts` / `index` query primitive with document / section /
       block scope handles; recursive and inline options.
+- [ ] Define the `Reference` type and resolution: `Reference.from_node(node)` (total
+      model→source), `resolve(reference, doc)` (source→model via span/quote/structural),
+      and `to_persisted()` (drop transient `node_id`). No annotation *storage* yet — just
+      the targeting contract the rest of the model is designed around.
 - [ ] Tests: nested tables/code in blockquotes and list items are counted and locatable;
-      per-section value+count rollups; density invariance; section slicing.
+      per-section value+count rollups; density invariance; section slicing; `Reference`
+      round-trips (node → source-grounded → re-resolved node) and survives a reparse.
 
 ### Phase 2: `DocumentOverview` serialization + detail levels
 
-- [ ] Pydantic/dataclass models for the schema (nodes, views, source, reserved layers);
-      `offset_unit` pinned to Unicode code points; optional derived coords.
-- [ ] `TextDoc.overview(detail=…)` builder + `Detail` ladder/flags.
+- [ ] Pydantic/dataclass models for the schema (nodes, views, source, reserved
+      `annotations` layer with the `Reference` target shape); `offset_unit` pinned to
+      Unicode code points; optional derived coords.
+- [ ] `TextDoc.overview(detail=…)` builder + `Detail` ladder/flags; render helpers emit
+      `data-node-id` / `data-source-span` so rendered selections resolve back to source.
 - [ ] Round-trip + golden tests; a tiny UI fixture is out of scope here (later phase).
 - [ ] Author the standalone language-neutral JSON Schema once the shape is confirmed
       (decision 5).
@@ -375,6 +490,10 @@ starts until "Open decisions" is settled.)
   (`OUTLINE ⊂ BLOCKS ⊂ INLINE ⊂ FULL`).
 - Coordinates: `source_span` round-trips against `source_text`; derived byte/UTF-16 spans
   agree on ASCII and a multi-byte sample.
+- References: a `Reference` built from a node carries the node's `source_span`; persisting
+  drops `node_id`; after a no-op reparse it re-resolves to the same node; after an edit
+  that shifts offsets, `text_quote` still re-resolves it. An annotation created against a
+  parsed table/link serializes with a source-grounded target.
 
 ## Relationship to other specs
 
