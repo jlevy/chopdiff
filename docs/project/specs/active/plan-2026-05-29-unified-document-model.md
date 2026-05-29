@@ -8,12 +8,21 @@
 trade-offs ("Exploration"), then proposes a clean design ("Proposed design"). The pivotal
 choices are listed in "Open decisions" and are **not yet settled**.
 
+**Implementation status:** **None — design-stage.** No code has been written for this
+plan and none lands until the Open decisions are settled. It builds on the
+block-aware/normalized-form work shipped in v0.4.0 (exact spans, structural `blocks()`,
+sections, links, top-level `block_type_counts()`); everything proposed here —
+recursive/nested rollups, the `Reference` model, and the `DocOverview` projection — is not
+yet built. Tracked by epic `chopdiff-8q8q` with decisions gate `chopdiff-0vy6`.
+
 > **Inputs:** the survey in
 > [`research-2026-05-29-document-model.md`](../../research/research-2026-05-29-document-model.md)
 > (read it first — this plan operationalizes its recommended direction) and the design of
-> record [`docs/textdoc-spec.md`](../../../textdoc-spec.md). This plan **subsumes**
-> [`plan-2026-05-29-multilevel-block-tallies.md`](plan-2026-05-29-multilevel-block-tallies.md):
-> multi-level tallies become one feature of the unified model.
+> record [`docs/textdoc-spec.md`](../../../textdoc-spec.md). This plan **subsumes** the
+> archived
+> [`plan-2026-05-29-multilevel-block-tallies.md`](../archive/plan-2026-05-29-multilevel-block-tallies.md):
+> multi-level tallies become one feature of the unified model (their decisions are folded
+> into "Open decisions" here).
 
 ## Overview
 
@@ -429,7 +438,12 @@ reparses and re-resolves the annotations back to nodes.
 ## Open decisions
 
 1. **Node set vs single tree (E1).** Adopt the node-table-with-views (1b) with the
-   containment tree as the top-level JSON shape? (Recommended.)
+   containment tree as the top-level JSON shape? (Recommended.) Includes the nested-block
+   exposure choice: fully populate container children (a table inside a blockquote/list
+   item becomes a node) while keeping the top-level `blocks()` shape and a `recursive`
+   opt-in for traversal/rollups. (See the archived
+   [tallies note](../archive/plan-2026-05-29-multilevel-block-tallies.md) axis A for the
+   detailed top-level-vs-recursive-vs-hybrid trade-off.)
 2. **Projection vs runtime object (E2).** `DocOverview` as a built projection over
    `TextDoc` (2a), no competing runtime model? (Recommended.)
 3. **Rollup surface (E3/E4).** One `collect/counts/index` primitive with scope handles, and
@@ -444,6 +458,15 @@ reparses and re-resolves the annotations back to nodes.
    also include a reparse-stable `structural_path` now, or add it only when reattachment
    robustness proves insufficient? And do we define the opaque `anchor` slot now (reserved,
    unused) or defer it entirely? Confirm `node_id` is never persisted.
+8. **Computation/caching (E6).** Lazy-cache the node table off the immutable `source_text`
+   (recommended; also fixes the quadratic per-section `Section.blocks()` re-parse), or keep
+   pure recompute-on-call? Confirm memoization counts as "no stored counts."
+9. **List-item paragraph counting.** In recursive rollups, count the wrapper `Paragraph`
+   inside each list item as a `paragraph` (density-invariant, since tight and loose items
+   both wrap), or exclude it? Affects only the `paragraph` tally, not `table`/`code`/etc.
+
+(Folded in from the archived tallies note, whose four decisions are subsumed by 1, 3, 8,
+and 9 here.)
 
 ## Implementation plan
 
@@ -497,9 +520,11 @@ starts until "Open decisions" is settled.)
 
 ## Relationship to other specs
 
-- **Subsumes** `plan-2026-05-29-multilevel-block-tallies.md` (multi-level tallies = the
-  rollup feature of phase 1). That spec will be archived as folded-in once this is
-  approved.
+- **Subsumes** the archived
+  [`plan-2026-05-29-multilevel-block-tallies.md`](../archive/plan-2026-05-29-multilevel-block-tallies.md)
+  (multi-level tallies = the rollup feature of phase 1; kept in `archive/` for its detailed
+  nested-block/caching axis analysis, with its four decisions folded into "Open decisions"
+  here).
 - **Extends** `docs/textdoc-spec.md` §6/§9 (structural tree + derived views); the design of
   record is updated when phase 1 lands.
 - Independent of `plan-2026-05-26-robustness-hardening.md`.

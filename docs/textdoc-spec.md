@@ -165,6 +165,14 @@ All calculated over the form; none store counts:
   (e.g. `TextDoc.block_type_counts()`, `Section.block_type_counts()`); nested content
   rolls up under its top-level block by default, descending into `children` is opt-in.
 
+**Status (v0.4.0):** the views above are built **top-level only** — `blocks()` does not
+populate blockquote/list-item children, so `block_type_counts()` does not see a table
+nested in a blockquote, and rollups carry counts but not locations together. Fully
+recursive rollups (values *and* counts at any scope, over blocks and inline items), the
+`Reference`/annotation model, and the serialized `DocOverview` projection are **planned,
+not yet built** — see
+[`plan-2026-05-29-unified-document-model.md`](project/specs/active/plan-2026-05-29-unified-document-model.md).
+
 ## 10. Editing and serialization
 
 `Sentence.text` is the editable content: edits change what `reassemble()` produces while

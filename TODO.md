@@ -17,6 +17,20 @@ tbd show <id>      # details + working notes (e.g. tbd show chopdiff-1x4u)
 
 ## Active plans
 
+### Flexible unified document model (DocOverview) — `docs/project/specs/active/`
+
+Design-stage. A source-grounded, JSON-serializable `DocOverview` projected from `TextDoc`:
+a stable node set + derived views + flexible value/count rollups at any scope
+(doc/section/block), recursive, over blocks and inline items, with a dual-addressing
+reference model (source-canonical, tree-convenient) and optional detail levels. Subsumes
+the multi-level block-tallies work.
+
+- Spec: [plan-2026-05-29-unified-document-model.md](docs/project/specs/active/plan-2026-05-29-unified-document-model.md)
+  (status: Draft — exploration + proposed design; **no code yet**, gated on Open
+  decisions).
+- Beads: epic `chopdiff-8q8q`; **P1 decisions gate `chopdiff-0vy6`** must be settled before
+  any implementation. Phase beads are created after the decisions are made.
+
 ### Robustness hardening — `docs/project/specs/active/`
 
 Correctness and API-contract fixes from the engineering review. Several findings were
@@ -73,3 +87,6 @@ Surfaced by the review reconciliation; fold into the robustness spec when picked
 - [docs/project/specs/archive/plan-2026-05-26-markdown-block-segmentation.md](docs/project/specs/archive/plan-2026-05-26-markdown-block-segmentation.md)
   — superseded by the block-aware-doc plan (proposed a parallel `MarkdownDoc` module;
   the chosen direction extends `TextDoc` in place).
+- [docs/project/specs/archive/plan-2026-05-29-multilevel-block-tallies.md](docs/project/specs/archive/plan-2026-05-29-multilevel-block-tallies.md)
+  — folded into the unified document model plan (kept for its detailed nested-block/caching
+  trade-off analysis; its four decisions are now in that plan's Open decisions).

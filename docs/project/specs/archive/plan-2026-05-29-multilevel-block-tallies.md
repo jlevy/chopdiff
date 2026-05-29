@@ -4,12 +4,14 @@
 
 **Author:** chopdiff maintainers
 
-**Status:** Folded into
-[`plan-2026-05-29-unified-document-model.md`](plan-2026-05-29-unified-document-model.md).
-Multi-level tallies are the "flexible rollups" feature of that broader unified-model plan
-(Phase 1). This document is kept for the focused tallies analysis; the rollup design now
-lives in the unified-model spec, where values/counts rollups generalize beyond block-type
-counts.
+**Status:** Superseded / archived — folded into
+[`plan-2026-05-29-unified-document-model.md`](../active/plan-2026-05-29-unified-document-model.md).
+Multi-level tallies are the "flexible rollups" feature of that unified-model plan (Phase
+1), and this note's four design decisions are folded into that plan's "Open decisions".
+Kept in `archive/` for the detailed nested-block (axis A) and caching (axis B) trade-off
+analysis; the unified-model spec is the authoritative planning surface.
+
+**Implementation status:** none — design-stage; not the active planning surface.
 
 > **Design of record:** [`docs/textdoc-spec.md`](../../../textdoc-spec.md) §9 (Derived
 > views and rollups). This plan extends that section; it does not change the normalized
