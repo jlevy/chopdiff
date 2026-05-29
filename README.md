@@ -80,9 +80,9 @@ parsing and sentence segmentation.
 
 This is a lightweight alternative to those approaches when you are just focusing on
 processing text, don't want a big dependency (like a full XML parser or NLP toolkit) and
-also want full control over the original source format (since the original text is
-exactly preserved, even whitespace—every sentence, paragraph, and token is mapped back
-to the original text).
+also want source-referenced text analysis. Parsed blocks and sentences carry offsets back
+to the input text, while `reassemble()` produces a normalized editable text form rather
+than a byte-for-byte copy of every original blank line and leading/trailing space.
 
 Note you may wish to also use this in conjunction with a Markdown parser or
 auto-formatter, as it can make documents and diffs more readable.
@@ -265,7 +265,7 @@ measure of devotion—that we here highly resolve that these dead shall not have
 vain—that this nation, under God, shall have a new birth of freedom—and that government
 of the people, by the people, for the people, shall not perish from the earth.
 
-Input document: 1466 bytes (17 lines, 1 paragraphs, 10 sentences, 264 words, 311 tiktokens)
+Input document: 1466 bytes (17 lines, 1 paras, 10 sents, 264 words, ~383 tok)
 
 INFO:chopdiff.docs.sliding_transforms:Sliding word transform: Begin on doc: total 575 wordtoks, 1466 bytes, 1 windows, windowing size=2048, shift=1792, min_overlap=8 wordtoks
 INFO:chopdiff.docs.sliding_transforms:Sliding word transform window 1/1 (575 wordtoks, 1466 bytes), at 0 wordtoks so far
@@ -292,7 +292,7 @@ INFO:chopdiff.docs.sliding_transforms:Word token changes:
     Rejected: add/remove +1/-1 out of 575 total
 INFO:chopdiff.docs.sliding_transforms:Sliding word transform: Done, output total 575 wordtoks
 
-Output document: 1469 bytes (7 lines, 4 paragraphs, 10 sentences, 264 words, 311 tiktokens)
+Output document: 1469 bytes (7 lines, 4 paras, 10 sents, 264 words, ~387 tok)
 
 --- With Paragraph Breaks -------------------------------------------------
 

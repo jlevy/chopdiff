@@ -1,6 +1,6 @@
 """
 Support for treating text as a sequence of word, punctuation, whitespace
-(word, setnence, and paragraph breaks), or HTML tags as tokens, which we call
+(word, sentence, and paragraph breaks), or HTML tags as tokens, which we call
 "wordtoks".
 
 Also works well with Markdown. Wordtoks make it possible to do word-oriented

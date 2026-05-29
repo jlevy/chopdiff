@@ -16,7 +16,8 @@ PyPI.
 
 This part is a little confusing the first time.
 Here is the simplest way to do it.
-For the purposes of this example replace OWNER and PROJECT with the right values.
+For this project, the GitHub owner/repository is `jlevy/chopdiff` and the PyPI project
+name is `chopdiff`.
 
 **Note:** These steps assume you already have a GitHub repo with your code pushed.
 If you used [`uvx uvtemplate`](https://github.com/jlevy/uvtemplate), it handles repo
@@ -30,7 +31,7 @@ for details.
 
 2. **Pick a name for the project** that isn’t already taken.
 
-   - Go to `https://pypi.org/project/PROJECT` to see if another project with that name
+   - Go to `https://pypi.org/project/chopdiff` to see if another project with that name
      already exists.
 
    - If needed, update your `pyproject.toml` with the correct name.
@@ -67,7 +68,7 @@ for details.
 
    - Watch for the release workflow in the GitHub Actions tab.
 
-   - If it succeeds, you should see it appear at `https://pypi.org/project/PROJECT`.
+   - If it succeeds, you should see it appear at `https://pypi.org/project/chopdiff`.
 
 ### Publishing Subsequent Releases
 
@@ -156,7 +157,7 @@ Follow this checklist for each new release.
 
    ### Full Changelog
 
-   https://github.com/OWNER/PROJECT/compare/${LAST_TAG}...${NEW_TAG}
+   https://github.com/jlevy/chopdiff/compare/${LAST_TAG}...${NEW_TAG}
    EOF
    )"
    ```
@@ -171,7 +172,7 @@ Follow this checklist for each new release.
    gh run list --workflow=publish.yml --limit 1
 
    # Verify on PyPI (may take a minute):
-   # https://pypi.org/project/PROJECT
+   # https://pypi.org/project/chopdiff
    ```
 
 ### Release Notes Format
@@ -201,7 +202,7 @@ Description of what changed and how to migrate.
 
 ### Full Changelog
 
-https://github.com/OWNER/PROJECT/compare/vPREVIOUS...vNEW
+https://github.com/jlevy/chopdiff/compare/vPREVIOUS...vNEW
 ```
 
 Guidelines:

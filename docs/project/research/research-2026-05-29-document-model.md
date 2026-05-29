@@ -4,7 +4,7 @@
 
 **Author:** Codex and Claude (consolidated)
 
-**Status:** Complete (initial survey)
+**Status:** Complete (survey, with 2026-05-29 fact-check updates)
 
 > This document subsumes and replaces two earlier overlapping surveys:
 > `research-2026-05-29-grounded-document-model.md` (the broad survey, matrix, options,
@@ -29,7 +29,7 @@ them:
   interpretation.
 - `TextNode` already provides a grounded tree for explicit HTML `div` structures.
 
-Two framing claims organize the conclusions:
+Three framing claims organize the conclusions:
 
 1. **The deliverable is a data model**, which is a distinct concern from its
    **serialization format** (JSON) and its **implementation** (Python today, possibly
@@ -42,6 +42,12 @@ Two framing claims organize the conclusions:
    rendered-layout geometry — plus external annotations that target nodes or spans. A
    single tree cannot express all of these because they overlap and cross-cut; a node
    table with typed layers can.
+
+3. **For Chopdiff, the near-term Python API should remain `TextDoc`-centered.** The
+   active implementation plan extends `TextDoc` with spans, sections, blocks, and links.
+   `DocumentOverview` is the better name for the future language-neutral serialized
+   graph/contract derived from `TextDoc`, not a competing Python document model unless a
+   later use case proves that extra runtime object is worth the public API surface.
 
 A corollary of (2): the "zoomable UI" and "multiple structural views" use cases are not
 separate requirements. They are the same requirement — one model projected to many views
@@ -118,6 +124,17 @@ Relevant limitations:
 - Sentence spans can be best-effort when the splitter normalizes whitespace.
 - Links, inline code spans, and inline HTML are not yet first-class source-grounded
   nodes.
+- Current offsets are Python string character offsets into the source text, not byte
+  offsets. The serialized cross-language contract must say this explicitly and provide
+  conversion indexes for byte-oriented parsers and UTF-16-oriented browser/editor APIs.
+- `TextDoc` has exact source references for stored blocks, but the editable
+  `reassemble()` form is still normalized: leading/trailing whitespace outside stored
+  blocks and runs of blank lines are not preserved as a byte-for-byte full-document
+  round trip.
+- This branch now locks Flowmark v0.7.1 through a maintainer-approved cool-off
+  exception, so the public `flowmark.atomic_spans` and `flowmark.markdown_ast` APIs are
+  available for the block-aware plan. Marko remains locked at v2.2.2; v2.2.3 is current
+  on PyPI but has not been separately excepted.
 
 ### `TextNode`
 
@@ -130,15 +147,17 @@ the shape is directly relevant to a broader document model.
 
 The current project specs already point in the right direction:
 
-- `plan-2026-05-26-block-aware-doc.md` proposes exact spans, sections, structural blocks,
-  links, and link-aware sentences, all extending `TextDoc` in place.
+- `plan-2026-05-26-block-aware-doc.md` proposes exact spans, sections, structural
+  blocks, links, and link-aware sentences, all extending `TextDoc` in place. This should
+  remain the implementation plan.
 - `plan-2026-05-26-markdown-block-segmentation.md` (archived) proposed a parallel
   parser-backed `MarkdownDoc`/`MarkdownBlock` layer; the chosen direction extends
   `TextDoc` rather than adding a parallel model.
 
 This research reinforces those specs and makes the "derived overlay" architecture
-explicit: keep source text and `TextDoc` as core linear grounding, and add specialized
-views rather than forcing every use case into one mutable tree.
+explicit: keep source text and `TextDoc` as core linear grounding, add specialized views
+on top, and define `DocumentOverview` as the serialized graph/schema projection. That is
+different from resurrecting the archived `MarkdownDoc` as a second Python-side model.
 
 ## Findings
 
@@ -172,6 +191,28 @@ Why this matters concretely:
   code units vs Unicode scalar values — because JS strings are UTF-16-indexed, Python
   strings are scalar-value-indexed, and PDF/OCR tools count differently. This one detail
   is where cross-language document models silently diverge.
+
+### Coordinate systems are a first-class design choice
+
+The fact-check pass makes this stronger than a footnote:
+
+- W3C Web Annotation distinguishes `TextPositionSelector` (character positions) from
+  `DataPositionSelector` (byte positions), and its text quote model explicitly says text
+  selection is in Unicode code points rather than code units.
+- `unist`/`mdast` positions use line, column, and optional offset; the offset is a
+  character in the source file.
+- LSP has three negotiated position encodings: UTF-8 bytes, UTF-16 code units, and
+  UTF-32 code units. UTF-16 is the default editor protocol behavior, while UTF-32 is the
+  encoding-agnostic "Unicode code point" form.
+- Tree-sitter exposes byte ranges and points. Lezer/CodeMirror exposes integer document
+  positions in the editor string model. Source maps use generated/original line and
+  column positions, and ECMA-426 specifies UTF-16 columns for JavaScript/CSS source maps.
+
+Recommendation: the first `DocumentOverview` schema should make `source_span` use
+`unicode_code_points`, matching Python `TextDoc` offsets and W3C text selectors. Where a
+consumer needs byte offsets or browser/editor offsets, expose explicit derived fields or
+conversion tables such as `byte_span`, `utf16_span`, and `line_column_span`. Do not
+overload one `start`/`end` pair with multiple coordinate systems.
 
 ### Zoom and views are one requirement, not two
 
@@ -224,9 +265,12 @@ annotations over one immutable source; see below.)
 
 Marko is the best near-term parser fit: it is already in the dependency graph and
 Flowmark uses it. It provides a Python AST and GFM support through extensions. The main
-gap is source spans — Marko elements do not expose exact spans by default — but the
-active spec notes the parser's source cursor can likely be subclassed or wrapped to
-attach spans. **Recommendation:** use Marko first for a parser-backed `MarkdownDoc`,
+gap is source spans — Marko elements do not expose exact spans by default — but Marko's
+`Source` object maintains a moving parse position and `Parser.parse_source()` is small
+enough to wrap for span annotation. Local verification on the locked Marko 2.2.2 source
+confirms this is still plausible; PyPI now lists Marko 2.2.3 (2026-05-28), which should
+not be adopted until it clears the repository's cool-off policy. **Recommendation:** use
+Marko first for parser-backed `TextDoc.blocks()` / `DocumentOverview` derivation,
 matching the current Python stack and avoiding a new parser dependency.
 
 #### mdast and unist
@@ -252,7 +296,9 @@ validation/fallback research, not the first implementation.
 successor designed for unambiguous parsing, and it carries **native source positions**.
 If attaching exact spans to Marko proves painful (the block-aware plan's main open risk),
 djot is the cleanest Markdown-family AST-with-sourcepos to evaluate as a fallback parser.
-**Recommendation:** keep Marko as the first path; hold djot as the fallback.
+The official JavaScript parser exposes `sourcePositions: true` and event spans; djot is
+also still described as not completely stable. **Recommendation:** keep Marko as the
+first path; hold djot as the fallback.
 
 ### Cross-Format ASTs
 
@@ -410,6 +456,25 @@ humans add more. **Recommendation:** make stand-off layering the conceptual core
 W3C selectors so a layer can reattach after a reparse or edit (store node id *and* source
 span *and* text-quote).
 
+### Source Maps And Transform Provenance
+
+Source maps are not a document model, but they are a useful pattern for normalized
+rewriting. ECMA-426 standardizes a JSON source map format for bidirectional mapping from
+generated code back to original sources; its core idea is a compact table of
+generated-position to original-position mappings, not a semantic tree.
+
+For Chopdiff this suggests a separate **provenance layer**:
+
+- `source_span` answers "where did this node come from in the canonical source?"
+- `generated_span` answers "where did this node land in normalized/rendered output?"
+- `mapping_kind` distinguishes exact, normalized, inferred, inserted, and deleted
+  mappings.
+- Operation records (`move_section`, `replace_block`, `normalize`) should emit mapping
+  tables when they produce a new source string.
+
+Do not make source maps the canonical model. Use their generated↔original mapping
+discipline for normalized Markdown rewrite validation, diff review, and UI highlights.
+
 ### Layout-Aware Document Extraction
 
 #### PDF.js
@@ -444,9 +509,14 @@ direction.)
   serialized, annotated, and transformed; edits should ultimately produce new source text
   and then reparse. This avoids the hardest class of bugs: a rich document model drifting
   away from the actual Markdown file.
+- **`TextDoc` is the implementation core; `DocumentOverview` is the contract.** The
+  active plan should keep extending `TextDoc` in place while the schema layer defines a
+  cross-language graph projection. Avoid a parallel Python document model until a real
+  runtime boundary requires it.
 - **Model ≠ format ≠ implementation.** The contract is a language-neutral schema; JSON
-  and Python are projections. Pin the offset unit (bytes vs UTF-16 vs scalar) in the
-  spec — the one detail where cross-language models silently diverge.
+  and Python are projections. Pin the offset unit in the spec — the first version should
+  use Unicode code points for `source_span`, with explicit byte/UTF-16 conversion fields
+  when needed.
 - **A graph is more honest than one tree.** Markdown blocks form one hierarchy; sections
   form a heading-derived hierarchy that crosses block containment; sentences/tokens form
   a linear sequence; links are inline ranges; layout groups by page/column/line;
@@ -467,9 +537,13 @@ direction.)
 - **Stable identity is a solved problem, twice** — red-green trees give identity under
   reparse (compiler world); CRDT ids give it under live edits (collaborative world). Use
   the first for the canonical pipeline; reserve the second for the edit edge.
+- **Generated output needs provenance, not a second truth.** Source-map-style
+  generated↔original mappings are the right layer for normalized Markdown output,
+  rendered HTML, and rewrite validation.
 - **Chopdiff's moat is grounding.** Editors (ProseMirror, Editor.js, BlockNote) and CRDTs
   all make the original source secondary; Chopdiff keeps source canonical with exact
-  spans and verbatim reassembly — the thing none of them offer. Don't trade that away.
+  source references and should move toward exact span slicing / verbatim block
+  reassembly rather than trading grounding away.
 
 ## Comparison Matrix
 
@@ -495,6 +569,7 @@ views/zoom levels). ✅ strong / ◐ partial / ✘ weak.
 | Editor.js/BlockNote/Notion (block-JSON) | ✘ MD source | ✅ blocks+ids | ✅✅ | ✅ | ✅ block ids | ◐ | Client JSON ergonomics |
 | Tree-sitter | ✅✅ byte ranges | syntax-rich | ◐ | ◐ source editors | ◐ | ◐ | Later incremental parser |
 | Lezer/CodeMirror | ✅✅ editor positions | syntax-rich | ◐ | ◐ browser editors | ◐ | ✅ | Later client live parser |
+| Source maps / ECMA-426 | ✅ generated↔original positions | ✘ semantic | ✅ | ✅ provenance | ◐ | ◐ | Provenance layer for normalized output |
 | Roslyn red-green / rowan / libSyntax | ✅✅ full-fidelity + trivia | ✅ | n/a | ✅ | ✅ stable ids on reparse | ◐ (one tree) | **Pattern for structural tree** |
 | CRDT (Yjs/Automerge/Loro) | ✘ for MD source | ◐ | ✅ | ✅✅ | ✅✅ survives edits | ◐ | Edit-edge identity (defer) |
 | W3C Web Annotation | targeting only | ✘ | ✅✅ | n/a | ✅✅ multi-selector | n/a | Annotation selector ref |
@@ -523,16 +598,18 @@ annotations don't naturally belong in a linear text model.
 **Assessment:** useful for spans and simple convenience APIs, too constraining as the
 full architecture.
 
-#### Option B: Add a parser-backed `MarkdownDoc`/`DocumentOverview` overlay
+#### Option B: Add a parser-backed `DocumentOverview` projection
 
-Keep `TextDoc` as the linear text model; add an object that owns source text,
-parser-backed nodes, sections, links, and indexes back into `TextDoc`.
+Keep `TextDoc` as the linear text model; add a serialized graph projection that owns
+source metadata, parser-backed nodes, sections, links, annotations, provenance, and
+indexes back into `TextDoc`.
 
-**Pros:** preserves existing `TextDoc` behavior; exact Markdown structure where blank-line
-paragraphs are insufficient; natural JSON model for UI and annotations; can evolve
-without breaking diff/window code.
-**Cons:** requires careful mapping between parser spans and `TextDoc` spans; adds a second
-public model to document clearly.
+**Pros:** preserves existing `TextDoc` behavior; exact Markdown structure where
+blank-line paragraphs are insufficient; natural JSON model for UI and annotations; can
+evolve without breaking diff/window code; aligns with the active plan by making
+`DocumentOverview` a contract/projection rather than a competing Python API.
+**Cons:** requires careful mapping between parser spans and `TextDoc` spans; adds a
+schema/projection layer that must be versioned and tested.
 **Assessment:** Recommended.
 
 #### Option C: Adopt mdast/unist as the canonical JSON schema
@@ -611,11 +688,12 @@ up Chopdiff's grounding moat.
 
 ## Recommended Direction
 
-Build a source-grounded `DocumentOverview`/`MarkdownDoc` layer (Option B + F),
-specified as a language-neutral contract (Option G), with these components:
+Build a source-grounded `DocumentOverview` projection (Option B + F), specified as a
+language-neutral contract (Option G), with these components:
 
 1. **Source record** — original text or external reference; content hash; source format
-   and parser metadata. (Pin the offset unit here.)
+   and parser metadata. Pin `source_span` to Unicode code points here, and expose
+   explicit derived byte/UTF-16 coordinates when needed.
 2. **Stable node table** — `id`, `kind`, `role`, `parent`, `children`, `source_span`,
    optional `analysis_span`, and `attrs`; parser-specific details hidden behind stable
    public fields (in `metadata`).
@@ -626,9 +704,10 @@ specified as a language-neutral contract (Option G), with these components:
 4. **Annotations** — stored separately, as typed stand-off layers targeting nodes or
    ranges with multiple selectors: node id; source span; text quote with prefix/suffix;
    optional opaque anchor (for future CRDT); optional DOM path; optional visual bbox.
-5. **Operations** — high-level records for manipulations: move section; replace block;
-   insert after node; rewrite span; normalize document. Apply to source (or to a
-   normalized Markdown AST), emit new Markdown, then reparse and validate.
+5. **Operations and provenance** — high-level records for manipulations: move section;
+   replace block; insert after node; rewrite span; normalize document. Apply to source
+   (or to a normalized Markdown AST), emit new Markdown, attach generated↔original
+   mapping records, then reparse and validate.
 6. **Normalized output** — Flowmark remains the likely Markdown normalizer; Pandoc an
    optional cross-format bridge.
 
@@ -643,7 +722,7 @@ first-class) for the eventual structural tree, and the **stand-off layering** mo
   "schema": "chopdiff.document_overview.v1",
   "source": {
     "format": "markdown",
-    "offset_unit": "utf8_bytes",
+    "offset_unit": "unicode_code_points",
     "sha256": "...",
     "text": "optional"
   },
@@ -659,6 +738,7 @@ first-class) for the eventual structural tree, and the **stand-off layering** mo
       "kind": "heading",
       "role": "section_title",
       "source_span": {"start": 0, "end": 12},
+      "byte_span": {"start": 0, "end": 12},
       "analysis_span": {"start": 2, "end": 12},
       "parent": "n_root",
       "children": [],
@@ -683,12 +763,15 @@ first-class) for the eventual structural tree, and the **stand-off layering** mo
       "body": {"text": "Top-level section heading."}
     }
   ],
-  "layout": []
+  "layout": [],
+  "provenance": []
 }
 ```
 
 Parser-specific source can be recorded in metadata but must not leak into the stable
-public schema. `offset_unit` is explicit so every consumer agrees on coordinates.
+public schema. `offset_unit` is explicit so every consumer agrees on coordinates; byte
+and UTF-16 spans are optional derived coordinates, not substitutes for the canonical
+`source_span`.
 
 ## Use Case Mapping
 
@@ -734,20 +817,23 @@ overlay keyed by node ids when alignment is possible.
 
 ### Near-term additions
 
-- Add computed spans to `Paragraph` and `Sentence`.
+- Add computed `[start, end)` spans to `Paragraph` and `Sentence`, using Unicode code
+  point offsets to match current `TextDoc` indexing.
 - Add `block_at_offset` and `sentence_at_offset`.
-- Add a clear source-text retention/accessor strategy if arbitrary slicing becomes
-  necessary.
-- Add a parser-backed `MarkdownDoc` with source spans.
+- Add a clear source-text retention/accessor strategy for exact span slicing.
+- Add parser-backed structural blocks as a `TextDoc` overlay/projection, not a parallel
+  Python document model.
 - Add heading-derived sections and TOC.
 - Add link extraction with spans.
 
 ### Medium-term additions
 
 - Add a JSON Schema (language-neutral) plus Pydantic/dataclass serialization for
-  `DocumentOverview`; pin the offset unit.
+  `DocumentOverview`; pin the offset unit and add conversion helpers for UTF-8 bytes and
+  UTF-16 code units.
 - Add annotation target records (stand-off layers).
 - Add operation records for structural transforms.
+- Add provenance records for normalized/generated output, source-map style.
 - Add a layout overlay type.
 - Add browser rendering helpers that emit `data-node-id`.
 - Define the model→views projection contract and confirm each view is O(n) from the node
@@ -768,8 +854,9 @@ overlay keyed by node ids when alignment is possible.
 
 - **Parser drift:** if `TextDoc`, Marko, Flowmark, and any client parser disagree, source
   spans and UI selections diverge.
-- **Offset-unit ambiguity:** unspecified byte-vs-UTF-16-vs-scalar coordinates silently
-  break cross-language clients. Pin it in the schema.
+- **Offset-unit ambiguity:** unspecified byte-vs-UTF-16-vs-code-point coordinates
+  silently break cross-language clients. Pin canonical `source_span` to Unicode code
+  points and require named derived coordinates for bytes or UTF-16.
 - **Over-modeling:** a universal graph can become too abstract. Keep the first schema
   small and expand around real use cases.
 - **Annotation reattachment:** no selector is sufficient alone. Store multiple selectors
@@ -782,11 +869,13 @@ overlay keyed by node ids when alignment is possible.
 
 ## Recommendations
 
-1. Keep `TextDoc` as the canonical linear analysis layer.
-2. Add a separate parser-backed `MarkdownDoc`/`DocumentOverview` overlay rather than
-   forcing all structure into `TextDoc`.
+1. Keep `TextDoc` as the canonical Python linear analysis layer.
+2. Extend `TextDoc` with parser-backed structural overlays in the near term; define
+   `DocumentOverview` as the language-neutral serialized graph projection. Do not add a
+   parallel `MarkdownDoc` runtime API unless a concrete boundary justifies it.
 3. Specify the model as a **language-neutral contract** (JSON Schema + prose), with Python
-   (and later TypeScript) as implementations; pin the offset unit.
+   (and later TypeScript) as implementations; pin `source_span` to Unicode code points
+   and expose byte/UTF-16 conversions explicitly.
 4. Adopt **stand-off layering** (UIMA/W3C) as the conceptual core: source + stable node
    table + typed span layers; parsed structure and AI/human annotations are all layers.
 5. Treat **zoom and views as one requirement** — validate the model against stable ids +
@@ -802,21 +891,24 @@ overlay keyed by node ids when alignment is possible.
 10. Make normalized Markdown rewriting the first writeback target; defer perfect
     source-preserving edits.
 11. Design public JSON around stable node records, not parser-internal AST objects.
-12. Validate every manipulation by reparsing and comparing source spans, node structure,
-    and token diffs.
-13. Preserve Chopdiff's differentiator: source canonical, exact spans, verbatim
-    reassembly.
+12. Add source-map-style provenance for normalized/generated output.
+13. Validate every manipulation by reparsing and comparing source spans, node structure,
+    provenance mappings, and token diffs.
+14. Preserve Chopdiff's differentiator: source canonical, exact source references, and
+    progressive movement toward exact span slicing / verbatim block reassembly.
 
 ## Next Steps
 
-- [ ] Decide naming: `MarkdownDoc`, `DocumentOverview`, or another name.
+- [ ] Use `DocumentOverview` for the serialized graph/schema projection; keep `TextDoc`
+      as the near-term Python implementation surface unless a later boundary requires a
+      separate runtime object.
 - [ ] Add exact span accessors and offset-lookup APIs to `TextDoc`
       (`block_at_offset`/`sentence_at_offset`).
 - [ ] Prototype Marko span attachment for full-document Markdown blocks; evaluate djot
       sourcepos as a fallback on the block-type corpus.
 - [ ] Define a minimal language-neutral JSON Schema for source, nodes, views,
-      annotations, and layout, with the offset unit pinned; validate round-trip from
-      `TextDoc`.
+      annotations, provenance, and layout, with the offset unit pinned to Unicode code
+      points; validate round-trip from `TextDoc`.
 - [ ] Add section and link indexes on top of parser-backed blocks.
 - [ ] Define the model→views projection contract and confirm O(n) derivation per view.
 - [ ] Decide the annotation target shape: node id + source span + text-quote (+ optional
@@ -824,17 +916,21 @@ overlay keyed by node ids when alignment is possible.
 - [ ] Build one small UI fixture that renders HTML with `data-node-id` and a zoomable
       section/block/link outline.
 - [ ] Define operation records for move-section and replace-block transforms.
+- [ ] Define generated↔original provenance records for normalized Markdown output.
 
 ## Methodology
 
 Local review of `src/chopdiff/docs/text_doc.py`, `src/chopdiff/divs/text_node.py`, the
-active block-aware plan, and the archived block-segmentation plan. External review
-prioritized official documentation and primary project references for Marko, mdast/unist,
-CommonMark/cmark, djot, Pandoc, DOM APIs, ProseMirror/Tiptap, Slate/Lexical/Quill,
-Editor.js/BlockNote/Notion, Tree-sitter/Lezer, Roslyn/rowan/libSyntax, Yjs/Automerge/Loro,
-W3C Web Annotation, UIMA CAS/brat/GATE, PDF.js, Docling/Unstructured, and
-DocBook/JATS/TEI. No new benchmarks were run; claims about specific tools reflect their
-documented designs.
+active block-aware plan, the active robustness plan, the archived block-segmentation
+plan, and tbd issue notes. External review prioritized official documentation and primary
+project references for Marko, mdast/unist, CommonMark/cmark, djot, Pandoc, DOM APIs,
+ProseMirror/Tiptap, Slate/Lexical/Quill, Editor.js/BlockNote/Notion,
+Tree-sitter/Lezer, Roslyn/rowan/libSyntax, Yjs/Automerge/Loro, W3C Web Annotation,
+UIMA CAS/brat/GATE, PDF.js, Docling/Unstructured, DocBook/JATS/TEI, LSP coordinate
+encodings, and ECMA-426 source maps. PyPI was checked on 2026-05-29 for current
+Flowmark and Marko release status; Flowmark v0.7.1 was then adopted through the
+repository's documented maintainer-approved exception path. No new benchmarks were run;
+claims about specific tools reflect their documented designs.
 
 ## References
 
@@ -850,11 +946,14 @@ External — Markdown / cross-format ASTs:
 
 - [Marko API Reference](https://marko-py.readthedocs.io/en/latest/api.html)
 - [Marko Built-in Extensions](https://marko-py.readthedocs.io/en/latest/extensions.html)
+- [Marko on PyPI](https://pypi.org/project/marko/)
+- [Flowmark on PyPI](https://pypi.org/project/flowmark/)
 - [mdast](https://github.com/syntax-tree/mdast)
 - [unist](https://github.com/syntax-tree/unist)
 - [commonmark.js](https://github.com/commonmark/commonmark.js)
 - [cmark-gfm](https://github.com/github/cmark-gfm)
 - [djot syntax and AST](https://djot.net/)
+- [@djot/djot package API](https://www.npmjs.com/package/@djot/djot)
 - [Pandoc filters](https://pandoc.org/filters.html)
 - [Pandoc Lua filters](https://pandoc.org/lua-filters.html)
 
@@ -862,6 +961,8 @@ External — DOM / editors:
 
 - [DOMParser](https://developer.mozilla.org/en-US/docs/Web/API/DOMParser/parseFromString)
 - [Document Object Model](https://developer.mozilla.org/docs/Web/API/Document_Object_Model)
+- [Language Server Protocol specification](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/)
+- [ECMA-426 Source Map Format](https://tc39.es/ecma426/)
 - [ProseMirror guide](https://prosemirror.net/docs/guide/)
 - [ProseMirror reference](https://prosemirror.net/docs/ref/)
 - [Tiptap core concepts](https://tiptap.dev/docs/editor/core-concepts/introduction)
