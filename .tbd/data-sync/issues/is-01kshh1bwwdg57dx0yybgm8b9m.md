@@ -5,7 +5,7 @@ title: "[epic] Document structure: exact spans, sections, and structural blocks 
 kind: epic
 status: open
 priority: 2
-version: 19
+version: 21
 spec_path: docs/project/specs/active/plan-2026-05-26-block-aware-doc.md
 labels: []
 dependencies: []
@@ -28,5 +28,5 @@ child_order_hints:
   - is-01ksr9rbn9bh3t5tjjy1m9eyyj
   - is-01ksr9rbyvszrytbtv8c1t97kg
 created_at: 2026-05-26T06:54:58.460Z
-updated_at: 2026-05-28T22:02:53.157Z
+updated_at: 2026-05-29T04:22:39.301Z
 ---
