@@ -5,13 +5,14 @@ title: "[epic] Phase 7: multi-level block-type tallies + locations (counts & whe
 kind: epic
 status: open
 priority: 2
-version: 2
-spec_path: docs/project/specs/active/plan-2026-05-29-multilevel-block-tallies.md
+version: 3
+spec_path: docs/project/specs/active/plan-2026-05-29-unified-document-model.md
 labels: []
 dependencies: []
+parent_id: is-01kss8gdn83f47wbrg3jve028r
 child_order_hints:
   - is-01kss86m4zr0dxct0xkzr7qkvf
 created_at: 2026-05-29T06:54:28.742Z
-updated_at: 2026-05-29T06:54:29.023Z
+updated_at: 2026-05-29T06:59:50.690Z
 ---
-Design analysis in the linked spec. Make block-type tallies + locations available at doc/section/subtree/block scope, including nested blocks (blockquote/list-item contents). Pending 4 open decisions (tree shape, caching, index vs Counter, paragraph counting). Do NOT implement until decisions are settled.
+Subsumed by the unified document model: the recursive value/count rollups component (Phase 1). Tallies+locations at doc/section/block scope incl. nested blocks.
