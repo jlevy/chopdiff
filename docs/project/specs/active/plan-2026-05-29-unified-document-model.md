@@ -1,4 +1,4 @@
-# Feature: A flexible unified document model (DocumentOverview)
+# Feature: A flexible unified document model (DocOverview)
 
 **Date:** 2026-05-29 (last updated 2026-05-29)
 
@@ -30,11 +30,11 @@ tree** but a **stable node set addressable by id, plus typed layers and derived 
 Sections cross-cut block containment, links are inline ranges, annotations are arbitrary;
 a single hierarchy cannot hold all of them, but a node table with span/id addressing makes
 every tree, slice, and rollup a cheap projection. `TextDoc` remains the Python core;
-**`DocumentOverview`** is the serialized, language-neutral projection.
+**`DocOverview`** is the serialized, language-neutral projection.
 
 ## Goals
 
-- One **unified JSON schema** (`DocumentOverview`) for the fully processed document,
+- One **unified JSON schema** (`DocOverview`) for the fully processed document,
   reusable and serializable into frontend UIs.
 - Recover the **exact original document structure** (containment tree) *and* the **section
   tree** as derived views of the same node set.
@@ -51,7 +51,7 @@ every tree, slice, and rollup a cheap projection. `TextDoc` remains the Python c
 ## Non-Goals
 
 - A parallel runtime Python document model competing with `TextDoc` (the research is
-  explicit: extend `TextDoc`; `DocumentOverview` is a projection/contract).
+  explicit: extend `TextDoc`; `DocOverview` is a projection/contract).
 - Live collaborative editing, CRDForms, or a rich-text editor model as canonical (client
   edge only; keep an opaque `anchor` slot open).
 - Perfect byte-for-byte source-preserving Markdown surgery (normalized rewrite is the
@@ -141,14 +141,14 @@ so consumers that just want the tree ignore the extra indexes.
 
 ## E2. Canonical store: extend `TextDoc`, or a standalone object?
 
-- **Option 2a — `DocumentOverview` is purely a serialized projection** built on demand
+- **Option 2a — `DocOverview` is purely a serialized projection** built on demand
   from `TextDoc` (+ its block tree, sections, links). No new long-lived runtime object;
   `TextDoc` stays the core.
-  - *Pros:* matches the research ("extend TextDoc; DocumentOverview is the contract"); no
+  - *Pros:* matches the research ("extend TextDoc; DocOverview is the contract"); no
     parallel model to keep in sync; reuses spans/sections/links already built.
   - *Cons:* the projection logic lives somewhere (a builder); repeated builds cost unless
     cached.
-- **Option 2b — a first-class `DocumentOverview` runtime object** that owns the node table
+- **Option 2b — a first-class `DocOverview` runtime object** that owns the node table
   and is the primary API.
   - *Pros:* one object to pass around; natural home for query methods.
   - *Cons:* a second document model competing with `TextDoc`; the research explicitly
@@ -301,7 +301,7 @@ Two consequences to design in:
   source-grounded annotations*. Future on-disk formats store annotations this way.
 - **Editor-bridge round-trip.** When editing in memory (optionally bridged to a ProseMirror
   /block-JSON editor model), annotations attach to model nodes; on serialize they resolve
-  to source spans and ride out through `DocumentOverview` to *original document + annotations
+  to source spans and ride out through `DocOverview` to *original document + annotations
   that reference original-document structures*; on reopen, a reparse re-resolves them to
   nodes. Rendered HTML carries `data-node-id` / `data-source-span` so a UI selection maps
   back to a node and thence to source.
@@ -313,14 +313,14 @@ Two consequences to design in:
 This is the recommended synthesis (1b + 2a + 3c + 4a + 5c + lazy cache), to be confirmed
 in "Open decisions."
 
-## D1. The `DocumentOverview` schema
+## D1. The `DocOverview` schema
 
 A single JSON object, boring and parser-agnostic (no Marko/Python class names in stable
 fields — those go in `metadata`). Shape (abbreviated; see the research JSON sketch):
 
 ```
-DocumentOverview = {
-  schema: "chopdiff.document_overview.v1",
+DocOverview = {
+  schema: "chopdiff.doc_overview.v1",
   source:  { format, offset_unit: "unicode_code_points", sha256, text? },
   nodes:   [ Node, ... ],            # the stable node set (block + inline families)
   views:   { toc, blocks, links, sentences, ... },   # arrays of node ids (projections)
@@ -349,7 +349,7 @@ Node = {
 A builder turns a `TextDoc` (+ its cached recursive block tree, sections, links) into the
 node table, lazily and cached on the immutable source. Public surface (additive):
 
-- `TextDoc.overview(detail=Detail.BLOCKS) -> DocumentOverview` — build/serialize.
+- `TextDoc.overview(detail=Detail.BLOCKS) -> DocOverview` — build/serialize.
 - Query primitive (works at doc, section, or block scope):
   - `collect(*, kinds=None, recursive=False, inline=False) -> list[Node]` (values)
   - `counts(*, recursive=False, inline=False) -> Counter[NodeKind]` (counts)
@@ -378,7 +378,7 @@ include-flags (`text`, `sentences`, `tokens`, `annotations`, `layout`) for preci
 | Recursively collect blocks + inline + relationships | recursive `collect(inline=True)`; parent/section/sentence edges |
 | Full recursive structure | fully-populated containment tree in `nodes` |
 | Tree → exact structure or any rollup | containment tree view + rollup projections of one node set |
-| Single serializable JSON for UIs | `DocumentOverview` schema, id-addressed, parser-agnostic |
+| Single serializable JSON for UIs | `DocOverview` schema, id-addressed, parser-agnostic |
 | Optional levels of detail | `Detail` ladder + include-flags |
 | Reference anything (source / element / rendered) | one `Reference` with coordinated selectors (D5) |
 | Persist source-grounded; edit by tree | save normalizes to source selectors; in-memory uses `node_id` |
@@ -407,7 +407,7 @@ Rules:
   else `text_quote`, else `structural_path`. Used on load/reparse and when bridging from a
   rendered selection.
 - **Persistence is source-grounded.** Saving drops the transient `node_id`; the saved
-  artifact is the **original document plus source-grounded annotations**. `DocumentOverview`
+  artifact is the **original document plus source-grounded annotations**. `DocOverview`
   serializes annotations in its `annotations` layer with source-grounded targets; node ids
   appear only in an in-memory/transport projection, never as the durable anchor.
 - **Rendered output references back.** HTML/render helpers emit `data-node-id` and
@@ -430,7 +430,7 @@ reparses and re-resolves the annotations back to nodes.
 
 1. **Node set vs single tree (E1).** Adopt the node-table-with-views (1b) with the
    containment tree as the top-level JSON shape? (Recommended.)
-2. **Projection vs runtime object (E2).** `DocumentOverview` as a built projection over
+2. **Projection vs runtime object (E2).** `DocOverview` as a built projection over
    `TextDoc` (2a), no competing runtime model? (Recommended.)
 3. **Rollup surface (E3/E4).** One `collect/counts/index` primitive with scope handles, and
    inline items as nodes (4a)? Or keep block-only rollups + a separate link index?
@@ -467,7 +467,7 @@ starts until "Open decisions" is settled.)
       per-section value+count rollups; density invariance; section slicing; `Reference`
       round-trips (node → source-grounded → re-resolved node) and survives a reparse.
 
-### Phase 2: `DocumentOverview` serialization + detail levels
+### Phase 2: `DocOverview` serialization + detail levels
 
 - [ ] Pydantic/dataclass models for the schema (nodes, views, source, reserved
       `annotations` layer with the `Reference` target shape); `offset_unit` pinned to
@@ -485,7 +485,7 @@ starts until "Open decisions" is settled.)
 - Density invariance: tight vs loose lists give identical structural rollups.
 - Section slicing: every view/rollup scoped to a section matches a whole-document filter
   restricted to that section's span; spans stay within `section.span`.
-- Serialization: `DocumentOverview` round-trips; ids are stable within a parse; stable
+- Serialization: `DocOverview` round-trips; ids are stable within a parse; stable
   fields contain no parser-internal names; detail levels are subset-consistent
   (`OUTLINE ⊂ BLOCKS ⊂ INLINE ⊂ FULL`).
 - Coordinates: `source_span` round-trips against `source_text`; derived byte/UTF-16 spans
