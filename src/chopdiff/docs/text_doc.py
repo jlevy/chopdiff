@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections import defaultdict
+from collections import Counter, defaultdict
 from collections.abc import Callable, Generator, Iterable, Iterator
 from copy import deepcopy
 from dataclasses import dataclass
@@ -8,14 +8,14 @@ from functools import cached_property
 from typing import TYPE_CHECKING, TypeAlias
 
 import regex
-from flowmark import split_sentences_regex
+from flowmark import flowmark_markdown, split_sentences_regex
 from flowmark.atomic_spans import iter_atomic_spans, split_sentences_with_spans
 from flowmark.markdown_ast import extract_links
 from funlog import tally_calls
-from marko.block import Heading, SetextHeading
+from marko.block import BlankLine, Heading, SetextHeading
 from typing_extensions import override
 
-from chopdiff.docs.block_types import BlockType, classify_block, markdown_parser
+from chopdiff.docs.block_types import BlockType, block_type_for
 from chopdiff.docs.sizes import TextUnit, size, size_in_bytes
 from chopdiff.docs.wordtoks import (
     BOF_TOK,
@@ -67,7 +67,7 @@ def is_markdown_header(markdown: str) -> bool:
 
 
 def _heading_element(text: str) -> Heading | SetextHeading | None:
-    parsed = markdown_parser().parse(text)
+    parsed = flowmark_markdown().parse(text)
     for element in parsed.children:
         if isinstance(element, (Heading, SetextHeading)):
             return element
@@ -149,7 +149,7 @@ def _block_links(block_text: str, doc_offset: int) -> list[Link]:
     from `iter_atomic_spans`. Reference links and other identities `iter_atomic_spans`
     cannot locate keep their identity but get `span=None`.
     """
-    identities = extract_links(markdown_parser().parse(block_text))
+    identities = extract_links(flowmark_markdown().parse(block_text))
     link_spans = [
         span
         for span in iter_atomic_spans(block_text)
@@ -391,7 +391,9 @@ class Paragraph:
         text = self.original_text.strip()
         if not text:
             return BlockType.paragraph
-        block_type = classify_block(text)
+        parsed = flowmark_markdown().parse(text)
+        element = next((el for el in parsed.children if not isinstance(el, BlankLine)), None)
+        block_type = block_type_for(element) if element is not None else BlockType.paragraph
         # marko treats a single-line HTML tag as an inline-HTML paragraph rather than
         # an HTML block, so fall back to chopdiff's own markup check for those.
         if block_type == BlockType.paragraph and self.is_markup():
@@ -556,15 +558,18 @@ class TextDoc:
         headings become nested `children`. Content before the first heading (preamble)
         belongs to no section. Derived from heading levels; no whole-document re-parse.
         """
+        source_text = self.source_text or self.reassemble()
         roots: list[Section] = []
         stack: list[Section] = []
         for para in self.paragraphs:
             level = para.heading_level()
             if level is None:
                 if stack:
-                    stack[-1].blocks.append(para)
+                    stack[-1].content.append(para)
                 continue
-            section = Section(heading=para, level=level, blocks=[], children=[])
+            section = Section(
+                heading=para, level=level, content=[], children=[], source_text=source_text
+            )
             while stack and stack[-1].level >= level:
                 stack.pop()
             if stack:
@@ -594,6 +599,14 @@ class TextDoc:
         from chopdiff.docs.block_tree import parse_blocks
 
         return parse_blocks(self.source_text or self.reassemble())
+
+    def block_type_counts(self) -> Counter[BlockType]:
+        """
+        Tally of top-level structural block types in the document. A derived view over
+        `blocks()` (no stored counts), density-invariant by construction — `Counter` over
+        the live block tree, so it always reflects current content.
+        """
+        return Counter(block.type for block in self.blocks())
 
     def toc(self) -> list[tuple[int, str, tuple[int, int]]]:
         """Flat table of contents in document order: `(level, title, span)` per heading."""
@@ -873,24 +886,57 @@ class Section:
     """
     A document section: a heading plus the content it owns, with nested subsections.
 
-    `blocks` are this section's own content blocks (excluding the heading line and any
-    subsections); `children` are nested `Section`s. Built by `TextDoc.sections()`. Sizes
-    are rolled up by reusing `TextDoc.size` over the section's blocks, so every
+    `content` are this section's own content paragraphs (excluding the heading line and
+    any subsections); `children` are nested `Section`s. Built by `TextDoc.sections()`.
+    Sizes are rolled up by reusing `TextDoc.size` over the section's paragraphs, so every
     `TextUnit` aggregates uniformly.
+
+    Two views of the same content, both derived (nothing stored as counts):
+
+    - the *editing* view — `content`, `own_blocks()`, `subtree_blocks()` — returns the
+      blank-line `Paragraph`s, matching the document's paragraph view;
+    - the *structural* view — `blocks()` — returns the density-invariant structural
+      `Block` tree scoped to this section.
     """
 
     heading: Paragraph
     level: int
-    blocks: list[Paragraph]
+    content: list[Paragraph]
     children: list[Section]
+    source_text: str = ""
 
     @property
     def title(self) -> str:
         return self.heading.heading_title() or ""
 
     def own_blocks(self) -> list[Paragraph]:
-        """The heading plus this section's own content blocks (no subsections)."""
-        return [self.heading, *self.blocks]
+        """The heading plus this section's own content paragraphs (no subsections)."""
+        return [self.heading, *self.content]
+
+    def blocks(self) -> list[Block]:
+        """
+        The structural block tree (see `TextDoc.blocks`) restricted to this section's
+        own content — the heading and the blocks it owns, excluding subsections. Spans
+        are document-absolute, and the slice is density-invariant like the whole-document
+        tree, so per-section block-type tallies are spacing-independent.
+        """
+        from chopdiff.docs.block_tree import parse_blocks
+
+        own = self.own_blocks()
+        start, end = own[0].span[0], own[-1].span[1]
+        return [
+            block
+            for block in parse_blocks(self.source_text)
+            if start <= block.span[0] and block.span[1] <= end
+        ]
+
+    def block_type_counts(self) -> Counter[BlockType]:
+        """
+        Tally of top-level structural block types in this section's own content. A
+        derived view over `blocks()` (no stored counts), density-invariant by
+        construction.
+        """
+        return Counter(block.type for block in self.blocks())
 
     def subtree_blocks(self) -> list[Paragraph]:
         """All blocks of this section and its subsections, in document order."""

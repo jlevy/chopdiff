@@ -90,12 +90,19 @@ caught up), remove the override and re-lock.
   dependencies, build hooks, network calls, or install scripts. Reviewed and approved
   by the maintainer, 2026-05-25.
 
-- **flowmark 0.7.0** (published 2026-05-27, inside the window). First-party package,
-  authored and maintained by the same maintainer; the new public inline API
-  (`flowmark.atomic_spans`, `flowmark.markdown_ast`) is what chopdiff adopts for exact
-  sentence spans and link extraction. Adds one transitive dependency, `pathspec` (a
-  long-established, pure-Python package well outside the window). Reviewed and approved
-  by the maintainer, 2026-05-27. Remove this override once 0.7.0 clears the 14-day window.
+- **flowmark 0.7.1** (published 2026-05-29, inside the window). First-party package,
+  authored and maintained by the same maintainer. Adopted for the authoritative block
+  spans added in [jlevy/flowmark#52](https://github.com/jlevy/flowmark/pull/52):
+  `flowmark_markdown().parse(text)` now attaches `element.span = (start, end)` to every
+  block element at every nesting level, read straight from marko's own `Source.pos`, and
+  `flowmark.markdown_ast.block_span` / `walk_elements` expose it. chopdiff adopts this to
+  drop its own regex block scanner (Phase 5). The full `0.7.0 → 0.7.1` source diff was
+  reviewed: the span-recording overrides in `formats/flowmark_markdown.py`
+  (`CustomListItem`, `parse_source`, `parse`), the `block_span` helper in
+  `markdown_ast.py`, and CLI/skill-install changes (`--surfaces`). No dependency changes
+  (`Requires-Dist` identical to 0.7.0), no build hooks, no network calls, no install
+  scripts. Reviewed and approved by the maintainer, 2026-05-29. Remove this override once
+  0.7.1 clears the 14-day window.
 
 ## Untrusted Repositories
 

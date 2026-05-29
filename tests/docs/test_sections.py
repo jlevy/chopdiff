@@ -1,5 +1,6 @@
 from textwrap import dedent
 
+from chopdiff.docs.block_types import BlockType
 from chopdiff.docs.sizes import TextUnit
 from chopdiff.docs.text_doc import TextDoc
 
@@ -50,6 +51,34 @@ def test_rolled_up_size_sums_subtree():
     assert full > own
     # Words are additive across blocks, so subtree == own + each child's subtree.
     assert full == own + sum(c.size(TextUnit.words, subtree=True) for c in top.children)
+
+
+def test_section_blocks_are_scoped_and_in_span():
+    doc = TextDoc.from_text(_DOC)
+    top = doc.sections()[0]
+    types = [b.type for b in top.blocks()]
+    # Top's OWN content only: its heading and intro paragraph, not Sub A/Sub B content.
+    assert types == [BlockType.heading, BlockType.paragraph]
+    s_start, s_end = top.span
+    for b in top.blocks():
+        assert s_start <= b.span[0] and b.span[1] <= s_end
+
+
+def test_section_block_type_counts_per_section():
+    doc = TextDoc.from_text(_DOC)
+    top = doc.sections()[0]
+    assert top.block_type_counts() == {BlockType.heading: 1, BlockType.paragraph: 1}
+    sub_a = top.children[0]
+    assert sub_a.block_type_counts() == {BlockType.heading: 1, BlockType.paragraph: 1}
+
+
+def test_block_type_counts_are_derived_not_stored():
+    # Counts always reflect current content; nothing is cached. A loose vs. tight list
+    # yields the same tally (density invariance carried through the rollup).
+    tight = TextDoc.from_text("# H\n\n- a\n- b\n- c")
+    loose = TextDoc.from_text("# H\n\n- a\n\n- b\n\n- c")
+    assert tight.block_type_counts() == loose.block_type_counts()
+    assert tight.block_type_counts()[BlockType.list] == 1
 
 
 def test_toc_is_flat_document_order():

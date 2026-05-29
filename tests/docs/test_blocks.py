@@ -83,6 +83,44 @@ def test_tight_list_decomposes_into_items_with_nesting():
         assert _DOC[item.span[0] : item.span[1]].lstrip().startswith(("-", "*", "+"))
 
 
+def test_ordered_list_is_its_own_block_type():
+    doc = TextDoc.from_text("1. one\n2. two")
+    assert _types(doc.blocks()) == [BlockType.ordered_list]
+    items = doc.blocks()[0].children
+    assert [c.type for c in items] == [BlockType.list_item, BlockType.list_item]
+
+
+def test_nested_ordered_and_bullet_lists():
+    # Ordered list with a nested bullet sublist, and vice versa.
+    ordered_outer = TextDoc.from_text("1. one\n   - a\n   - b\n2. two")
+    top = ordered_outer.blocks()
+    assert _types(top) == [BlockType.ordered_list]
+    nested = [c for c in top[0].children[0].children if c.type == BlockType.list]
+    assert len(nested) == 1 and len(nested[0].children) == 2
+
+    bullet_outer = TextDoc.from_text("- one\n  1. a\n  2. b\n- two")
+    top2 = bullet_outer.blocks()
+    assert _types(top2) == [BlockType.list]
+    nested2 = [c for c in top2[0].children[0].children if c.type == BlockType.ordered_list]
+    assert len(nested2) == 1 and len(nested2[0].children) == 2
+
+
+def test_density_invariant_list_blocks():
+    # Dense and loose forms of the same list produce identical block/item structure;
+    # only the `tight` flag differs.
+    dense = TextDoc.from_text("- a\n- b\n- c").blocks()
+    loose = TextDoc.from_text("- a\n\n- b\n\n- c").blocks()
+
+    def structure(blocks: list[Block]) -> list[tuple[BlockType, int]]:
+        return [(b.type, len(b.children)) for b in blocks]
+
+    assert structure(dense) == structure(loose) == [(BlockType.list, 3)]
+    assert all(c.type == BlockType.list_item for c in dense[0].children)
+    assert all(c.type == BlockType.list_item for c in loose[0].children)
+    assert dense[0].tight is True
+    assert loose[0].tight is False
+
+
 def test_blocks_top_level_structure_matches_marko():
     # Cross-check the top-level block count against marko (ignoring blank lines).
     from flowmark import flowmark_markdown
@@ -123,11 +161,10 @@ def test_paragraph_then_thematic_break_without_blank_line():
     doc = TextDoc.from_text(text)
     # CommonMark: a `---` right after a paragraph is a setext H2, not a thematic break.
     # Just ensure we agree with marko's call (it's one block).
+    from flowmark import flowmark_markdown
     from marko.block import BlankLine
 
-    from chopdiff.docs.block_types import markdown_parser
-
-    parsed = markdown_parser().parse(text)
+    parsed = flowmark_markdown().parse(text)
     marko_top = [c for c in parsed.children if not isinstance(c, BlankLine)]
     assert len(doc.blocks()) == len(marko_top)
 
@@ -135,9 +172,8 @@ def test_paragraph_then_thematic_break_without_blank_line():
 def test_block_types_parity_with_marko_for_no_blank_transitions():
     # The structural block tree must agree with marko's top-level block count for
     # documents where blocks are adjacent without blank-line separators.
+    from flowmark import flowmark_markdown
     from marko.block import BlankLine
-
-    from chopdiff.docs.block_types import markdown_parser
 
     cases = [
         "# H1\nPara after.",
@@ -149,7 +185,7 @@ def test_block_types_parity_with_marko_for_no_blank_transitions():
         "Para before break.\n\n***\n\nPara after break.",
     ]
     for text in cases:
-        parsed = markdown_parser().parse(text)
+        parsed = flowmark_markdown().parse(text)
         marko_top = [c for c in parsed.children if not isinstance(c, BlankLine)]
         ours = TextDoc.from_text(text).blocks()
         assert len(ours) == len(marko_top), f"block count mismatch on: {text!r}"
