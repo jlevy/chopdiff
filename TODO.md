@@ -33,15 +33,18 @@ the multi-level block-tallies work.
 
 ### Robustness hardening — `docs/project/specs/active/`
 
-Correctness and API-contract fixes from the engineering review. Several findings were
-already resolved in v0.3.0 (exact source offsets, console-script removal, tiktoken
-dropped, nested self-closing tag fix, documented mutation contract); the rest are open.
+Correctness and API-contract fixes from the engineering review, **re-reviewed 2026-05-29
+against current v0.4.0 code**. Findings already fixed (console script, absolute offsets,
+`from_text` doc honesty, publish `--locked`, quiet tests) are recorded as resolved; the
+open items are verified with current evidence and grouped into three phases.
 
 - Spec: [plan-2026-05-26-robustness-hardening.md](docs/project/specs/active/plan-2026-05-26-robustness-hardening.md)
-  (status: Draft).
-- Beads: the earlier umbrella/phase beads (`chopdiff-3o4e`, `-ptf0`, `-2cgj`, `-z3js`)
-  are **no longer in the synced store** — recreate the tracking beads when this work is
-  picked up.
+  (status: Draft — open, current).
+- Beads: epic `chopdiff-pdu2` → `chopdiff-pytp` (Phase 1: core correctness/safety),
+  `chopdiff-y0cd` (Phase 2: HTML + contracts), `chopdiff-xvqb` (Phase 3: API/examples/docs).
+- **Sequencing:** Phase 1 (filter-bypass, `sub_doc`/`sub_paras` copy semantics, paragraph
+  windowing, div chunking, library asserts, etc.) is the foundation the document model
+  builds on and should land first; Phases 2–3 interleave with or follow the doc-model work.
 
 ## Completed
 

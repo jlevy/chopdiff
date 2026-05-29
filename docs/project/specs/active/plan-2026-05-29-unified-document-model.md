@@ -90,6 +90,14 @@ points) and ids; stand-off layering as the conceptual core; red-green (immutable
 computed position, trivia first-class) as the structural-tree pattern; "zoom and views are
 one requirement."
 
+**Prerequisite — robustness hardening.** This plan builds on `TextDoc`'s offsets,
+sub-document slicing, and transforms. Phase 1 of
+[`plan-2026-05-26-robustness-hardening.md`](plan-2026-05-26-robustness-hardening.md)
+should land first: `sub_doc`/`sub_paras` currently alias caller objects (the node
+table/`Reference` model wants safe copies), `filtered_transform` can skip its filter, and
+div chunking mis-slices. The doc-model's source-grounding assumptions (exact spans,
+honest `from_text` normalization) are already satisfied in v0.4.0.
+
 ## Requirements (from the request)
 
 1. Rollups at **any time** of **values or counts**, not overly constrained.
