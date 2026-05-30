@@ -24,7 +24,7 @@ projection — is not yet built. Tracked by epic `chopdiff-8q8q`.
 > archived
 > [`plan-2026-05-29-multilevel-block-tallies.md`](../archive/plan-2026-05-29-multilevel-block-tallies.md):
 > multi-level tallies become one feature of the unified model (their decisions are folded
-> into "Open decisions" here).
+> in here).
 
 ## Overview
 
@@ -124,8 +124,8 @@ honest `from_text` normalization) are already satisfied in v0.4.0.
 
 # Exploration
 
-Each subsection states the question, the realistic options, pros/cons, and a leaning. None
-is final until "Open decisions" is settled.
+Each subsection states the question, the realistic options, pros/cons, and a leaning;
+the settled choices are recorded under "Decisions" and the Decision Record.
 
 ## E1. One tree, or a node set with derived trees?
 
@@ -246,9 +246,8 @@ A caller should choose how much to materialize/serialize. Options for the axis:
   - *Pros:* easy default ladder + precise control when needed.
   - *Cons:* slight surface duplication.
 
-**Leaning (at exploration time): 5c.** A small `Detail` ladder backed by include-flags.
-**Superseded — see DR-5:** on reflection we kept only the flags (composable `include`
-layers) and dropped the named ladder, for the same mechanism-over-menu reason as DR-4.
+**Leaning: composable `include` layers (the flags of 5c, without a named ladder)** — same
+mechanism-over-menu reasoning as the rollup surface (E3). Settled in DR-5.
 
 ## E6. Computation and caching
 
@@ -330,7 +329,7 @@ Two consequences to design in:
 # Proposed design
 
 This is the recommended synthesis (1b + 2a + 3c + 4a + 5c + lazy cache), to be confirmed
-in "Open decisions."
+under "Decisions."
 
 ## D1. The `DocOverview` schema
 
@@ -511,7 +510,9 @@ nodes); on save, the `SpanRef`s persist quote-canonical and serialize as *origin
 + source-grounded annotations*; reopening reparses and re-resolves them to nodes (fast path
 when unchanged, fuzzy re-anchor when edited).
 
-## Open decisions
+## Decisions (all settled)
+
+Summary index; rationale and consequences are in the Decision Record below.
 
 1. **Node set vs single tree (E1).** ✅ **SETTLED (2026-05-29): node-table-with-views
    (1b).** A stable node table (id + span) is canonical; the containment tree, section
@@ -549,7 +550,7 @@ when unchanged, fuzzy re-anchor when edited).
    persistence; Chrome-Text-Fragment convertible; `node_id` never persisted; `structural_path`
    and CRDT `anchor` deferred.** Informed by
    [`research-2026-05-30-span-references.md`](../../research/research-2026-05-30-span-references.md).
-   See DR-6. (Named `SpanRef`, not `Reference`, to be specific.)
+   See DR-6.
 8. **Computation/caching (E6).** ✅ **SETTLED (2026-05-29): lazy-cache** the node table off
    the immutable `source_text` (also fixes the quadratic per-section `Section.blocks()`
    re-parse). Memoization of a derived view is not a "stored count"; the contract is "do
@@ -558,9 +559,6 @@ when unchanged, fuzzy re-anchor when edited).
 9. **List-item paragraph counting.** ✅ **SETTLED (2026-05-29): count it.** The wrapper
    `Paragraph` inside each list item is counted as a `paragraph`; it is density-invariant
    (tight and loose items both wrap), and excluding it would be a special case.
-
-(Folded in from the archived tallies note, whose four decisions are subsumed by 1, 3, 8,
-and 9 here.)
 
 ## Decision record
 
@@ -671,8 +669,8 @@ examples.
 
 ### DR-6 — Span references: `SpanRef` (quote canonical + offset hint) (settles Open decision 7)
 
-**Decision (2026-05-30):** A small **`SpanRef`** type (not `Reference` — too generic)
-carries two coordinated span kinds: a **quoted span** (`exact` + optional `prefix`/`suffix`)
+**Decision (2026-05-30):** A small **`SpanRef`** type carries two coordinated span kinds:
+a **quoted span** (`exact` + optional `prefix`/`suffix`)
 that is the **canonical durable anchor**, and an **offset span** (`start`/`end` in Unicode
 code points) that is a **recomputable hint**. Persistence is quote-canonical and
 source-grounded; `node_id` is an in-memory handle only and is never persisted. The quote is
@@ -697,8 +695,28 @@ refined** once v1 is in use — `SpanRef` v1 is deliberately scoped to the Chrom
 
 ## Implementation plan
 
-Kept to two phases; phase 1 is the useful core, phase 2 is serialization polish. (No work
-starts until "Open decisions" is settled.)
+All decisions are settled, so we **update the design of record first** (Phase 0) and then
+implement against it, keeping `docs/textdoc-spec.md` the single current, comprehensive,
+concise design doc for the document model.
+
+### Phase 0: make `docs/textdoc-spec.md` current (do first)
+
+Fold the settled DocOverview design into the design of record before writing code, so the
+implementation is built against current docs. Concrete edits (see "Design-of-record
+updates" below for the per-section detail):
+
+- [ ] §3 normalized form: canonical normalized form is the **node table**; `TextDoc` is the
+      Python core/editing view, `DocOverview` the derived projection/contract (DR-1, DR-2).
+- [ ] §6 structural tree: containers fully populate children (recursive); the block tree is
+      a derived view; density-invariant.
+- [ ] §8 inline: inline items are nodes; links via `collect(kinds={link})`.
+- [ ] §9 derived views: the single `collect()` primitive (DR-4) replaces
+      `block_type_counts()`; composable `include` layers (DR-5); drop "top-level only".
+- [ ] New section: **DocOverview** node model + JSON schema (Pydantic authoring, views,
+      layers, coordinates = Unicode code points), and **`SpanRef`** + the (later) annotation
+      stand-off layer (DR-3, DR-6).
+- [ ] §11 invariants: node-id stability within a parse; quote-canonical references; no
+      blessed rollups/levels. §12: add the span-references research brief.
 
 ### Phase 1: recursive node model + flexible rollups (Python)
 
@@ -710,7 +728,7 @@ starts until "Open decisions" is settled.)
 - [ ] Add the single `collect(*, kinds=, where=, recursive=, inline=)` query primitive
       with document / section / block scope handles. No per-kind rollup methods (DR-4).
 - [ ] Define the `SpanRef` type and resolution: `SpanRef.from_node(node)` (total
-      model→source), `resolve(reference, doc)` (source→model via span/quote/structural),
+      model→source), `resolve(span_ref, doc)` (source→model: exact fast path, then quote fuzzy re-anchor),
       and `to_persisted()` (drop transient `node_id`). No annotation *storage* yet — just
       the targeting contract the rest of the model is designed around.
 - [ ] Tests: nested tables/code in blockquotes and list items are counted and locatable;
@@ -728,6 +746,49 @@ starts until "Open decisions" is settled.)
 - [ ] Author the standalone language-neutral JSON Schema once the shape is confirmed
       (decision 5).
 
+## Design-of-record updates (`docs/textdoc-spec.md`)
+
+Phase 0 makes `docs/textdoc-spec.md` the single current, comprehensive, concise design doc.
+Per-section edits (the design doc carries the prose; this maps what changes):
+
+- **§1 Purpose / §2 Goals** — add that the serialized normalized-form contract is
+  `DocOverview` (language-neutral, frontend-serializable); `TextDoc` is the Python core.
+  Goals add: cross-language JSON contract, source-canonical references, simplicity +
+  flexibility (one query primitive, composable layers — no blessed menus).
+- **§3 The normalized form** — the **node table is canonical**; the block tree, section
+  tree, inline index, and token stream are derived views; `DocOverview` is the projection
+  of `TextDoc` (DR-1, DR-2).
+- **§4 Core types and offsets** — define `Node{id, kind, parent, children, source_span,
+  attrs}`; node ids stable within a parse; **pin the offset unit to Unicode code points**
+  with byte/UTF-16 conversions as derived coords.
+- **§5 Block-type model** — note containers (blockquote, list item) fully populate block
+  children; `ordered_list` already present.
+- **§6 Structural block tree** — recursive (containers populate children); a derived view
+  over the node table; density-invariant (unchanged correctness, fuller children).
+- **§7 Sections and TOC** — section is a view; `Section`-scoped `collect()` for per-section
+  slices/rollups.
+- **§8 Inline elements and links** — inline items are first-class nodes; links are
+  `collect(kinds={link})`; block↔inline relationships are node edges.
+- **§9 Derived views and rollups** — replace the "top-level only / planned" status with the
+  settled single `collect(*, kinds=, where=, recursive=, inline=)` primitive (DR-4);
+  counts/values via standard Python; **remove `block_type_counts()`** (superseded; migration
+  note); payload via composable `include` layers (DR-5).
+- **New section — DocOverview schema** — node table + views + reserved layers; Pydantic
+  authoring (DR-3); `include` layers; coordinates.
+- **New section — `SpanRef` and annotations** — the span-reference type (quote canonical +
+  offset hint; Chrome-Text-Fragment convertible; DR-6); the stand-off annotation layer as a
+  later phase expected to be refined.
+- **§10 Editing and serialization** — `DocOverview` serialization with `include` layers;
+  edit `TextDoc`/source then re-derive; rendered `data-node-id`/`data-source-span`.
+- **§11 Invariants and non-goals** — node-id stability within a parse; quote-canonical
+  references; no blessed rollups/levels; offset unit pinned. Non-goals: no parallel runtime
+  model, no DOM/XPath selectors, annotations/operations/provenance/layout are later.
+- **§12 References** — add `research-2026-05-30-span-references.md`, the document-model
+  survey, and this plan.
+
+When Phase 0 lands, the `block_type_counts()` removal is the one semi-breaking changelog
+item (migration: `Counter(n.kind for n in doc.overview().collect(...))`).
+
 ## Testing Strategy
 
 - Recursive tallies: a document with tables/code nested in blockquotes and list items
@@ -736,11 +797,11 @@ starts until "Open decisions" is settled.)
 - Section slicing: every view/rollup scoped to a section matches a whole-document filter
   restricted to that section's span; spans stay within `section.span`.
 - Serialization: `DocOverview` round-trips; ids are stable within a parse; stable
-  fields contain no parser-internal names; detail levels are subset-consistent
-  (including a layer adds only its part; the core is always present).
+  fields contain no parser-internal names; `include` layers compose (including a layer adds
+  only its part; the structural core is always present).
 - Coordinates: `source_span` round-trips against `source_text`; derived byte/UTF-16 spans
   agree on ASCII and a multi-byte sample.
-- References: a `SpanRef` built from a node carries the node's `source_span`; persisting
+- Span references: a `SpanRef` built from a node carries the node's `source_span`; persisting
   drops `node_id`; after a no-op reparse it re-resolves to the same node; after an edit
   that shifts offsets, `text_quote` still re-resolves it. An annotation created against a
   parsed table/link serializes with a source-grounded target.
@@ -750,10 +811,9 @@ starts until "Open decisions" is settled.)
 - **Subsumes** the archived
   [`plan-2026-05-29-multilevel-block-tallies.md`](../archive/plan-2026-05-29-multilevel-block-tallies.md)
   (multi-level tallies = the rollup feature of phase 1; kept in `archive/` for its detailed
-  nested-block/caching axis analysis, with its four decisions folded into "Open decisions"
-  here).
-- **Extends** `docs/textdoc-spec.md` §6/§9 (structural tree + derived views); the design of
-  record is updated when phase 1 lands.
+  nested-block/caching axis analysis).
+- **Updates `docs/textdoc-spec.md`** (the design of record) **first**, in Phase 0 — see
+  "Design-of-record updates" — so implementation is built against current docs.
 - Independent of `plan-2026-05-26-robustness-hardening.md`.
 
 * * *
