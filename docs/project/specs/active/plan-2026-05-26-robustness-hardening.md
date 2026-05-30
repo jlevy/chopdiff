@@ -4,11 +4,11 @@
 
 **Author:** Codex; revised by a fresh senior review
 
-**Status:** Draft — open, **current**. Every item below was re-verified against the code on
-2026-05-29 (post-v0.4.0): findings already fixed are moved to "Resolved since the original
-review"; open findings carry current `file` evidence and a confirmed repro. The original
-tracking beads (`chopdiff-3o4e`/`-ptf0`/`-2cgj`/`-z3js`) were lost from the store and are
-recreated as part of this revision (see "Tracking").
+**Status:** **Implemented (Phases 1–3), 2026-05-29.** Re-reviewed against v0.4.0 code,
+then implemented TDD: every open finding below now has a regression test and a fix on the
+branch (165 tests, lint clean, build green). Pending release. Findings already fixed
+before this pass are under "Resolved since the original review". Tracked under epic
+`chopdiff-pdu2` (see "Tracking").
 
 ## Overview
 

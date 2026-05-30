@@ -8,6 +8,7 @@
 # ///
 import argparse
 import logging
+from pathlib import Path
 from textwrap import dedent
 
 import openai  # pyright: ignore  # Not a project dep.
@@ -106,16 +107,19 @@ def main():
 
     logging.basicConfig(level=logging.INFO)
 
-    with open(args.input_file, encoding="utf-8") as f:
-        input_text = f.read()
-
-    print(heading("Original"))
-    print(fill_text(input_text))
+    input_text = Path(args.input_file).read_text(encoding="utf-8")
 
     result = insert_paragraph_breaks(input_text)
+    formatted = fill_text(result)
 
-    print(heading("With paragraph breaks"))
-    print(fill_text(result))
+    if args.output:
+        Path(args.output).write_text(formatted, encoding="utf-8")
+        print(f"Wrote paragraph-broken text to {args.output}")
+    else:
+        print(heading("Original"))
+        print(fill_text(input_text))
+        print(heading("With paragraph breaks"))
+        print(formatted)
 
 
 if __name__ == "__main__":

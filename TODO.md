@@ -39,12 +39,15 @@ against current v0.4.0 code**. Findings already fixed (console script, absolute 
 open items are verified with current evidence and grouped into three phases.
 
 - Spec: [plan-2026-05-26-robustness-hardening.md](docs/project/specs/active/plan-2026-05-26-robustness-hardening.md)
-  (status: Draft — open, current).
-- Beads: epic `chopdiff-pdu2` → `chopdiff-pytp` (Phase 1: core correctness/safety),
-  `chopdiff-y0cd` (Phase 2: HTML + contracts), `chopdiff-xvqb` (Phase 3: API/examples/docs).
-- **Sequencing:** Phase 1 (filter-bypass, `sub_doc`/`sub_paras` copy semantics, paragraph
-  windowing, div chunking, library asserts, etc.) is the foundation the document model
-  builds on and should land first; Phases 2–3 interleave with or follow the doc-model work.
+  (status: **Implemented (Phases 1–3) on branch, pending release**).
+- Beads: epic `chopdiff-pdu2` → `chopdiff-pytp` (Phase 1), `chopdiff-y0cd` (Phase 2),
+  `chopdiff-xvqb` (Phase 3) — all closed, with per-finding child beads.
+- Done TDD: filter-bypass, `sub_doc`/`sub_paras` copy semantics, paragraph windowing, div
+  chunking, library asserts→exceptions, `WindowSettings` validation, stitching, `apply_to`
+  identity, `TokenMapping` metric, empty-doc wordtoks (Phase 1); nested self-closing,
+  tag/attr validation, strict mode, empty-vs-missing attr, multi-class matching, exception
+  cause, `parse_tag` docs (Phase 2); root-API docstring, examples `Path`/`--output`,
+  validation (Phase 3). Foundation for the document-model work is now in place.
 
 ## Completed
 
