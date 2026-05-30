@@ -3,9 +3,9 @@ type: is
 id: is-01kstdjj19rhp9k8qqw7sv81vk
 title: "Robustness Phase 1: core correctness/safety (filter bypass, sub_doc/sub_paras copy, para-window, div chunking, asserts, WindowSettings, stitching, apply_to identity, TokenMapping metric, empty-doc wordtoks)"
 kind: task
-status: open
+status: closed
 priority: 1
-version: 11
+version: 12
 spec_path: docs/project/specs/active/plan-2026-05-26-robustness-hardening.md
 labels: []
 dependencies: []
@@ -22,5 +22,7 @@ child_order_hints:
   - is-01ksw0wc848rsg2yrrpeqa0fqp
   - is-01ksw0wcm97g8ej0x439t1mnpa
 created_at: 2026-05-29T17:47:37.385Z
-updated_at: 2026-05-30T08:44:16.905Z
+updated_at: 2026-05-30T09:00:59.248Z
+closed_at: 2026-05-30T09:00:59.247Z
+close_reason: "Phase 1 complete: all 10 child beads (filter bypass, sub_doc/sub_paras copy, para window, div chunking, asserts, WindowSettings, stitching, apply_to identity, TokenMapping metric, empty-doc wordtoks) done, TDD, 160 tests green."
 ---
