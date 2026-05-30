@@ -3,9 +3,9 @@ type: is
 id: is-01ksxcggndfjse9zdmrfpptmak
 title: Node table build + lazy cache on TextDoc (docs/node_table.py)
 kind: task
-status: open
+status: closed
 priority: 2
-version: 7
+version: 9
 spec_path: docs/project/specs/active/plan-2026-05-29-unified-document-model.md
 labels: []
 dependencies:
@@ -23,7 +23,9 @@ dependencies:
     target: is-01ksxchatt9gc8cpg1c5zv5y3z
 parent_id: is-01kss8gdn83f47wbrg3jve028r
 created_at: 2026-05-30T21:26:45.165Z
-updated_at: 2026-05-30T21:27:30.382Z
+updated_at: 2026-05-30T22:48:47.040Z
+closed_at: 2026-05-30T22:48:47.040Z
+close_reason: null
 ---
 New src/chopdiff/docs/node_table.py. build_node_table(doc) -> NodeTable from recursive block tree (markdown), sections (document), paragraph/sentence editing view (textual).
 - Stable ids (pre-order); wire parent/children; set layer, source_span, attrs (heading level, list ordered/tight, link url/title).
