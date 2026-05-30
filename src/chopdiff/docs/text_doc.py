@@ -35,8 +35,7 @@ from chopdiff.util.token_estimate import estimate_tokens
 
 if TYPE_CHECKING:
     from chopdiff.docs.block_tree import Block
-    from chopdiff.docs.node import Node, NodeKind
-    from chopdiff.docs.node_table import NodeTable
+    from chopdiff.docs.node import Node, NodeKind, NodeTable
 
 SYMBOL_PARA = "¶"
 
@@ -466,7 +465,9 @@ class TextDoc:
 
     paragraphs: list[Paragraph]
     source_text: str = ""
-    _cached_node_table: object = field(default=None, init=False, compare=False, repr=False)
+    _cached_node_table: NodeTable | None = field(
+        default=None, init=False, compare=False, repr=False
+    )
 
     def node_table(self) -> NodeTable:
         """
@@ -474,13 +475,10 @@ class TextDoc:
         function of the immutable `source_text`, so it is computed once and reused.
         """
         if self._cached_node_table is None:
-            from chopdiff.docs.node_table import NodeTable, build_node_table
+            from chopdiff.docs.node_table import build_node_table
 
             self._cached_node_table = build_node_table(self)
-        # The import is deferred to avoid circular imports at module load time.
-        from chopdiff.docs.node_table import NodeTable
-
-        assert isinstance(self._cached_node_table, NodeTable)
+        assert self._cached_node_table is not None
         return self._cached_node_table
 
     @classmethod
@@ -911,18 +909,6 @@ class TextDoc:
             sent_mapping[sent_index].append(i)
 
         return wordtok_mapping, sent_mapping
-
-    def node_table(self) -> NodeTable:
-        """
-        Lazily build and cache the node table for this document. Safe because
-        `source_text` is immutable after parse. The table is the canonical
-        normalized form from which all derived views are projections.
-        """
-        if "_cached_node_table" not in self.__dict__:
-            from chopdiff.docs.node_table import build_node_table
-
-            self.__dict__["_cached_node_table"] = build_node_table(self)
-        return self.__dict__["_cached_node_table"]  # pyright: ignore
 
     def collect(
         self,

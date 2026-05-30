@@ -95,6 +95,65 @@ class Node:
     attrs: dict[str, object] = field(default_factory=dict)
 
 
+@dataclass
+class NodeTable:
+    """
+    A flat, id-addressed table of all parsed elements in a document, covering
+    markdown, document, and textual layers over the same source text.
+
+    The table is the canonical normalized form; derived views (block tree, section
+    tree, etc.) are projections of it. Within a layer, `parent`/`children` form
+    the containment structure; cross-layer relationships use interval containment
+    via `containing()` and `contained_by()`.
+    """
+
+    nodes: dict[str, Node] = field(default_factory=dict)
+    roots: list[str] = field(default_factory=list)
+    source_text: str = ""
+
+    def node(self, nid: str) -> Node:
+        """Look up a node by id; raises `KeyError` if not found."""
+        return self.nodes[nid]
+
+    def by_kind(self, kind: NodeKind) -> list[Node]:
+        """All nodes of a given kind, in insertion order."""
+        return [n for n in self.nodes.values() if n.kind == kind]
+
+    def by_layer(self, layer: Layer) -> list[Node]:
+        """All nodes in a given layer, in insertion order."""
+        return [n for n in self.nodes.values() if n.layer == layer]
+
+    def children_of(self, nid: str) -> list[Node]:
+        """The child nodes of the node with `nid`."""
+        parent = self.nodes[nid]
+        return [self.nodes[cid] for cid in parent.children]
+
+    def containing(self, span: tuple[int, int]) -> list[Node]:
+        """
+        All nodes whose `source_span` fully contains `span` (i.e. the node's span
+        encloses the query span). Useful for cross-layer containment queries like
+        "which section contains this link."
+        """
+        start, end = span
+        return [
+            n
+            for n in self.nodes.values()
+            if n.source_span is not None and n.source_span[0] <= start and end <= n.source_span[1]
+        ]
+
+    def contained_by(self, span: tuple[int, int]) -> list[Node]:
+        """
+        All nodes whose `source_span` is fully contained within `span`. Useful for
+        queries like "which blocks are inside this region."
+        """
+        start, end = span
+        return [
+            n
+            for n in self.nodes.values()
+            if n.source_span is not None and start <= n.source_span[0] and n.source_span[1] <= end
+        ]
+
+
 ## Tests
 
 

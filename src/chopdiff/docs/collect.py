@@ -14,8 +14,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
-from chopdiff.docs.node import Node, NodeKind
-from chopdiff.docs.node_table import NodeTable
+from chopdiff.docs.node import Node, NodeKind, NodeTable
 
 # Inline NodeKinds: elements that live inside a block.
 INLINE_KINDS: frozenset[NodeKind] = frozenset(

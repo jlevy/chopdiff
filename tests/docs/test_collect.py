@@ -8,8 +8,8 @@ from collections import Counter
 from textwrap import dedent
 
 from chopdiff.docs.collect import collect
-from chopdiff.docs.node import Layer, NodeKind
-from chopdiff.docs.node_table import NodeTable, build_node_table
+from chopdiff.docs.node import Layer, NodeKind, NodeTable
+from chopdiff.docs.node_table import build_node_table
 from chopdiff.docs.text_doc import TextDoc
 
 # A rich document with nested structure: headings, a blockquote containing a table,
@@ -137,7 +137,7 @@ def test_contains_cross_layer_query():
     `contains` restricts results to nodes whose source_span falls within the
     given span, enabling cross-layer queries.
     """
-    doc, table = _doc_and_table()
+    _, table = _doc_and_table()
     # Find section nodes from the document layer.
     sections = [
         n for n in table.nodes.values() if n.kind == NodeKind.section and n.layer == Layer.document
@@ -168,7 +168,7 @@ def test_contains_finds_inline_links_in_span():
     """
     `contains` with `inline=True` can find inline links within a given text region.
     """
-    doc, table = _doc_and_table()
+    _, table = _doc_and_table()
     # Find the span of "Section One" content (before "## Section Two").
     sec_two_start = _RICH_DOC.find("## Section Two")
     assert sec_two_start > 0
