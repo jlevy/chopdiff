@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections import Counter, defaultdict
 from collections.abc import Callable, Generator, Iterable, Iterator
 from copy import deepcopy
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from functools import cached_property
 from typing import TYPE_CHECKING, TypeAlias
 
@@ -35,6 +35,8 @@ from chopdiff.util.token_estimate import estimate_tokens
 
 if TYPE_CHECKING:
     from chopdiff.docs.block_tree import Block
+    from chopdiff.docs.node import Node, NodeKind
+    from chopdiff.docs.node_table import NodeTable
 
 SYMBOL_PARA = "¶"
 
@@ -464,6 +466,22 @@ class TextDoc:
 
     paragraphs: list[Paragraph]
     source_text: str = ""
+    _cached_node_table: object = field(default=None, init=False, compare=False, repr=False)
+
+    def node_table(self) -> NodeTable:
+        """
+        Lazily build and cache the node table for this document. The table is a pure
+        function of the immutable `source_text`, so it is computed once and reused.
+        """
+        if self._cached_node_table is None:
+            from chopdiff.docs.node_table import NodeTable, build_node_table
+
+            self._cached_node_table = build_node_table(self)
+        # The import is deferred to avoid circular imports at module load time.
+        from chopdiff.docs.node_table import NodeTable
+
+        assert isinstance(self._cached_node_table, NodeTable)
+        return self._cached_node_table
 
     @classmethod
     @tally_calls(level="warning", min_total_runtime=5)
@@ -893,6 +911,44 @@ class TextDoc:
             sent_mapping[sent_index].append(i)
 
         return wordtok_mapping, sent_mapping
+
+    def node_table(self) -> NodeTable:
+        """
+        Lazily build and cache the node table for this document. Safe because
+        `source_text` is immutable after parse. The table is the canonical
+        normalized form from which all derived views are projections.
+        """
+        if "_cached_node_table" not in self.__dict__:
+            from chopdiff.docs.node_table import build_node_table
+
+            self.__dict__["_cached_node_table"] = build_node_table(self)
+        return self.__dict__["_cached_node_table"]  # pyright: ignore
+
+    def collect(
+        self,
+        scope: str | None = None,
+        *,
+        kinds: set[NodeKind] | None = None,
+        where: Callable[[Node], bool] | None = None,
+        recursive: bool = False,
+        inline: bool = False,
+        contains: tuple[int, int] | None = None,
+    ) -> list[Node]:
+        """
+        Convenience that calls `collect()` over `self.node_table()`. See
+        `chopdiff.docs.collect.collect` for parameter details.
+        """
+        from chopdiff.docs.collect import collect as _collect
+
+        return _collect(
+            self.node_table(),
+            scope,
+            kinds=kinds,
+            where=where,
+            recursive=recursive,
+            inline=inline,
+            contains=contains,
+        )
 
     @override
     def __str__(self):
