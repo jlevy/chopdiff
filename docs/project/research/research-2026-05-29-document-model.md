@@ -748,7 +748,7 @@ first-class) for the eventual structural tree, and the **stand-off layering** mo
 
 ```json
 {
-  "schema": "chopdiff.doc_graph.v1",
+  "schema": "DocGraph/v0.1",
   "source": {
     "format": "markdown",
     "offset_unit": "unicode_code_points",

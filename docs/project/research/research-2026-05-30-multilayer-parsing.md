@@ -219,7 +219,7 @@ The four dimensions the project has identified, restated as layers with their in
 | **Textual** | paragraphs, sentences, word tokens | `source_text` | — |
 | **Markdown structure** | block elements (recursive), inline (links, code, emphasis) | `source_text` | — |
 | **Document structure** | section / heading hierarchy and TOC | headings | Markdown structure |
-| **Synthetic structure** | explicit `<div>` / `<span>` regions, chunk groupings | `source_text` (tag scan only) | — |
+| **Synthetic structure** | regions marked by a small defined set of marker tags (today `<div>` / `<span>`), chunk groupings | `source_text` (tag scan only) | — |
 
 Three properties follow:
 
@@ -239,6 +239,15 @@ Three properties follow:
 3. **Cost tracks enablement:** Sentence splitting and full Markdown inline parsing are the
    expensive layers; a structural `<div>` scan is cheap. Pricing parsing by layer lets a
    caller pay only for what a use case needs.
+
+The synthetic layer is a general "structure from marker tags" mechanism, not a `<div>`
+special case. "Synthetic" means structure that is not inherent in the prose or Markdown but
+is added via a small, defined whitelist of marker tags, and that whitelist can hold different
+kinds of tags: standard HTML containers (`<div>`/`<span>`, today), custom semantic tags
+(`<chunk>`), or comment-delimited Markdoc-style directives (`<!-- chunk id="foo" -->`). Each
+region becomes a node carrying its tag name and attributes, so a new marker tag is a
+whitelist entry, not new parser code. (Only `<div>`/`<span>` are parsed today; the rest is
+the design principle.)
 
 ### Cross-layer relationships are offset-containment queries
 

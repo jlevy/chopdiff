@@ -26,7 +26,7 @@ scope (doc/section/block), recursive, over blocks and inline items, with the sou
 `SpanRef` reference model and composable `include`/`detail` serialization. The
 **layered-parsing lens** (E9) frames the views as parse layers (textual / markdown /
 document / synthetic) over one offset space, with cross-layer relationships as
-offset-containment queries; the synthetic (div) layer and future cross-layer structural
+offset-containment queries; the synthetic (marker-tag) layer and future cross-layer structural
 edits are later phases that drop in via four cheap Phase-1 hooks. Subsumes the multi-level
 block-tallies work.
 

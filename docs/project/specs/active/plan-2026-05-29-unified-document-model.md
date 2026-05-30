@@ -344,7 +344,7 @@ already parses the same `source_text` along several independent dimensions:
 | **textual** | paragraphs, sentences, word tokens | — |
 | **markdown** | block elements (recursive) and inline (links, code, emphasis) | — |
 | **document** | section / heading hierarchy and TOC | markdown (headings) |
-| **synthetic** | explicit `<div>`/`<span>` regions, chunk groupings (today's `TextNode`) | — |
+| **synthetic** | regions marked by a small defined set of marker tags (today `<div>`/`<span>` via `TextNode`), chunk groupings | — |
 
 This is **not a redesign**; it validates DR-1..DR-6 (a node table, not one tree, is exactly
 what coexisting layers need) and reframes the settled views as layers. The key realizations:
@@ -382,8 +382,9 @@ richness), not top-level layers; one vocabulary instead of two. Enabling `docume
 auto-enables `markdown` (its only dependency). This refines DR-5's *membership*, not its
 mechanism (composable, no fixed ladder); see DR-5.
 
-**Later by design, not now.** The **synthetic layer** (re-expressing `TextNode`/div parsing
-as a layer keyed into the node table) and **cross-layer structural-edit operations**
+**Later by design, not now.** The **synthetic layer** (structure from a small defined set of
+marker tags, re-expressing `TextNode`'s tag parsing as a layer keyed into the node table) and
+**cross-layer structural-edit operations**
 (move/wrap/splice anchored on `SpanRef`, generalizing today's `div_insert_wrapped`) are named
 later phases (Phases 3–4). The four hooks above ensure they drop in without reworking the
 core, which is the whole point of getting the layered shape right now.
@@ -402,7 +403,7 @@ fields; those go in `metadata`). Shape (abbreviated; see the research JSON sketc
 
 ```
 DocGraph = {
-  schema: "chopdiff.doc_graph.v1",
+  schema: "DocGraph/v0.1",
   source:  { format, offset_unit: "unicode_code_points", sha256, text? },
   nodes:   [ Node, ... ],            # the stable node set (block + inline families)
   views:   { toc, blocks, links, sentences, ... },   # arrays of node ids (projections)
@@ -842,16 +843,25 @@ updates" below for the per-section detail):
 
 Re-express the existing `<div>`/`<span>` structural parsing (`TextNode`, `parse_divs`,
 chunking) as the **synthetic layer** keyed into the shared node table, reconciling the two
-structural models the codebase has today (marko block model vs the `TextNode` div parser).
+structural models the codebase has today (marko block model vs the `TextNode` tag parser).
 Deferred by design (E9): not needed to ship the core, and the Phase-1 hooks (`layer` field,
 offset-containment `collect()`) make it additive rather than a rewrite.
 
+The **synthetic layer is the general "structure from marker tags" mechanism**, not just
+`<div>`/`<span>`. "Synthetic" means structure that is not inherent in the prose or Markdown
+but is added via a small, defined whitelist of marker tags, which can be different kinds of
+tags: standard HTML containers (`<div>`/`<span>`, today), custom semantic tags (`<chunk>`),
+or comment-delimited Markdoc-style directives (`<!-- chunk id="foo" -->`). This is the design
+principle; the initial implementation need only cover today's `<div>`/`<span>`.
+
 - [ ] Map `parse_divs`/`TextNode` output into `Node`s tagged `layer=synthetic`, keeping
-      exact offsets; the existing parser can back it (no new dependency).
+      exact offsets; the existing parser can back it (no new dependency). Carry the tag name
+      and attributes in `attrs` so a new marker tag is a whitelist entry, not a new code path.
 - [ ] Synthetic nodes coexist with markdown/textual nodes by span; cross-layer queries
       ("which markdown blocks are inside this `<div class="chunk">`") via offset-containment.
-- [ ] In-band metadata (`<span data-timestamp>`) becomes a synthetic-layer node that can
-      emit a `SpanRef` for free, unifying in-band and out-of-band (annotation-layer) metadata.
+- [ ] In-band metadata (`<span data-timestamp>`, or a `<!-- ... -->` directive) becomes a
+      synthetic-layer node that can emit a `SpanRef` for free, unifying in-band and
+      out-of-band (annotation-layer) metadata.
 
 ### Phase 4 (later): cross-layer structural edits and stand-off layers
 

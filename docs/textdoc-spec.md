@@ -108,7 +108,7 @@ each contributing nodes tagged with their `layer`:
 | **textual** | paragraphs, sentences, word tokens | — | ordered list |
 | **markdown** | block elements (recursive) and inline (links, code, emphasis) | — | tree |
 | **document** | section / heading hierarchy and TOC | markdown (headings) | tree |
-| **synthetic** | explicit `<div>`/`<span>` regions, chunk groupings (later phase) | — | tree |
+| **synthetic** | regions marked by a small defined set of marker tags (today `<div>`/`<span>`), chunk groupings (later phase) | — | tree |
 
 Two consequences define how layers interact:
 
@@ -122,7 +122,20 @@ Two consequences define how layers interact:
   generalized). The `SpanRef`-targeted annotation layer (§11) is the out-of-band layer,
   anchored to the same offset space.
 
-Layers are **enabled à la carte** (a configuration, not a fork): today's `TextNode` div
+The **synthetic layer is a general mechanism, not a `<div>` special case:** synthetic
+structure is introduced by a small, defined vocabulary of marker tags that delimit regions
+for chunking, grouping, and in-band metadata. The vocabulary is a fixed, known whitelist and
+can take any of these forms:
+
+- standard HTML containers, today `<div>`/`<span>` via `TextNode`;
+- custom semantic XML tags such as `<chunk>`;
+- comment-delimited (Markdoc-style) directives such as `<!-- chunk id="foo" -->`, which carry
+  structure in Markdown without rendering.
+
+The layer carries each region as a node with its tag name and attributes in `attrs`, so a new
+marker tag is configuration (an entry in the whitelist), not a new code path.
+
+Layers are **enabled à la carte** (a configuration, not a fork): today's `TextNode` tag
 subsystem is "the synthetic layer alone," and the full analysis path enables several. See
 [`research-2026-05-30-multilayer-parsing.md`](project/research/research-2026-05-30-multilayer-parsing.md)
 for the framing and prior art.
@@ -318,7 +331,7 @@ names in stable fields. Shape (abbreviated):
 
 ```
 DocGraph = {
-  schema: "chopdiff.doc_graph.v1",
+  schema: "DocGraph/v0.1",
   source:  { format, offset_unit: "unicode_code_points", sha256, text? },
   nodes:   [ Node, ... ],                       # the canonical node table
   views:   { toc, blocks, links, sentences },   # arrays of node ids (projections)
@@ -413,9 +426,10 @@ offset-containment queries, §3); exact provider-keyed token counts (`estimate_t
 heuristic); a thread-safety layer.
 
 **Later phases, not non-goals (E9).** The **synthetic layer**, re-expressing today's
-`TextNode`/`<div>` chunking as a layer keyed into the node table, and **cross-layer
-structural edits** (move/wrap/splice anchored on `SpanRef`, generalizing
-`div_insert_wrapped`) are deferred phases, not excluded. `TextNode` stays as-is meanwhile.
+`TextNode` tag chunking (a small defined set of marker tags, today `<div>`/`<span>`) as a layer
+keyed into the node table, and **cross-layer structural edits** (move/wrap/splice anchored on
+`SpanRef`, generalizing `div_insert_wrapped`) are deferred phases, not excluded. `TextNode`
+stays as-is meanwhile.
 The annotation, operation, provenance, and layout layers are likewise schema-reserved and
 built later. The Phase-1 hooks (the `layer` field, offset-containment `collect()`,
 `SpanRef`-anchored edits) keep these a small lift rather than a redesign.
