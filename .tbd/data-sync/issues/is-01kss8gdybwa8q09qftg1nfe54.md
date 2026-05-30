@@ -5,16 +5,16 @@ title: Settle unified-document-model design decisions (node-set vs tree, project
 kind: task
 status: open
 priority: 1
-version: 5
+version: 6
 spec_path: docs/project/specs/active/plan-2026-05-29-unified-document-model.md
 labels: []
 dependencies: []
 parent_id: is-01kss8gdn83f47wbrg3jve028r
 created_at: 2026-05-29T06:59:50.347Z
-updated_at: 2026-05-30T16:42:02.143Z
+updated_at: 2026-05-30T16:45:41.446Z
 ---
 See 'Open decisions' in the spec. Blocks all implementation.
 
 ## Notes
 
-Settled 2026-05-29: DR-1 node-table-with-views; DR-2 DocOverview projection of TextDoc; DR-3 Pydantic schema authoring (JSON Schema/Zod later); DR-4 one general collect() rollup primitive, no blessed per-kind shortcuts. Remaining open: 4 (detail axis), 6 (phase-1 scope), 7 (reference selectors), 8 (caching), 9 (list-item paragraph counting).
+Settled 2026-05-29: DR-1 node-table; DR-2 projection; DR-3 Pydantic authoring; DR-4 single collect() primitive (no shortcuts); plus 4 (Detail ladder), 6 (minimal phase-1 scope), 8 (lazy-cache), 9 (count list-item wrapper paragraphs). ONLY OPEN: 7 (reference selectors) - under research re: Chrome Text Fragments + W3C selectors + syntactic-vs-quoted spans. Settle after the research report.
