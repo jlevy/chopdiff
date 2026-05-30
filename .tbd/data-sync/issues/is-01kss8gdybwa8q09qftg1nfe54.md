@@ -5,12 +5,16 @@ title: Settle unified-document-model design decisions (node-set vs tree, project
 kind: task
 status: open
 priority: 1
-version: 2
+version: 3
 spec_path: docs/project/specs/active/plan-2026-05-29-unified-document-model.md
 labels: []
 dependencies: []
 parent_id: is-01kss8gdn83f47wbrg3jve028r
 created_at: 2026-05-29T06:59:50.347Z
-updated_at: 2026-05-29T07:05:30.682Z
+updated_at: 2026-05-30T16:30:07.746Z
 ---
 See 'Open decisions' in the spec. Blocks all implementation.
+
+## Notes
+
+Settled 2026-05-29: DR-1 (node-table-with-views) and DR-2 (DocOverview as a projection of TextDoc, source canonical). Recorded in the spec's Decision record. Remaining open: 3 (rollup surface), 4 (detail axis), 5 (schema home), 6 (phase-1 scope), 7 (reference selectors), 8 (caching), 9 (list-item paragraph counting).
