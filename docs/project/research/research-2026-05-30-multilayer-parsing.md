@@ -14,7 +14,11 @@
 > (durable span references / Chrome Text Fragments / W3C selectors). This brief narrows to
 > one question those two raised but did not fully develop: **what does it mean to treat a
 > document as several coexisting, independently-enabled parses over one immutable source,
-> and is that a coherent, novel, and useful framework?**
+> and is that a coherent, novel, and useful framework?** It also develops, in the layered
+> context, **how durable span references (Chrome Text Fragments, W3C selectors, fuzzy
+> anchoring) anchor an annotation/reference layer** that survives reparse and edits —
+> consolidating the span-reference brief into the layered model rather than leaving it as a
+> separate concern.
 
 ## Overview
 
@@ -72,17 +76,21 @@ what buys flexibility for downstream uses we have not yet imagined.
    serialization) and which one carries the flexibility?
 7. What is the hardest open problem (offset invalidation under edits) and how do related
    systems handle it?
+8. How do durable span references (Chrome Text Fragments, W3C selectors, fuzzy anchoring)
+   work, how do they differ, and how does a reference anchor a layer so it survives reparse
+   and edits?
 
 ## Scope
 
 Included: the *layering* question specifically — coexisting parses, enablement and
-dependencies, cross-layer relationships, layer purpose taxonomy, and how this reframes
-the node-table-with-views architecture already recommended in the broad survey.
+dependencies, cross-layer relationships, layer purpose taxonomy, how this reframes the
+node-table-with-views architecture already recommended in the broad survey, and **how
+durable span references anchor an annotation/reference layer** (consolidating and building
+on `research-2026-05-30-span-references.md`).
 
 Excluded (covered elsewhere, cited not repeated): the full editor/parser/CRDT/PDF survey
-and the comparison matrix (see `research-2026-05-29-document-model.md`); durable
-span-reference selector design (see `research-2026-05-30-span-references.md`); choice of
-Markdown parser (Marko vs djot); offset-unit choice (settled: Unicode code points). No new
+and the comparison matrix (see `research-2026-05-29-document-model.md`); choice of Markdown
+parser (Marko vs djot); offset-unit choice (settled: Unicode code points). No new
 dependency selection and no implementation code here.
 
 ## Findings
@@ -248,6 +256,113 @@ attached externally (a SpanRef) become *the same kind of thing* — a span carry
 payload — and relate to every other layer by the same containment query. The bridge
 between in-band and out-of-band metadata is structural, not manual.
 
+### Referencing portions of a document: span references as a layer
+
+An out-of-band annotation needs a way to say *which* portion of the document it targets,
+and that reference must survive two things the layered model takes for granted: reparse
+(the node table is a cache, rebuilt from source, so node ids are not durable) and edits
+(offsets shift). A raw offset pair fails both. The mature systems all converge on the same
+answer — **store multiple coordinated selectors, make a text quote canonical, treat offsets
+as a hint** — and that answer is what makes references a well-behaved *layer* rather than a
+fragile pointer. This section consolidates the span-reference brief into the layered model.
+
+#### How the major formats reference a span
+
+- **Chrome / WICG Text Fragments** (`#:~:text=…`). Grammar:
+  `#[element-id]:~:text=[prefix-,]textStart[,textEnd][,-suffix]`. `textStart` alone is an
+  exact match; `textStart,textEnd` is a range; a trailing `prefix-` and leading `-suffix`
+  supply disambiguating context. Matching is case-insensitive (Unicode base-character,
+  accent-insensitive), **word-boundary constrained** ("range" matches "mountain range", not
+  "orange"), whitespace-flexible, and each piece must sit within one block-level element.
+  Critically, there is **no robustness fallback**: if no match is found the fragment is
+  *silently ignored*. The spec itself calls text fragments "less stable than document
+  structure" — they are designed for *transient* links (search result highlights, sharing),
+  not durable anchors. `-`, `,`, `&` in content are percent-encoded; the `:~:` directive is
+  stripped from script-visible URLs; a user gesture is required (anti-abuse). Supported in
+  Chrome/Edge/Opera/Safari and Firefox (2024+); feature-detect via
+  `document.fragmentDirective`.
+- **W3C Web Annotation selectors.** The reference vocabulary: `TextQuoteSelector`
+  (`exact` + `prefix` + `suffix` — most robust, context disambiguates and the quote enables
+  fuzzy re-match); `TextPositionSelector` (`start`/`end` integer offsets — fast but brittle,
+  and the spec **never resolved code-points vs UTF-16**, a real interop hazard);
+  `RangeSelector` (start/end via XPath/CSS — DOM-tied). Composition is first-class:
+  `refinedBy` (e.g. a section fragment refined by a quote) and `oa:Choice` (ordered
+  alternatives — the fallback mechanism). This is the menu chopdiff's reference type draws
+  from.
+- **Hypothesis / Apache Annotator — fuzzy anchoring (the battle-tested practice).** Stores
+  *three* selectors per annotation (Range + TextPosition + TextQuote) and re-anchors in
+  priority order: (1) DOM range, verified against the quote; (2) position offsets, verified
+  against the quote; (3) quote fuzzy-search *hinted* by the offset; (4) quote full-document
+  fuzzy search. Fuzzy matching uses Google diff-match-patch (Bitap) with a hint offset and
+  threshold; ~32 chars of prefix/suffix are stored. **None of the three is "canonical" — but
+  the quote is what makes recovery possible**, and offsets are recomputed on success.
+- **RFC 5147 (`text/plain`) and W3C Media Fragments** (for comparison). Pure offset/line
+  identifiers (`#char=0,99`, `#line=10,19`, `t=10,20`), optionally with `;length=`/`;md5=`
+  **integrity checks** that *detect* change but offer no recovery. Useful precedent for
+  "offsets plus an integrity hint," not for robustness.
+
+#### Strategy comparison
+
+| Strategy | Robust to edits | Disambiguation | Compact | Standard |
+| --- | --- | --- | --- | --- |
+| Offset span | Fragile (shifts) | Perfect if unchanged | Two ints | RFC 5147, `TextPositionSelector` |
+| Text quote (exact only) | Moderate | Poor if repeated | ~ selection | `TextQuoteSelector` |
+| Quote + prefix/suffix | Good (fuzzy-able) | Good | exact + ~32×2 | `TextQuoteSelector`, Chrome TF |
+| Structural path | Fragile to restructure | Good | Moderate | `RangeSelector` |
+| Multi-selector ensemble | Best | Excellent | Larger | Hypothesis, `oa:Choice` |
+
+The lesson is consistent across all of them, and it is the offset-unit pitfall too:
+`len("🤦🏼‍♂️")` is 5 code points, 7 UTF-16 units, 17 UTF-8 bytes — so the unit must be
+declared. Chopdiff pins **Unicode code points** (Python-native, matches W3C text selection)
+and treats UTF-16/byte forms as derived conversions.
+
+#### `SpanRef`: chopdiff's reference, and why it is a layer
+
+The recommended shape carries *both* a durable quote and a recomputable offset hint, and
+deliberately never persists the in-memory node id:
+
+```python
+class SpanRef:
+    # Quoted span — canonical durable anchor (survives edits; Text-Fragment compatible)
+    exact: str
+    prefix: str = ""        # ~32-128 chars of context
+    suffix: str = ""
+    # Offset span — exact within the current source; a recomputable HINT, code points
+    start: int | None = None
+    end: int | None = None
+    # (node_id is an in-memory handle only and is NEVER persisted)
+```
+
+Naming note: the type is `SpanRef` rather than a bare `Reference`, which is too generic for
+a low-level library. The first version is at least as expressive as Chrome's
+prefix/suffix+exact model; refinement (multiple coordinated selectors, structural paths,
+`oa:Choice`-style alternatives) is expected once the annotation layer is exercised.
+
+This is exactly what makes references a *layer* in the framework rather than a pointer:
+
+- **The annotation/reference layer is the out-of-band layer.** It is ordered and
+  overlap-tolerant (a SpanRef can straddle paragraphs), so by the nesting-guarantee rule its
+  view is a list, not a tree. It is the one layer whose nodes are authored externally rather
+  than parsed from source — but it anchors to the same offset coordinate space as every
+  parsed layer, so cross-layer containment queries work unchanged ("which section / block /
+  sentence contains this annotation?").
+- **Re-anchoring is the layered model's reparse, applied to references.** When source
+  changes the node table is rebuilt; a SpanRef re-resolves to nodes by the Hypothesis order
+  — offset hint verified against `exact`, then offset-hinted fuzzy, then full-document fuzzy
+  — and its offsets are recomputed. Persistence is quote-canonical precisely because node
+  ids and offsets do not survive reparse; the quote does.
+- **In-band and out-of-band unify through SpanRef.** A parsed in-band span (a
+  `<span data-timestamp>` from the synthetic layer) is *already* source-grounded, so it can
+  emit a SpanRef for free; an externally-authored annotation *is* a SpanRef plus a payload.
+  One reference mechanism serves both, which is why the in-band/out-of-band bridge is
+  structural.
+- **Chrome Text Fragment export is a lossy projection** of a SpanRef: emit
+  `#:~:text=[prefix-,]exact[,-suffix]` for prose where word-boundary + case-insensitive
+  matching is acceptable, truncating context to ~50 chars for URL length, and drop the
+  offsets. Do *not* store the Text-Fragment URL itself (it is a rendering) or DOM/XPath
+  selectors (environment-specific). This gives shareable, browser-native deep links out of
+  the same references used internally.
+
 ### Two view shapes per layer: well-nested tree vs ordered list
 
 Offset containment reconstructs a clean tree *only* when a layer's spans are well-nested.
@@ -350,6 +465,11 @@ cache" invalidates all enabled layers at once.
   — including ones not yet imagined — is a projection, not a refactor.
 - **In-band and out-of-band metadata unify.** A discovered `data-*` span and an attached
   annotation are both payload-carrying spans; one framework serves both.
+- **A reference is a layer, not a pointer.** Durable span references (quote canonical,
+  offsets as hints, node id never persisted) anchor the out-of-band annotation layer to the
+  same offset space as parsed layers, so they survive reparse via fuzzy re-anchoring
+  (Hypothesis order) and relate to every other layer by containment. Chrome Text Fragments
+  are a lossy export, not the storage form.
 
 ## Comparison Matrix
 
@@ -395,8 +515,10 @@ canonical source); **Enablement** (layers turned on à la carte); **Cross-layer 
 
 ## Next Steps
 
-- [ ] Fold in verified prior-art citations (overlapping markup, UIMA/NIF tiers,
+- [x] Fold in verified prior-art citations (overlapping markup, UIMA/NIF tiers,
       tree-sitter injections, OHCO critique).
+- [x] Cover span-reference formats in depth (Chrome Text Fragments, W3C selectors, fuzzy
+      anchoring, `SpanRef`) and tie them to the annotation layer.
 - [ ] Walk every existing use case (synthetic chunking, in-band metadata, surgical edit,
       section move, zoomable UI) through the layered lens and confirm each needs only
       offset-keyed spans + per-layer views + containment queries.
@@ -412,7 +534,10 @@ canonical source); **Enablement** (layers turned on à la carte); **Cross-layer 
 Builds on local review of `TextDoc`, `TextNode`, the div subsystem, the block-aware
 work (v0.4.0), and the two prior research briefs. A dedicated research pass gathered
 primary sources for the overlapping-markup, multi-tier-annotation, layered-parsing, and
-OHCO-critique threads (folded into Findings). A few primary pages returned 403 to
+OHCO-critique threads (folded into Findings). The span-reference section consolidates the
+primary-source findings of `research-2026-05-30-span-references.md` (Chrome Text Fragments,
+W3C selectors, Hypothesis fuzzy anchoring, RFC 5147) into the layered model. A few primary
+pages returned 403 to
 automated fetches (TexMECS, xconcur.org, the MPI ELAN page, the LSP 3.16 spec page); those
 claims are corroborated by consistent secondary sources and noted where confidence is
 lower. No new benchmarks were run; claims about specific systems reflect their documented
@@ -461,6 +586,14 @@ External — OHCO and its critique:
 
 - [OHCO: "What is Text, Really?" (DeRose et al., 1990)](https://link.springer.com/article/10.1007/BF02941632)
 - [Overlapping-hierarchy critique (Renear et al., 1996)](https://www.ideals.illinois.edu/items/9468)
+
+External — span references / annotation targeting (see also the span-reference brief):
+
+- [WICG Scroll-To-Text-Fragment spec](https://wicg.github.io/scroll-to-text-fragment/) / [README](https://github.com/WICG/scroll-to-text-fragment/blob/main/README.md)
+- [MDN Text Fragments](https://developer.mozilla.org/en-US/docs/Web/URI/Reference/Fragment/Text_fragments)
+- [W3C Web Annotation Data Model](https://www.w3.org/TR/annotation-model/) / [Vocabulary](https://www.w3.org/TR/annotation-vocab/)
+- [Hypothesis fuzzy anchoring](https://web.hypothes.is/blog/fuzzy-anchoring/) / [Apache Annotator](https://github.com/apache/incubator-annotator) / [diff-match-patch](https://github.com/google/diff-match-patch)
+- [RFC 5147 (text/plain fragments)](https://datatracker.ietf.org/doc/html/rfc5147) / [W3C Media Fragments](https://www.w3.org/TR/media-frags/)
 
 <!-- This document follows common-doc-guidelines.md.
 See github.com/jlevy/practical-prose and review guidelines before editing.
