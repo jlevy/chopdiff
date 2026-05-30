@@ -733,15 +733,21 @@ class TextDoc:
             else:
                 sub_paras.append(para)
 
-        return TextDoc(sub_paras, source_text=self.source_text)
+        # Deep-copy so the sub-document is an independent value: callers (and transform
+        # helpers like remove_window_br) must not mutate the original through a slice.
+        return TextDoc([deepcopy(p) for p in sub_paras], source_text=self.source_text)
 
     def sub_paras(self, start: int, end: int | None = None) -> TextDoc:
         """
-        Get a sub-document containing a range of paragraphs.
+        Get a sub-document containing a range of paragraphs. Returns an independent deep
+        copy, so mutating the sub-document does not affect this one.
         """
         if end is None:
             end = len(self.paragraphs) - 1
-        return TextDoc(self.paragraphs[start : end + 1], source_text=self.source_text)
+        return TextDoc(
+            [deepcopy(p) for p in self.paragraphs[start : end + 1]],
+            source_text=self.source_text,
+        )
 
     def iter_blocks(
         self,
@@ -849,6 +855,14 @@ class TextDoc:
     def as_wordtok_to_sent(
         self, bof_eof: bool = False
     ) -> Generator[tuple[str, SentIndex], None, None]:
+        # An empty document has no sentences; boundary tokens map to a sentinel index so
+        # `as_wordtoks(bof_eof=True)` yields just BOF/EOF instead of raising on last_index().
+        if not self.paragraphs:
+            if bof_eof:
+                yield BOF_TOK, SentIndex(0, 0)
+                yield EOF_TOK, SentIndex(0, 0)
+            return
+
         if bof_eof:
             yield BOF_TOK, self.first_index()
 
