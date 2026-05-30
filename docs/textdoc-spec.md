@@ -189,31 +189,37 @@ in tests.
 
 ### Sequential block list — `TextDoc.base_blocks() -> list[Block]`
 
-A flat, depth-annotated **partition** of the document: the ordered sequence of base blocks,
-each carrying a `depth`. It is the view for block-by-block pipelines and for outline UIs
-that move/resequence blocks (e.g. Notion-style drag-and-drop) — chopdiff does not implement
-such UIs, but the model supports addressing and reordering at this granularity.
+A **base block is a block node** (the same `Block`/node type) — but the **base-block list**
+is a *partition* of the document: the ordered sequence of base blocks, each carrying a
+`depth`. It is the view for block-by-block pipelines and outline UIs that move/resequence
+blocks (e.g. Notion-style drag-and-drop, where every item is a draggable unit) — chopdiff
+does not implement such UIs, but the model supports addressing and reordering at this
+granularity. Document manipulation and processing happen base block by base block.
 
-**Default frontier:** descend through list containers (`list`, `ordered_list`,
-`list_item`); **every other block is an atomic base block**, carrying its `depth`.
-Consequences:
+**Frontier.** Leaf and atomic blocks (heading, paragraph, table, code, thematic break,
+HTML, and a whole **blockquote**) are each one base block. **Lists decompose:** each **list
+item, at every nesting level, is its own base block** with increasing `depth`
+(flat-with-depth). An item holding a nested list contributes its own content at depth *d*
+and its nested items follow at *d+1*, which keeps the partition non-overlapping.
 
-- A **blockquote is always one base block** (not descended), even if it contains a table.
-- A **list is never itself a base block**; each **item, at every nesting level, is its own
-  base block** with increasing `depth`, giving a flat-with-depth sequence. An item that
-  holds a nested list contributes its own content as a base block at depth *d*, and the
-  nested items follow at depth *d+1* (which is what keeps the partition non-overlapping).
+How deep lists decompose is one numeric parameter, `base_blocks(list_depth=6)`:
 
-The frontier is parameterizable — `base_blocks(descend=...)`, default
-`{list, ordered_list, list_item}`; `descend=∅` collapses to the top-level blocks (a list is
-then one base block). One mechanism, sensible default — not a fixed menu.
+- `list_depth = N` (default **6** — deep enough for normal nested lists): split list items
+  down to *N* nesting levels; list content nested deeper than *N* stays whole inside its
+  depth-*N* base block (avoids pathological fan-out on very deep lists).
+- `list_depth = -1`: unlimited — split at every nesting level.
+- `list_depth = 0`: lists are not split — each list is a single base block (coarse mode,
+  i.e. the top-level blocks).
+
+Blockquotes are always one base block regardless of `list_depth`.
 
 **Invariants** (validated and documented): the base-block list is **ordered** by position,
-**non-overlapping** by span, and a **complete cover** — reassembling the base blocks in
-order reproduces the document (at the normalized/editing level, the same way
-`reassemble()` joins paragraphs). So a pipeline may edit or **resequence** base blocks and
-reassemble; `depth` is mutable metadata (promoting a depth-2 item to depth-1 on a move is
-intended, not a violation — it just changes that block's rendered nesting).
+**non-overlapping** by span, and a **complete cover**. Reassembling the base blocks in order
+reproduces the document **exactly except for normalized paragraph-break whitespace** (runs
+of blank lines between blocks); every base block also retains its exact `source_span`, so a
+byte-for-byte reconstruction is available from offsets when needed. A pipeline may process,
+edit, or **resequence** base blocks and reassemble; `depth` is mutable metadata — promoting
+a depth-2 item to depth-1 on a move just changes its rendered nesting, not a violation.
 
 ## 7. Sections and TOC
 

@@ -722,10 +722,12 @@ updates" below for the per-section detail):
 
 - [ ] Make the structural block tree fully recursive (containers populate block children);
       keep top-level `blocks()` shape, add deep traversal. Density-invariant preserved.
-- [ ] Add `base_blocks(*, descend={list,ordered_list,list_item})` — the flat, depth-annotated
-      **sequential block list** (partition). Invariant: ordered, non-overlapping, complete
-      cover (reassembly reproduces the document); `depth` per base block. Terminology: *block
-      node* (recursive tree) vs *base block* (partition). (textdoc-spec §6.)
+- [ ] Add `base_blocks(*, list_depth=6)` — the flat, depth-annotated **sequential block
+      list** (partition). `list_depth` controls list decomposition (default 6; `-1`
+      unlimited; `0` lists unsplit); blockquotes always atomic. Invariant: ordered,
+      non-overlapping, complete cover whose reassembly reproduces the document (exact except
+      normalized paragraph-break whitespace; exact via offsets). A base block is a block
+      node; the base-block *list* is the partition. (textdoc-spec §6.)
 - [ ] Model inline items as nodes with `parent` block and computed `section`/`sentence`.
 - [ ] Lazy-cache the node table on the immutable `source_text`; make `Section.blocks()`
       slice the cached tree (remove per-section reparse).
