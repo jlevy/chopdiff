@@ -5,11 +5,19 @@ title: "Robustness Phase 2: HTML helpers + smaller contracts (nested self-closin
 kind: task
 status: open
 priority: 2
-version: 1
+version: 8
 spec_path: docs/project/specs/active/plan-2026-05-26-robustness-hardening.md
 labels: []
 dependencies: []
 parent_id: is-01kstdjhs0af2pq2p92b2d46v0
+child_order_hints:
+  - is-01ksw0x8fkc0f4cjwz8vdcfh6n
+  - is-01ksw0x8twd08ktqq3s4jcc4bn
+  - is-01ksw0x9608nagyrpm6t75ywmf
+  - is-01ksw0x9k841c0w2gg0bzcgmp5
+  - is-01ksw0x9ze87ycdxqtrmcs30as
+  - is-01ksw0xadc0sbrj45y45ar5p3v
+  - is-01ksw0xat5tjq5ah8ma0y3f6mh
 created_at: 2026-05-29T17:47:37.656Z
-updated_at: 2026-05-29T17:47:37.656Z
+updated_at: 2026-05-30T08:44:47.813Z
 ---
