@@ -222,18 +222,30 @@ def _build_inline_nodes(
             )
             all_nodes[nid] = node
 
-    # Code spans and inline HTML via iter_atomic_spans.
+    # Code spans, inline HTML, and images via iter_atomic_spans.
     for atomic in iter_atomic_spans(source_text):
         if not atomic.is_atomic or atomic.name is None:
             continue
         if atomic.name not in _INLINE_ATOMIC_KINDS:
             continue
-        # Skip links/images already handled above.
-        if atomic.name == "markdown_link":
-            continue
 
-        kind = _INLINE_ATOMIC_KINDS[atomic.name]
         span = (atomic.start, atomic.end)
+
+        # For markdown_link spans: links were already handled above via doc.links().
+        # Only process unhandled ones here (images, which extract_links skips).
+        if atomic.name == "markdown_link":
+            if span in seen_spans:
+                continue
+            # Check if this is an image (preceded by `!`).
+            if atomic.start > 0 and source_text[atomic.start - 1] == "!":
+                kind = NodeKind.image
+                span = (atomic.start - 1, atomic.end)
+            else:
+                # A non-image markdown_link not found by doc.links(); skip.
+                continue
+        else:
+            kind = _INLINE_ATOMIC_KINDS[atomic.name]
+
         if span in seen_spans:
             continue
         seen_spans.add(span)
@@ -247,6 +259,19 @@ def _build_inline_nodes(
             inline_attrs["content"] = stripped.strip()
         elif kind == NodeKind.inline_html:
             inline_attrs["tag"] = atomic.text
+        elif kind == NodeKind.image:
+            inline_attrs["url"] = ""
+            # Extract URL from the image markdown: ![alt](url)
+            text = source_text[span[0] : span[1]]
+            paren_start = text.find("(")
+            paren_end = text.rfind(")")
+            if paren_start >= 0 and paren_end > paren_start:
+                inline_attrs["url"] = text[paren_start + 1 : paren_end]
+            # Extract alt text.
+            bracket_start = text.find("[")
+            bracket_end = text.find("]")
+            if bracket_start >= 0 and bracket_end > bracket_start:
+                inline_attrs["text"] = text[bracket_start + 1 : bracket_end]
 
         section_id = _find_deepest_section(span[0], all_nodes)
         if section_id:
