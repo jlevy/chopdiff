@@ -6,9 +6,11 @@
 
 **Status:** Draft — design firming up. This document walks through approaches
 ("Exploration"), proposes a clean design ("Proposed design"), and records settled choices
-("Decision record"). **The two architectural decisions are settled (2026-05-29): DR-1
-node-table-with-views, DR-2 `DocOverview` as a projection of `TextDoc`.** The remaining
-seven Open decisions are smaller and still open.
+("Decision record"). **Four decisions are settled (2026-05-29): DR-1 node-table-with-views,
+DR-2 `DocOverview` as a projection of `TextDoc`, DR-3 Pydantic schema authoring, DR-4 one
+general `collect()` rollup primitive (no blessed shortcuts).** Remaining Open decisions: 4
+(detail axis), 6 (phase-1 scope), 7 (reference selectors), 8 (caching), 9 (list-item
+paragraph counting).
 
 **Implementation status:** **None — design-stage.** No code has been written for this
 plan and none lands until the Open decisions are settled. It builds on the
@@ -366,21 +368,38 @@ Node = {
 ## D2. Python projection and query API (over `TextDoc`)
 
 A builder turns a `TextDoc` (+ its cached recursive block tree, sections, links) into the
-node table, lazily and cached on the immutable source. Public surface (additive):
+node table, lazily and cached on the immutable source. Public surface (additive), kept
+deliberately minimal — **one general query primitive, no blessed per-kind rollups** (DR-4):
 
 - `TextDoc.overview(detail=Detail.BLOCKS) -> DocOverview` — build/serialize.
-- Query primitive (works at doc, section, or block scope):
-  - `collect(*, kinds=None, recursive=False, inline=False) -> list[Node]` (values)
-  - `counts(*, recursive=False, inline=False) -> Counter[NodeKind]` (counts)
-  - `index(*, recursive=False) -> dict[NodeKind, list[Node]]` (values + locations + counts)
-- Scope handles: `overview` (document), `overview.section(id)`, `overview.node(id)`; each
-  exposes the same three methods, so rollups are uniform across scopes.
-- Relationships: `node.parent`, `node.ancestors`, `node.section`, `node.sentence` (for
-  inline), all by id; "links in section 3" = `overview.section(s3).collect(kinds={link},
-  recursive=True)`.
+- **One query primitive**, at document / section / block scope:
+  ```python
+  collect(*, kinds=None, where=None, recursive=False, inline=False) -> list[Node]
+  ```
+  `kinds=` selects by node kind (typed, common case); `where=` is a `Node -> bool`
+  predicate escape hatch for anything else; `recursive` descends into children; `inline`
+  includes inline nodes. It returns **nodes** — each carrying `span`, `attrs`, and edges.
+- **Values, counts, and groupings are standard Python over the result**, documented with
+  clear examples, not separate methods:
+  ```python
+  ov.collect(kinds={NodeKind.table}, recursive=True)            # the tables (values + spans)
+  len(ov.collect(kinds={NodeKind.table}, recursive=True))       # how many
+  Counter(n.kind for n in ov.collect(recursive=True))           # tally by kind
+  {k: list(g) for k, g in groupby(... )}                        # group as needed
+  ```
+- Scope handles: `ov` (document), `ov.section(id)`, `ov.node(id)`; each exposes `collect`,
+  so rollups are uniform across scopes.
+- Relationships are node edges, not a separate rollup: `node.parent`, `node.ancestors`,
+  `node.section`, `node.sentence` (for inline). "links in section 3" =
+  `ov.section(s3).collect(kinds={NodeKind.link}, recursive=True)`; pair with their block
+  via `[(n, n.parent) for n in ...]`.
 
 This makes the structural block tree fully recursive (containers populate children),
-fixing the tallies gap: a table inside a blockquote or list item is a node and is counted.
+fixing the tallies gap: a table inside a blockquote or list item is a node and is found.
+The existing v0.4.0 convenience accessors (`TextDoc.block_type_counts()`,
+`Section.block_type_counts()`) are **superseded by `collect()`** and are removed when the
+unified model lands (migration: `Counter(n.kind for n in ov.collect(...))`); this is a
+semi-breaking change for the next minor.
 
 ## D3. Detail levels
 
@@ -392,7 +411,7 @@ include-flags (`text`, `sentences`, `tokens`, `annotations`, `layout`) for preci
 
 | Requirement | Mechanism |
 | --- | --- |
-| Rollups of values or counts, any time | `collect` / `counts` / `index` over the node set |
+| Rollups of values or counts, any time | one `collect()` over the node set; counts via `len`/`Counter` |
 | Around blocks or whole document, by section | scope handles: document / `section(id)` / `node(id)` |
 | Recursively collect blocks + inline + relationships | recursive `collect(inline=True)`; parent/section/sentence edges |
 | Full recursive structure | fully-populated containment tree in `nodes` |
@@ -460,8 +479,12 @@ reparses and re-resolves the annotations back to nodes.
    not a competing editable runtime model. It may be a rich value with query methods, but
    source text / `TextDoc` stays canonical; edits go through `TextDoc`/source and
    re-derive. See the Decision Record.
-3. **Rollup surface (E3/E4).** One `collect/counts/index` primitive with scope handles, and
-   inline items as nodes (4a)? Or keep block-only rollups + a separate link index?
+3. **Rollup surface (E3/E4).** ✅ **SETTLED (2026-05-29): Option B — one general query
+   primitive, no blessed shortcuts.** A single `collect(*, kinds=, where=, recursive=,
+   inline=)` over the node set, at doc/section/block scope; counts/values/groupings are
+   standard Python (`len`/`Counter`/comprehensions) documented with clear examples. Inline
+   items are nodes (4a); relationships are node edges. No per-kind rollup methods, to keep
+   the embeddable library's surface small. See DR-4.
 4. **Detail axis (E5).** Cumulative `Detail` ladder backed by flags (5c)?
 5. **Schema versioning home.** ✅ **SETTLED (2026-05-29): Pydantic as the authoring layer.**
    The `DocOverview` schema is authored as Pydantic models (single source of truth), which
@@ -512,7 +535,7 @@ minimal Phase-1 scope (decision 6).
 
 **Decision (2026-05-29):** `DocOverview` is a **derived projection / serialized contract**
 built from `TextDoc` (the Python core). It may be returned as a rich value with
-`collect/counts/index` query methods, but it is **read-mostly and not canonical**: source
+a `collect()` query method, but it is **read-mostly and not canonical**: source
 text / `TextDoc` is the source of truth, and edits go through `TextDoc`/source and
 re-derive. No competing editable runtime document model.
 
@@ -546,6 +569,29 @@ cases prove the shape. The model ≠ format separation (research) holds: the Pyd
 pin `offset_unit` (Unicode code points); when the shape stabilizes, publish the emitted
 JSON Schema as the cross-language artifact and consider a Zod mirror for TS clients.
 
+### DR-4 — Rollup surface: one general query primitive, no blessed shortcuts (settles Open decision 3)
+
+**Decision (2026-05-29):** Provide a **single general query primitive** —
+`collect(*, kinds=, where=, recursive=, inline=)` over the node set at doc/section/block
+scope — and **no per-kind rollup methods**. Values are the returned nodes; counts and
+groupings are standard Python (`len`, `Counter`, comprehensions), documented with clear
+worked examples. Relationships are node edges (`parent`/`section`/`sentence`), not a
+separate API.
+
+**Why:** chopdiff is a low-level library embedded in other programs. A fixed menu of
+"blessed" rollups (`tables()`, `code_blocks()`, …) is combinatorial (kind × scope ×
+recursive × values/counts × inline), can't cover ad-hoc queries, and grows the surface to
+design, version, and maintain. One primitive with a `kinds=` selector plus a `where=`
+predicate escape hatch is maximally flexible, has a tiny stable surface, and keeps "no
+stored counts" by construction. The maintenance cost of shortcuts of uncertain value is
+not worth embedding in a low-level dependency.
+
+**Consequences:** discoverability rests on clear docs and worked examples (the
+`examples/normalized_form.py` pattern) rather than autocomplete; the v0.4.0
+`block_type_counts()` accessors are superseded by `collect()` and removed in the next minor
+(migration documented). Add named conveniences later only if docs/usage prove a specific
+one is broadly needed.
+
 ## Implementation plan
 
 Kept to two phases; phase 1 is the useful core, phase 2 is serialization polish. (No work
@@ -558,8 +604,8 @@ starts until "Open decisions" is settled.)
 - [ ] Model inline items as nodes with `parent` block and computed `section`/`sentence`.
 - [ ] Lazy-cache the node table on the immutable `source_text`; make `Section.blocks()`
       slice the cached tree (remove per-section reparse).
-- [ ] Add the `collect` / `counts` / `index` query primitive with document / section /
-      block scope handles; recursive and inline options.
+- [ ] Add the single `collect(*, kinds=, where=, recursive=, inline=)` query primitive
+      with document / section / block scope handles. No per-kind rollup methods (DR-4).
 - [ ] Define the `Reference` type and resolution: `Reference.from_node(node)` (total
       model→source), `resolve(reference, doc)` (source→model via span/quote/structural),
       and `to_persisted()` (drop transient `node_id`). No annotation *storage* yet — just
