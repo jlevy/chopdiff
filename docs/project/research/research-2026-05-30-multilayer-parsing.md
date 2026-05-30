@@ -4,7 +4,7 @@
 
 **Author:** Claude (with Joshua Levy)
 
-**Status:** In Progress
+**Status:** Complete (survey with primary-source citations)
 
 > Companion to two prior briefs, which it builds on rather than repeats:
 > [`research-2026-05-29-document-model.md`](research-2026-05-29-document-model.md)
@@ -46,10 +46,14 @@ for all.
 
 This is the conceptual core behind both `DocGraph` (the serialized, language-neutral
 projection of the layers) and `TextDoc` (the Python parsing/analysis API that builds and
-queries them). The claim worth testing in this brief is that this layered framing is
-**unusually general** — most prior systems commit to a single privileged hierarchy and
-bolt the others on — and that getting the framework right is what buys flexibility for
-downstream uses we have not yet imagined.
+queries them). The non-tree insight itself is *not* new — overlapping-markup data models
+(GODDAG, LMNL, TAG) and multi-tier NLP annotation (UIMA, annotation graphs) established it
+decades ago, and the academic community explicitly retracted the "text is one hierarchy"
+thesis (OHCO) in 1996. What is underexplored, and where this framework aims to contribute,
+is **packaging that insight as a small, embeddable, source-grounded, JSON-serializable
+library with à-la-carte layer enablement and an explicit dependency graph** — rather than a
+full markup meta-language or a heavyweight NLP framework. Getting that framework right is
+what buys flexibility for downstream uses we have not yet imagined.
 
 ## Questions to Answer
 
@@ -85,29 +89,101 @@ dependency selection and no implementation code here.
 
 ### Prior art: multiple coordinated layers over one source
 
-> _Citations being verified by a research pass; this section will be filled in with
-> primary sources. Placeholder structure below records the threads to cover._
+The layered framing is novel as a *practical embeddable library design*, but the
+underlying idea — that one text needs several coexisting structures — has a long and mostly
+academic lineage. The recurring lesson across four traditions is the same: **the single
+tree is the thing that breaks, and the fix is to share one anchor space (text leaves or
+character offsets) across independent structural layers.** That is exactly the
+node-table-keyed-to-offsets substrate proposed here. What is largely *missing* from the
+prior art is à-la-carte enablement with a dependency graph and a deliberately small,
+JSON-serializable, language-neutral contract; most prior systems are either full markup
+meta-languages or heavyweight NLP frameworks.
 
 #### Overlapping / concurrent markup
 
-_To fill: GODDAG, LMNL (ranges), TexMECS, TAG/TAGML, XConcur, standoff properties — the
-data models that abandon the single-tree assumption._
+The text-encoding community hit the single-tree wall directly and produced a sequence of
+non-tree data models:
+
+- **SGML CONCUR** (ISO 8879:1986) already allowed multiple DTDs over one document, each a
+  different hierarchy — the conceptual precedent for concurrent layers, though rarely
+  implemented.
+- **MECS** and its successor **TexMECS** (Huitfeldt; Sperberg-McQueen) permit elements to
+  *overlap* rather than nest; TexMECS drops even MECS's same-type non-overlap restriction.
+- **GODDAG** (Sperberg-McQueen & Huitfeldt, 2000/2004) is the canonical data structure:
+  multiple markup trees share the same ordered leaf (text) nodes, and overlap is
+  represented by nodes with multiple parents — a DAG over shared leaves. This is the direct
+  ancestor of "many trees, one anchor space."
+- **LMNL** (Tennison & Piez, 2002) replaces the element hierarchy with named *ranges* over
+  a string plus structured *annotations*; ranges freely overlap and hierarchy is *derived,
+  not prescribed* — strikingly close to "spans over source, views derived by containment."
+- **XConcur** (Witt & Schonefeld) layers N independent XML hierarchies over one source,
+  each separately extractable and validatable; XConcur-CL adds cross-layer constraints.
+- **TAG / TAGML** (Huygens ING, 2017) models text as a property *hypergraph*: hyperedges
+  connect a markup node to multiple text nodes, so overlap and discontinuity are native.
+- **Standoff properties** (rooted in 1990s TIPSTER) keep annotations as offset-keyed
+  `{start, end, type}` records over immutable text — the lightweight, JSON-friendly end of
+  this spectrum, and the closest in spirit to chopdiff's intended weight.
+
+The takeaway: every one of these abandoned the single tree, and the durable common
+denominator is *shared leaves / shared offsets + independent structural layers*. Chopdiff's
+contribution is not the non-tree insight (well-established) but packaging it as a small,
+enable-by-need, source-grounded, serializable model rather than a markup meta-language.
 
 #### Stand-off and multi-tier annotation (NLP / linguistics)
 
-_To fill: UIMA CAS Sofa + multiple views, NIF + RFC 5147 offsets, ELAN/Praat tiers — the
-"many independent layers over immutable text" tradition._
+The linguistics tradition independently arrived at "many layers, one immutable source,"
+and crucially treats layers as *tiers* — flat, independent segmentations rather than one
+hierarchy:
+
+- **UIMA CAS** supports multiple *views*, each with its own Subject of Analysis and its own
+  annotation index, all sharing one type system and CAS — the closest enterprise ancestor
+  of typed layers over a shared base.
+- **NIF 2.0** anchors all annotation to RFC 5147 character-offset URIs over an immutable
+  `Context` string; independent layers (POS, entities, parses) are just different RDF
+  triples over the same offsets. This validates code-point offsets as the cross-layer
+  lingua franca.
+- **ELAN** and **Praat TextGrid** use stacked, independent *tiers* over one media timeline
+  (utterance / word / phoneme / gesture), with ELAN distinguishing independent from
+  dependent tiers — a direct precedent for the layer *dependency* idea (sections depend on
+  headings the way a word tier depends on an utterance tier).
+- **Annotation graphs** (Bird & Liberman, 2001) formalize all of this: annotations are
+  labeled edges over shared anchor nodes; different annotation types are independent
+  subgraphs, no single tree privileged — the closest formal statement of "node table with
+  typed layers."
 
 #### Multi-grammar / layered parsing in tools
 
-_To fill: Tree-sitter injection grammars (embedded languages over one buffer), language
-servers / semantic tokens as a layer over syntax._
+Working editors and parsers already do layered parsing over one buffer, which is direct
+evidence the approach is implementable and performant:
+
+- **Tree-sitter injections** restrict a parser to byte ranges (`included_ranges`), so a
+  host grammar (HTML) and embedded grammars (JS, CSS) each produce their own tree over the
+  same buffer; editors literally call these "language layers" and they nest recursively.
+  This is the strongest engineering precedent for *enabling* parsers per region/dimension.
+- **LSP semantic tokens** are an offset-keyed annotation layer *on top of* syntax
+  highlighting — a semantic layer that needs type information the grammar layer cannot
+  provide, merged with it at render time. Precedent for "comprehension layer over a
+  structural layer."
+- **TextMate / VS Code injection grammars** and **Emacs Polymode / MMM-Mode** add scoped
+  sub-grammars or multiple major modes to regions of one buffer — the same layering at the
+  editor level.
 
 #### The OHCO thesis and its overlapping-hierarchy critique
 
-_To fill: OHCO ("text is an Ordered Hierarchy of Content Objects") and the critique that
-real documents have multiple overlapping hierarchies — the academic framing of exactly why
-one tree is insufficient._
+The academic framing of exactly why one tree is insufficient:
+
+- **OHCO** — "What is Text, Really?" (DeRose, Durand, Mylonas, Renear, 1990) — argued text
+  *is* an Ordered Hierarchy of Content Objects, the theoretical justification for SGML/XML
+  tree markup.
+- **The retraction** — "Refining Our Notion of What Text Really Is" (Renear, Mylonas,
+  Durand, 1996) — three of the same authors concede, after TEI experience, that real
+  documents exhibit *multiple concurrent overlapping hierarchies* and that no version of
+  OHCO survives counterexample. This is the canonical statement that a document is **not**
+  a single tree.
+
+Chopdiff's model is, in effect, the post-OHCO position operationalized: do not pick one
+hierarchy; keep several as layers over a shared anchor space, and compute relationships
+between them on demand.
 
 ### The backing document: source + node table keyed to offsets
 
@@ -334,9 +410,13 @@ canonical source); **Enablement** (layers turned on à la carte); **Cross-layer 
 ## Methodology
 
 Builds on local review of `TextDoc`, `TextNode`, the div subsystem, the block-aware
-work (v0.4.0), and the two prior research briefs. A dedicated research pass is gathering
+work (v0.4.0), and the two prior research briefs. A dedicated research pass gathered
 primary sources for the overlapping-markup, multi-tier-annotation, layered-parsing, and
-OHCO-critique threads; those citations will be folded into Findings.
+OHCO-critique threads (folded into Findings). A few primary pages returned 403 to
+automated fetches (TexMECS, xconcur.org, the MPI ELAN page, the LSP 3.16 spec page); those
+claims are corroborated by consistent secondary sources and noted where confidence is
+lower. No new benchmarks were run; claims about specific systems reflect their documented
+designs.
 
 ## References
 
@@ -349,7 +429,38 @@ Local:
 - [TextDoc](../../../src/chopdiff/docs/text_doc.py)
 - [TextNode](../../../src/chopdiff/divs/text_node.py)
 
-External: _to be added with the prior-art pass._
+External — overlapping / concurrent markup:
+
+- [SGML CONCUR (Library of Congress format description)](https://www.loc.gov/preservation/digital/formats/fdd/fdd000465.shtml)
+- [MECS (Huitfeldt)](https://xml.coverpages.org/MECS-200105.html)
+- [TexMECS specification](http://mlcd.blackmesatech.com/mlcd/2003/Papers/texmecs.html) (403 to automated fetch; see secondary sources)
+- [GODDAG (Sperberg-McQueen & Huitfeldt, LNCS 2023)](https://link.springer.com/chapter/10.1007/978-3-540-39916-2_12)
+- [LMNL (Tennison & Piez, Extreme Markup 2002)](http://conferences.idealliance.org/extreme/html/2002/Tennison02/EML2002Tennison02.html)
+- [LMNL links page (Piez)](http://piez.org/wendell/LMNL/lmnl-page.html)
+- [XConcur](https://www.xconcur.org/) (403 to automated fetch)
+- [TAG / TAGML (Huygens ING)](https://github.com/HuygensING/TAG)
+- [TAG paper (Haentjens Dekker & Birnbaum, Balisage 2017)](https://www.balisage.net/Proceedings/vol21/html/HaentjensDekker01/BalisageVol21-HaentjensDekker01.html)
+- [Standoff properties editor](https://github.com/argimenes/standoff-properties-editor)
+
+External — stand-off / multi-tier annotation:
+
+- [UIMA Overview & SDK (CAS, Sofa, views)](https://uima.apache.org/d/uimaj-current/oas.html)
+- [NIF 2.0 Core specification](https://persistence.uni-leipzig.org/nlp2rdf/specification/core.html)
+- [ELAN (MPI)](https://archive.mpi.nl/tla/elan) / [EAF spec (CLARIN)](https://standards.clarin.eu/sis/views/view-spec.xq?id=SpecEAF)
+- [Praat TextGrid](https://www.fon.hum.uva.nl/praat/manual/TextGrid.html)
+- [Annotation graphs (Bird & Liberman, 2001)](https://arxiv.org/abs/cs/0010033)
+
+External — layered parsing in tools:
+
+- [Tree-sitter multi-language parsing](https://tree-sitter.github.io/tree-sitter/using-parsers/3-advanced-parsing.html)
+- [LSP semantic tokens (3.17 spec)](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/)
+- [TextMate injection grammars](https://macromates.com/blog/2012/injection-grammars-project-variables/) / [VS Code syntax highlighting](https://code.visualstudio.com/api/language-extensions/syntax-highlight-guide)
+- [Polymode](https://polymode.github.io/) / [MMM Mode](https://mmm-mode.sourceforge.net/)
+
+External — OHCO and its critique:
+
+- [OHCO: "What is Text, Really?" (DeRose et al., 1990)](https://link.springer.com/article/10.1007/BF02941632)
+- [Overlapping-hierarchy critique (Renear et al., 1996)](https://www.ideals.illinois.edu/items/9468)
 
 <!-- This document follows common-doc-guidelines.md.
 See github.com/jlevy/practical-prose and review guidelines before editing.
