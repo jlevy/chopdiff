@@ -3,9 +3,9 @@ type: is
 id: is-01kstdjj9r7ctvwkqxnpsk6hww
 title: "Robustness Phase 2: HTML helpers + smaller contracts (nested self-closing, tag/attr validation, strict mode, empty-vs-missing attr, exception cause/B904, class matching, parse_tag)"
 kind: task
-status: open
+status: closed
 priority: 2
-version: 8
+version: 9
 spec_path: docs/project/specs/active/plan-2026-05-26-robustness-hardening.md
 labels: []
 dependencies: []
@@ -19,5 +19,7 @@ child_order_hints:
   - is-01ksw0xadc0sbrj45y45ar5p3v
   - is-01ksw0xat5tjq5ah8ma0y3f6mh
 created_at: 2026-05-29T17:47:37.656Z
-updated_at: 2026-05-30T08:44:47.813Z
+updated_at: 2026-05-30T09:06:43.097Z
+closed_at: 2026-05-30T09:06:43.097Z
+close_reason: "Phase 2 complete: nested self-closing, strict mode, empty-vs-missing attr, tag/attr validation, multi-class matching, exception cause, parse_tag docs. 165 tests green."
 ---
