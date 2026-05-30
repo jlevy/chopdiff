@@ -35,7 +35,8 @@ class TextNode:
 
     @property
     def end_offset(self) -> int:
-        assert self.content_end >= 0
+        if self.content_end < 0:
+            raise AssertionError(f"content_end not set on node: {self.content_end}")
         return self.content_end + len(self.end_marker) if self.end_marker else self.content_end
 
     @property
@@ -46,11 +47,15 @@ class TextNode:
         return TextDoc.from_text(self.contents, sentence_splitter=sentence_splitter)
 
     def slice_children(self, start: int, end: int) -> TextNode:
+        """
+        Return a copy holding children `[start, end]` (inclusive end), matching the
+        inclusive-range convention of `TextDoc.sub_paras` and `chunk_generator`.
+        """
         if not self.children:
             raise ValueError("Cannot slice_children on a non-container node.")
         else:
             node_copy = copy(self)
-            node_copy.children = node_copy.children[start:end]
+            node_copy.children = node_copy.children[start : end + 1]
             return node_copy
 
     def size(self, unit: TextUnit) -> int:
