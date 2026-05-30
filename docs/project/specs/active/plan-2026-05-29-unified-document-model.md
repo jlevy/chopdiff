@@ -7,7 +7,7 @@
 **Status:** Draft — design nearly settled. **Eight of nine decisions are settled
 (2026-05-29):** DR-1 node-table-with-views, DR-2 `DocOverview` as a projection of `TextDoc`,
 DR-3 Pydantic schema authoring, DR-4 one general `collect()` rollup primitive (no blessed
-shortcuts), plus 4 (`Detail` ladder), 6 (minimal phase-1 scope), 8 (lazy-cache), 9 (count
+shortcuts), plus 4 (composable `include` layers, no ladder), 6 (minimal phase-1 scope), 8 (lazy-cache), 9 (count
 list-item wrapper paragraphs). **The one remaining open decision is 7 (reference
 selectors)**, under active research (alignment with Chrome Text Fragments / W3C selectors;
 syntactic offset spans vs quoted prefix/suffix spans).
@@ -248,9 +248,9 @@ A caller should choose how much to materialize/serialize. Options for the axis:
   - *Pros:* easy default ladder + precise control when needed.
   - *Cons:* slight surface duplication.
 
-**Leaning: 5c.** A small `Detail` ladder (`OUTLINE`, `BLOCKS`, `INLINE`, `FULL`) backed by
-explicit include-flags. `OUTLINE` = section tree + counts only (tiny); `FULL` = everything
-including text and (later) annotations.
+**Leaning (at exploration time): 5c.** A small `Detail` ladder backed by include-flags.
+**Superseded — see DR-5:** on reflection we kept only the flags (composable `include`
+layers) and dropped the named ladder, for the same mechanism-over-menu reason as DR-4.
 
 ## E6. Computation and caching
 
@@ -371,7 +371,8 @@ A builder turns a `TextDoc` (+ its cached recursive block tree, sections, links)
 node table, lazily and cached on the immutable source. Public surface (additive), kept
 deliberately minimal — **one general query primitive, no blessed per-kind rollups** (DR-4):
 
-- `TextDoc.overview(detail=Detail.BLOCKS) -> DocOverview` — build/serialize.
+- `TextDoc.overview(*, include=...) -> DocOverview` — build/serialize; `include` is a set of
+  optional layers, default = structural core only (DR-5).
 - **One query primitive**, at document / section / block scope:
   ```python
   collect(*, kinds=None, where=None, recursive=False, inline=False) -> list[Node]
@@ -401,11 +402,23 @@ The existing v0.4.0 convenience accessors (`TextDoc.block_type_counts()`,
 unified model lands (migration: `Counter(n.kind for n in ov.collect(...))`); this is a
 semi-breaking change for the next minor.
 
-## D3. Detail levels
+## D3. Detail / payload control
 
-`Detail.OUTLINE` (sections + counts) ⊂ `BLOCKS` (+ block nodes/spans) ⊂ `INLINE` (+ inline
-nodes) ⊂ `FULL` (+ `text`, sentences/tokens, and reserved layers). Backed by independent
-include-flags (`text`, `sentences`, `tokens`, `annotations`, `layout`) for precise control.
+`overview(*, include=...)` takes a **set of optional layers** to materialize/serialize; the
+structural core (node table: ids, kinds, parent/children, `source_span`) is always present,
+everything else is opt-in. There is **no fixed level ladder** (DR-5) — a caller composes
+exactly the layers they need:
+
+```python
+overview()                                   # structural core only (small)
+overview(include={Layer.text, Layer.inline}) # + node text and inline nodes
+```
+
+`Layer` is a small orthogonal enum (`text`, `inline`, `sentences`, `tokens`, derived
+coords, and later `annotations`/`layout`); each maps to a cleanly separable part of the
+Pydantic model. Common compositions are shown in docs as *examples*, not blessed presets;
+a downstream user who wants a preset defines their own `frozenset[Layer]`. New data
+categories are added as one more `Layer` (additive, no refactor).
 
 ## D4. How the requirements are met
 
@@ -417,7 +430,7 @@ include-flags (`text`, `sentences`, `tokens`, `annotations`, `layout`) for preci
 | Full recursive structure | fully-populated containment tree in `nodes` |
 | Tree → exact structure or any rollup | containment tree view + rollup projections of one node set |
 | Single serializable JSON for UIs | `DocOverview` schema, id-addressed, parser-agnostic |
-| Optional levels of detail | `Detail` ladder + include-flags |
+| Optional levels of detail | composable `include` layers (no fixed ladder); default = core |
 | Reference anything (source / element / rendered) | one `Reference` with coordinated selectors (D5) |
 | Persist source-grounded; edit by tree | save normalizes to source selectors; in-memory uses `node_id` |
 
@@ -485,8 +498,10 @@ reparses and re-resolves the annotations back to nodes.
    standard Python (`len`/`Counter`/comprehensions) documented with clear examples. Inline
    items are nodes (4a); relationships are node edges. No per-kind rollup methods, to keep
    the embeddable library's surface small. See DR-4.
-4. **Detail axis (E5).** ✅ **SETTLED (2026-05-29): cumulative `Detail` ladder
-   (`OUTLINE ⊂ BLOCKS ⊂ INLINE ⊂ FULL`) backed by independent include-flags (5c).**
+4. **Detail axis (E5).** ✅ **SETTLED (2026-05-29): Option B — composable `include` layers,
+   no fixed ladder.** A small orthogonal `Layer` set selects which optional parts to
+   materialize/serialize (default = structural core); presets are caller-defined, not
+   blessed. Same simplicity+flexibility principle as DR-4. See DR-5.
 5. **Schema versioning home.** ✅ **SETTLED (2026-05-29): Pydantic as the authoring layer.**
    The `DocOverview` schema is authored as Pydantic models (single source of truth), which
    emit a JSON Schema; a standalone language-neutral artifact (JSON Schema, or a
@@ -611,6 +626,27 @@ not worth embedding in a low-level dependency.
 (migration documented). Add named conveniences later only if docs/usage prove a specific
 one is broadly needed.
 
+### DR-5 — Detail/payload control: composable `include` layers, no fixed ladder (settles Open decision 4)
+
+**Decision (2026-05-29):** Control serialized payload size with a **set of optional
+layers** — `overview(*, include=...)` over a small orthogonal `Layer` enum (`text`,
+`inline`, `sentences`, `tokens`, derived coords, later `annotations`/`layout`). The
+structural core (node table + spans) is always present; everything else is opt-in. **No
+fixed `OUTLINE/BLOCKS/INLINE/FULL` ladder.** Presets are caller-defined `frozenset[Layer]`,
+documented as examples, not blessed constants.
+
+**Why:** same simplicity+flexibility principle as DR-4, applied to the payload axis. A
+fixed cumulative ladder is coarse (can't ask for "blocks + links but no text") and a new
+downstream combination forces inserting a level — a breaking, refactor-inducing change.
+Orthogonal flags give any combination with a small, stable surface; new data categories are
+one additive `Layer`. This is a document model meant to serve many situations without being
+updated each time.
+
+**Consequences:** keep the default small and useful (core only); each `Layer` maps to a
+cleanly separable part of the Pydantic models so "include or not" is a clean per-layer
+toggle; testing is linear (per layer), not combinatorial; document common compositions as
+examples.
+
 ## Implementation plan
 
 Kept to two phases; phase 1 is the useful core, phase 2 is serialization polish. (No work
@@ -638,7 +674,7 @@ starts until "Open decisions" is settled.)
 - [ ] Pydantic/dataclass models for the schema (nodes, views, source, reserved
       `annotations` layer with the `Reference` target shape); `offset_unit` pinned to
       Unicode code points; optional derived coords.
-- [ ] `TextDoc.overview(detail=…)` builder + `Detail` ladder/flags; render helpers emit
+- [ ] `TextDoc.overview(*, include=…)` builder + `Layer` set (no ladder); render helpers emit
       `data-node-id` / `data-source-span` so rendered selections resolve back to source.
 - [ ] Round-trip + golden tests; a tiny UI fixture is out of scope here (later phase).
 - [ ] Author the standalone language-neutral JSON Schema once the shape is confirmed
@@ -653,7 +689,7 @@ starts until "Open decisions" is settled.)
   restricted to that section's span; spans stay within `section.span`.
 - Serialization: `DocOverview` round-trips; ids are stable within a parse; stable
   fields contain no parser-internal names; detail levels are subset-consistent
-  (`OUTLINE ⊂ BLOCKS ⊂ INLINE ⊂ FULL`).
+  (including a layer adds only its part; the core is always present).
 - Coordinates: `source_span` round-trips against `source_text`; derived byte/UTF-16 spans
   agree on ASCII and a multi-byte sample.
 - References: a `Reference` built from a node carries the node's `source_span`; persisting
