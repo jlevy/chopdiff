@@ -19,17 +19,27 @@ tbd show <id>      # details + working notes (e.g. tbd show chopdiff-1x4u)
 
 ### Flexible unified document model (DocGraph) — `docs/project/specs/active/`
 
-Design-stage. A source-grounded, JSON-serializable `DocGraph` projected from `TextDoc`:
-a stable node set + derived views + flexible value/count rollups at any scope
-(doc/section/block), recursive, over blocks and inline items, with a dual-addressing
-reference model (source-canonical, tree-convenient) and optional detail levels. Subsumes
-the multi-level block-tallies work.
+Design settled, ready to build. A source-grounded, JSON-serializable `DocGraph` projected
+from `TextDoc`: a stable node table (each node tagged with its parse **layer**) + derived
+views + one general `collect()` query (values/counts/groupings via standard Python) at any
+scope (doc/section/block), recursive, over blocks and inline items, with the source-canonical
+`SpanRef` reference model and composable `include`/`detail` serialization. The
+**layered-parsing lens** (E9) frames the views as parse layers (textual / markdown /
+document / synthetic) over one offset space, with cross-layer relationships as
+offset-containment queries — so the synthetic (div) layer and future cross-layer structural
+edits are later phases that drop in via four cheap Phase-1 hooks. Subsumes the multi-level
+block-tallies work.
 
 - Spec: [plan-2026-05-29-unified-document-model.md](docs/project/specs/active/plan-2026-05-29-unified-document-model.md)
-  (status: Draft — exploration + proposed design; **no code yet**, gated on Open
-  decisions).
-- Beads: epic `chopdiff-8q8q`; **P1 decisions gate `chopdiff-0vy6`** must be settled before
-  any implementation. Phase beads are created after the decisions are made.
+  (status: **all nine decisions settled (DR-1..DR-6) + E9 layered lens; Phase 0
+  design-of-record current; no code yet**). Design of record:
+  [docs/textdoc-spec.md](docs/textdoc-spec.md).
+- Research: the [document-model survey](docs/project/research/research-2026-05-29-document-model.md),
+  [span-references](docs/project/research/research-2026-05-30-span-references.md), and
+  [multi-layer parsing](docs/project/research/research-2026-05-30-multilayer-parsing.md) briefs.
+- Beads: epic `chopdiff-8q8q`; decisions gate `chopdiff-0vy6` closed. **Next: break Phase 1
+  (recursive node model + `layer` field + `collect()` + offset-containment + `SpanRef`) into
+  implementation beads.**
 
 ### Robustness hardening — `docs/project/specs/active/`
 

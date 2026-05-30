@@ -8,7 +8,11 @@
 records DR-1..DR-6 cover the architecture (node table; `DocGraph` projection; Pydantic
 authoring; one `collect()` rollup primitive; composable `include` layers; the `SpanRef`
 span-reference type), plus 6 (minimal phase-1 scope), 8 (lazy-cache), 9 (count list-item
-wrapper paragraphs). Ready to break Phase 1 into implementation beads.
+wrapper paragraphs). The **layered-parsing lens (E9, 2026-05-30)** is folded in as a
+consolidating frame: it validates DR-1..DR-6, adds four cheap Phase-1 hooks (node `layer`
+field, offset-containment queries, per-layer nesting guarantee, `SpanRef`-anchored edits),
+unifies the `Layer` vocabulary, and names later Phases 3–4 (synthetic layer; cross-layer
+structural edits). Ready to break Phase 1 into implementation beads.
 
 **Implementation status:** **None yet — design settled, ready to build.** All nine
 decisions are recorded (DR-1..DR-6); the next step is to break Phase 1 into implementation
@@ -17,11 +21,14 @@ structural `blocks()`, sections, links, top-level `block_type_counts()`); everyt
 proposed here — recursive/nested rollups, the `SpanRef` model, and the `DocGraph`
 projection — is not yet built. Tracked by epic `chopdiff-8q8q`.
 
-> **Inputs:** the survey in
+> **Inputs:** the surveys in
 > [`research-2026-05-29-document-model.md`](../../research/research-2026-05-29-document-model.md)
-> (read it first — this plan operationalizes its recommended direction) and the design of
-> record [`docs/textdoc-spec.md`](../../../textdoc-spec.md). This plan **subsumes** the
-> archived
+> (read it first — this plan operationalizes its recommended direction),
+> [`research-2026-05-30-span-references.md`](../../research/research-2026-05-30-span-references.md)
+> (the `SpanRef` design), and
+> [`research-2026-05-30-multilayer-parsing.md`](../../research/research-2026-05-30-multilayer-parsing.md)
+> (the layered-parsing lens, E9), and the design of record
+> [`docs/textdoc-spec.md`](../../../textdoc-spec.md). This plan **subsumes** the archived
 > [`plan-2026-05-29-multilevel-block-tallies.md`](../archive/plan-2026-05-29-multilevel-block-tallies.md):
 > multi-level tallies become one feature of the unified model (their decisions are folded
 > in here).
@@ -324,6 +331,63 @@ Two consequences to design in:
   nodes. Rendered HTML carries `data-node-id` / `data-source-span` so a UI selection maps
   back to a node and thence to source.
 
+## E9. The layered-parsing lens (consolidating frame, 2026-05-30)
+
+After the background research (see
+[`research-2026-05-30-multilayer-parsing.md`](../../research/research-2026-05-30-multilayer-parsing.md)),
+one framing makes the whole design cohere and shows how to extend it cleanly: the derived
+views are not ad-hoc — each is **one parse layer** over the shared offset space. chopdiff
+already parses the same `source_text` along several independent dimensions:
+
+| Layer | Produces | Depends on |
+| --- | --- | --- |
+| **textual** | paragraphs, sentences, word tokens | — |
+| **markdown** | block elements (recursive) + inline (links, code, emphasis) | — |
+| **document** | section / heading hierarchy + TOC | markdown (headings) |
+| **synthetic** | explicit `<div>`/`<span>` regions, chunk groupings (today's `TextNode`) | — |
+
+This is **not a redesign** — it validates DR-1..DR-6 (a node table, not one tree, is exactly
+what coexisting layers need) and reframes the settled views as layers. The key realizations:
+
+- **A reference is a layer, not a pointer.** The `SpanRef`-targeted annotation layer (E8/D5)
+  is the out-of-band layer; it anchors to the same offset space as the parsed layers.
+- **Cross-layer relationships are offset-containment queries, not stored edges.** Within a
+  layer, `parent`/`children`; across layers, interval containment/overlap ("which blocks are
+  inside this `<div>`", "which section contains this link"). This is what makes overlap
+  representable and future cross-layer edits tractable.
+- **Each layer declares a nesting guarantee** — well-nested → a tree view (`blocks()`, the
+  section tree); ordered-only → a sequential list view (`base_blocks()`, a flat annotation
+  layer). This generalizes the §6 tree-vs-partition distinction to every layer.
+- **Enablement is a configuration, not a fork.** Today's `TextNode`-as-separable-subsystem is
+  simply "the synthetic layer enabled alone." The same model serves the cheap structural-only
+  path and the full multi-layer analysis path; we never maintain two architectures.
+
+**Four cheap "design-in-now" hooks** make the synthetic layer and future structural edits a
+small lift later instead of a refactor; they are the entire delta this lens adds:
+
+1. **A `layer` field on `Node`** (`Node{id, kind, layer, parent, children, source_span,
+   attrs}`). Almost free in Phase 1; it is what lets the synthetic layer's nodes coexist by
+   span rather than by fitting one tree.
+2. **Offset-containment as a `collect()` mode** — interval containment/overlap so cross-layer
+   queries work without re-parsing.
+3. **A per-layer nesting guarantee** (tree vs ordered list), recorded on each layer.
+4. **`SpanRef` as the anchor for edits too,** not just annotations — so the later structural
+   operations attach to `SpanRef`s and survive reparse.
+
+**Unified `Layer` vocabulary (settled 2026-05-30).** "Layer" now means a **parse dimension**
+you can *enable* (build) and *include* (serialize): `textual`, `markdown`, `document`,
+`synthetic`, and later `annotations`/`layout`. The earlier DR-5 enum members (`text`,
+`inline`, `tokens`, derived coords) become **detail sub-options** of a layer (payload
+richness), not top-level layers — one vocabulary instead of two. Enabling `document`
+auto-enables `markdown` (its only dependency). This refines DR-5's *membership*, not its
+mechanism (composable, no fixed ladder); see DR-5.
+
+**Later by design, not now.** The **synthetic layer** (re-expressing `TextNode`/div parsing
+as a layer keyed into the node table) and **cross-layer structural-edit operations**
+(move/wrap/splice anchored on `SpanRef`, generalizing today's `div_insert_wrapped`) are named
+later phases (Phases 3–4). The four hooks above ensure they drop in without reworking the
+core — which is the whole point of getting the layered shape right now.
+
 ---
 
 # Proposed design
@@ -346,7 +410,7 @@ DocGraph = {
 }
 
 Node = {
-  id, kind, role?, parent?, children: [id...],
+  id, kind, layer, role?, parent?, children: [id...],   # `layer` = parse dimension (E9)
   source_span: {start,end}?,         # code points; None for unlocatable inline (ref links)
   byte_span?, utf16_span?,           # optional derived coords
   attrs: { ... },                    # e.g. heading level, list ordered/tight, link url/title
@@ -401,21 +465,26 @@ semi-breaking change for the next minor.
 
 ## D3. Detail / payload control
 
-`graph(*, include=...)` takes a **set of optional layers** to materialize/serialize; the
-structural core (node table: ids, kinds, parent/children, `source_span`) is always present,
-everything else is opt-in. There is **no fixed level ladder** (DR-5) — a caller composes
-exactly the layers they need:
+`graph(*, include=..., detail=...)` controls what is built and serialized. **`include` is a
+set of `Layer`s** — parse dimensions: `textual`, `markdown`, `document`, `synthetic`, later
+`annotations`/`layout` (E9). The structural core (node table: ids, kinds, `layer`,
+parent/children, `source_span`) is always present; each enabled layer adds its nodes/views.
+There is **no fixed level ladder** (DR-5) — a caller composes exactly the layers they need;
+enabling `document` auto-enables its dependency `markdown`:
 
 ```python
-graph()                                   # structural core only (small)
-graph(include={Layer.text, Layer.inline}) # + node text and inline nodes
+graph()                                       # default layers, structural core (small)
+graph(include={Layer.markdown, Layer.document})           # blocks + sections
+graph(include={Layer.markdown}, detail={Detail.text, Detail.inline})  # + node text + inline
 ```
 
-`Layer` is a small orthogonal enum (`text`, `inline`, `sentences`, `tokens`, derived
-coords, and later `annotations`/`layout`); each maps to a cleanly separable part of the
-Pydantic model. Common compositions are shown in docs as *examples*, not blessed presets;
-a downstream user who wants a preset defines their own `frozenset[Layer]`. New data
-categories are added as one more `Layer` (additive, no refactor).
+**Payload richness within a layer is a small set of `detail` sub-options** (`text`,
+`inline`, `tokens`, derived coords) — the former DR-5 enum members, now detail flags rather
+than top-level layers (E9 unified vocabulary). Each layer/detail maps to a cleanly separable
+part of the Pydantic model. Common compositions are shown in docs as *examples*, not blessed
+presets; a downstream user who wants a preset defines their own `frozenset`. New parse
+dimensions are one more `Layer`; new payload categories are one more `detail` — additive, no
+refactor.
 
 ## D4. How the requirements are met
 
@@ -533,10 +602,12 @@ Summary index; rationale and consequences are in the Decision Record below.
    standard Python (`len`/`Counter`/comprehensions) documented with clear examples. Inline
    items are nodes (4a); relationships are node edges. No per-kind rollup methods, to keep
    the embeddable library's surface small. See DR-4.
-4. **Detail axis (E5).** ✅ **SETTLED (2026-05-29): Option B — composable `include` layers,
-   no fixed ladder.** A small orthogonal `Layer` set selects which optional parts to
-   materialize/serialize (default = structural core); presets are caller-defined, not
-   blessed. Same simplicity+flexibility principle as DR-4. See DR-5.
+4. **Detail axis (E5).** ✅ **SETTLED (2026-05-29; vocabulary unified 2026-05-30): Option B
+   — composable layers, no fixed ladder.** `include` selects which `Layer`s (parse
+   dimensions: `textual`/`markdown`/`document`/`synthetic`/…) to build and serialize;
+   `detail` sub-options (`text`/`inline`/`tokens`/coords) control payload richness. Default
+   = structural core; presets are caller-defined, not blessed. Same simplicity+flexibility
+   principle as DR-4. See DR-5 and E9.
 5. **Schema versioning home.** ✅ **SETTLED (2026-05-29): Pydantic as the authoring layer.**
    The `DocGraph` schema is authored as Pydantic models (single source of truth), which
    emit a JSON Schema; a standalone language-neutral artifact (JSON Schema, or a
@@ -648,12 +719,15 @@ one is broadly needed.
 
 ### DR-5 — Detail/payload control: composable `include` layers, no fixed ladder (settles Open decision 4)
 
-**Decision (2026-05-29):** Control serialized payload size with a **set of optional
-layers** — `graph(*, include=...)` over a small orthogonal `Layer` enum (`text`,
-`inline`, `sentences`, `tokens`, derived coords, later `annotations`/`layout`). The
-structural core (node table + spans) is always present; everything else is opt-in. **No
-fixed `OUTLINE/BLOCKS/INLINE/FULL` ladder.** Presets are caller-defined `frozenset[Layer]`,
-documented as examples, not blessed constants.
+**Decision (2026-05-29; vocabulary unified 2026-05-30, E9):** Control what is built and
+serialized with two composable axes: **`include` = a set of `Layer`s** (parse dimensions:
+`textual`, `markdown`, `document`, `synthetic`, later `annotations`/`layout`) and **`detail`
+= payload sub-options** (`text`, `inline`, `tokens`, derived coords). The structural core
+(node table + `layer` + spans) is always present; everything else is opt-in. **No fixed
+`OUTLINE/BLOCKS/INLINE/FULL` ladder.** Presets are caller-defined `frozenset`, documented as
+examples, not blessed constants. (Originally the `Layer` enum mixed parse dimensions and
+payload detail; E9 split them into `Layer` + `detail` for one consistent vocabulary — a
+membership refinement, not a mechanism change.)
 
 **Why:** same simplicity+flexibility principle as DR-4, applied to the payload axis. A
 fixed cumulative ladder is coarse (can't ask for "blocks + links but no text") and a new
@@ -702,21 +776,28 @@ concise design doc for the document model.
 ### Phase 0: make `docs/textdoc-spec.md` current (do first)
 
 Fold the settled DocGraph design into the design of record before writing code, so the
-implementation is built against current docs. Concrete edits (see "Design-of-record
+implementation is built against current docs. The DocGraph/`collect`/`SpanRef` edits are
+applied; the E9 layer-concept edits are the remaining Phase-0 work (see "Design-of-record
 updates" below for the per-section detail):
 
-- [ ] §3 normalized form: canonical normalized form is the **node table**; `TextDoc` is the
+- [x] §3 normalized form: canonical normalized form is the **node table**; `TextDoc` is the
       Python core/editing view, `DocGraph` the derived projection/contract (DR-1, DR-2).
-- [ ] §6 structural tree: containers fully populate children (recursive); the block tree is
+- [x] §6 structural tree: containers fully populate children (recursive); the block tree is
       a derived view; density-invariant.
-- [ ] §8 inline: inline items are nodes; links via `collect(kinds={link})`.
-- [ ] §9 derived views: the single `collect()` primitive (DR-4) replaces
+- [x] §8 inline: inline items are nodes; links via `collect(kinds={link})`.
+- [x] §9 derived views: the single `collect()` primitive (DR-4) replaces
       `block_type_counts()`; composable `include` layers (DR-5); drop "top-level only".
-- [ ] New section: **DocGraph** node model + JSON schema (Pydantic authoring, views,
+- [x] New section: **DocGraph** node model + JSON schema (Pydantic authoring, views,
       layers, coordinates = Unicode code points), and **`SpanRef`** + the (later) annotation
       stand-off layer (DR-3, DR-6).
-- [ ] §11 invariants: node-id stability within a parse; quote-canonical references; no
+- [x] §11 invariants: node-id stability within a parse; quote-canonical references; no
       blessed rollups/levels. §12: add the span-references research brief.
+- [x] **E9 layer concept:** §3/§4 introduce the four parse **layers** + the `layer` field on
+      `Node` + the dependency DAG; cross-layer relationships are **offset-containment**
+      queries; each layer has a **nesting guarantee** (tree vs ordered list). §10 unify the
+      `Layer` vocabulary (parse dimensions) + `detail` sub-options. §13 note the synthetic
+      layer / cross-layer edits are later phases (not "replace `TextNode`"). §15 add the
+      multilayer brief.
 
 ### Phase 1: recursive node model + flexible rollups (Python)
 
@@ -729,14 +810,19 @@ updates" below for the per-section detail):
       normalized paragraph-break whitespace; exact via offsets). A base block is a block
       node; the base-block *list* is the partition. (textdoc-spec §6.)
 - [ ] Model inline items as nodes with `parent` block and computed `section`/`sentence`.
+- [ ] **Tag every node with its `layer`** (textual / markdown / document) and record each
+      layer's **nesting guarantee** (tree vs ordered list). Reserve the `synthetic` layer
+      (not built in Phase 1). (E9 hooks 1 and 3 — cheap now, enables Phases 3–4.)
 - [ ] Lazy-cache the node table on the immutable `source_text`; make `Section.blocks()`
       slice the cached tree (remove per-section reparse).
 - [ ] Add the single `collect(*, kinds=, where=, recursive=, inline=)` query primitive
-      with document / section / block scope handles. No per-kind rollup methods (DR-4).
+      with document / section / block scope handles, **including an offset-containment mode
+      for cross-layer queries** (E9 hook 2). No per-kind rollup methods (DR-4).
 - [ ] Define the `SpanRef` type and resolution: `SpanRef.from_node(node)` (total
       model→source), `resolve(span_ref, doc)` (source→model: exact fast path, then quote fuzzy re-anchor),
-      and `to_persisted()` (drop transient `node_id`). No annotation *storage* yet — just
-      the targeting contract the rest of the model is designed around.
+      and `to_persisted()` (drop transient `node_id`). `SpanRef` is the anchor for edits too,
+      not just annotations (E9 hook 4). No annotation *storage* yet — just the targeting
+      contract the rest of the model is designed around.
 - [ ] Tests: nested tables/code in blockquotes and list items are counted and locatable;
       per-section value+count rollups; density invariance; section slicing; `SpanRef`
       round-trips (node → source-grounded → re-resolved node) and survives a reparse.
@@ -752,6 +838,34 @@ updates" below for the per-section detail):
 - [ ] Author the standalone language-neutral JSON Schema once the shape is confirmed
       (decision 5).
 
+### Phase 3 (later): the synthetic layer
+
+Re-express the existing `<div>`/`<span>` structural parsing (`TextNode`, `parse_divs`,
+chunking) as the **synthetic layer** keyed into the shared node table — reconciling the two
+structural models the codebase has today (marko block model vs the `TextNode` div parser).
+Deferred by design (E9): not needed to ship the core, and the Phase-1 hooks (`layer` field,
+offset-containment `collect()`) make it additive rather than a rewrite.
+
+- [ ] Map `parse_divs`/`TextNode` output into `Node`s tagged `layer=synthetic`, keeping
+      exact offsets; the existing parser can back it (no new dependency).
+- [ ] Synthetic nodes coexist with markdown/textual nodes by span; cross-layer queries
+      ("which markdown blocks are inside this `<div class="chunk">`") via offset-containment.
+- [ ] In-band metadata (`<span data-timestamp>`) becomes a synthetic-layer node that can
+      emit a `SpanRef` for free — unifying in-band and out-of-band (annotation-layer) metadata.
+
+### Phase 4 (later): cross-layer structural edits + stand-off layers
+
+The eventual payoff: **structural-edit operations anchored on `SpanRef` that work uniformly
+across layers**, generalizing today's synthetic-structure edits (`div_insert_wrapped`,
+wrap/splice). Plus the built-out `annotations` (stand-off), `operation`/`provenance`, and
+`layout` layers the schema reserves.
+
+- [ ] Operation records (move section, wrap region, replace block, splice) that resolve
+      targets via `SpanRef`, apply to source, re-derive, and validate (reparse + token diff).
+- [ ] The `annotations` stand-off layer (built on the Phase-1 `SpanRef` contract); revisit
+      and refine `SpanRef`/annotations once v1 is in use, as DR-6 anticipates.
+- [ ] `provenance` (source-map-style generated↔original) and `layout` overlays as needed.
+
 ## Design-of-record updates (`docs/textdoc-spec.md`)
 
 Phase 0 makes `docs/textdoc-spec.md` the single current, comprehensive, concise design doc.
@@ -763,10 +877,13 @@ Per-section edits (the design doc carries the prose; this maps what changes):
   flexibility (one query primitive, composable layers — no blessed menus).
 - **§3 The normalized form** — the **node table is canonical**; the block tree, section
   tree, inline index, and token stream are derived views; `DocGraph` is the projection
-  of `TextDoc` (DR-1, DR-2).
-- **§4 Core types and offsets** — define `Node{id, kind, parent, children, source_span,
-  attrs}`; node ids stable within a parse; **pin the offset unit to Unicode code points**
-  with byte/UTF-16 conversions as derived coords.
+  of `TextDoc` (DR-1, DR-2). **Introduce the four parse layers** (textual / markdown /
+  document / synthetic) — the views *are* layer views — with the dependency DAG (document →
+  markdown) and **offset-containment as the cross-layer relationship** (E9).
+- **§4 Core types and offsets** — define `Node{id, kind, layer, parent, children,
+  source_span, attrs}` (the `layer` field, E9); node ids stable within a parse; each layer
+  carries a **nesting guarantee** (tree vs ordered list); **pin the offset unit to Unicode
+  code points** with byte/UTF-16 conversions as derived coords.
 - **§5 Block-type model** — note containers (blockquote, list item) fully populate block
   children; `ordered_list` already present.
 - **§6 Block views** — terminology (*block element*/*inline* vs *block node* vs *base
@@ -783,7 +900,12 @@ Per-section edits (the design doc carries the prose; this maps what changes):
   counts/values via standard Python; **remove `block_type_counts()`** (superseded; migration
   note); payload via composable `include` layers (DR-5).
 - **New section — DocGraph schema** — node table + views + reserved layers; Pydantic
-  authoring (DR-3); `include` layers; coordinates.
+  authoring (DR-3); **unified `Layer` vocabulary** (parse dimensions) + `detail` sub-options
+  (E9); coordinates.
+- **§13 invariants/non-goals** — refine "replacing `TextNode`" non-goal: `TextNode` stays;
+  **expressing it as the synthetic layer (Phase 3) and cross-layer structural edits (Phase
+  4) are later phases**, not non-goals. Cross-layer relations are offset-containment, never
+  stored cross-layer edges.
 - **New section — `SpanRef` and annotations** — the span-reference type (quote canonical +
   offset hint; Chrome-Text-Fragment convertible; DR-6); the stand-off annotation layer as a
   later phase expected to be refined.
@@ -792,8 +914,8 @@ Per-section edits (the design doc carries the prose; this maps what changes):
 - **§11 Invariants and non-goals** — node-id stability within a parse; quote-canonical
   references; no blessed rollups/levels; offset unit pinned. Non-goals: no parallel runtime
   model, no DOM/XPath selectors, annotations/operations/provenance/layout are later.
-- **§12 References** — add `research-2026-05-30-span-references.md`, the document-model
-  survey, and this plan.
+- **§12 References** — add `research-2026-05-30-span-references.md`,
+  `research-2026-05-30-multilayer-parsing.md`, the document-model survey, and this plan.
 
 When Phase 0 lands, the `block_type_counts()` removal is the one semi-breaking changelog
 item (migration: `Counter(n.kind for n in doc.graph().collect(...))`).

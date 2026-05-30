@@ -99,14 +99,44 @@ canonical store:
 The editing view's block boundaries are unchanged by the structural tree, so there is no
 forced migration of the editing unit.
 
+**Parse layers.** Those views are not ad-hoc — each is one **parse layer** over the shared
+offset space. chopdiff parses the same `source_text` along several independent dimensions,
+each contributing nodes tagged with their `layer`:
+
+| Layer | Produces | Depends on | Nesting guarantee |
+| --- | --- | --- | --- |
+| **textual** | paragraphs, sentences, word tokens | — | ordered list |
+| **markdown** | block elements (recursive) + inline (links, code, emphasis) | — | tree |
+| **document** | section / heading hierarchy + TOC | markdown (headings) | tree |
+| **synthetic** | explicit `<div>`/`<span>` regions, chunk groupings (later phase) | — | tree |
+
+Two consequences define how layers interact:
+
+- **Cross-layer relationships are offset-containment queries, not stored edges.** Within a
+  layer, navigate `parent`/`children`; *across* layers, use interval containment/overlap
+  ("which markdown blocks are inside this `<div>`", "which section contains this link").
+  This is what lets layers overlap and cross-cut without contradiction (a section is not a
+  subtree of the block tree; a `<div>` may open mid-block).
+- **Each layer declares a nesting guarantee** — well-nested layers project to a tree view,
+  ordered-only layers to a sequential list view (the §6 tree-vs-partition distinction,
+  generalized). The `SpanRef`-targeted annotation layer (§11) is the out-of-band layer,
+  anchored to the same offset space.
+
+Layers are **enabled à la carte** (a configuration, not a fork): today's `TextNode` div
+subsystem is "the synthetic layer alone," and the full analysis path enables several. See
+[`research-2026-05-30-multilayer-parsing.md`](project/research/research-2026-05-30-multilayer-parsing.md)
+for the framing and prior art.
+
 ## 4. Core types, nodes, and offsets
 
 - `TextDoc` — retains `source_text`; owns the `Paragraph` list (editing view) and the
   derived, lazily-cached node table and views.
-- `Node` — `id` (stable within a parse), `kind` (a `BlockType` or an inline kind),
+- `Node` — `id` (stable within a parse), `kind` (a `BlockType` or an inline kind), `layer`
+  (the parse dimension it belongs to — textual / markdown / document / synthetic; §3),
   `parent`, `children`, `source_span`, `attrs` (e.g. heading level, `List.ordered`/`tight`,
-  link url/title). Parser-internal details live in `attrs`/`metadata`, never in stable
-  public fields.
+  link url/title). `parent`/`children` are within-layer edges; cross-layer relationships are
+  offset-containment queries (§3). Parser-internal details live in `attrs`/`metadata`, never
+  in stable public fields.
 - `Paragraph` — a blank-line block: `sentences`, `Offsets`, `span`, cached top-level
   `block_type`, computed `original_text`, helpers (`heading_level()`, `heading_title()`,
   `links()`).
@@ -296,18 +326,26 @@ DocGraph = {
 }
 ```
 
-`TextDoc.graph(*, include=...)` builds/serializes it. **Payload size is controlled by a
-composable set of optional layers** — not a fixed ladder (DR-5):
+`TextDoc.graph(*, include=..., detail=...)` builds/serializes it. **What is built and
+serialized is controlled by two composable axes** — not a fixed ladder (DR-5):
 
 ```python
-graph()                                    # structural core only (small)
-graph(include={Layer.text, Layer.inline})  # + node text and inline nodes
+graph()                                                  # default layers, structural core
+graph(include={Layer.markdown, Layer.document})          # blocks + sections
+graph(include={Layer.markdown}, detail={Detail.text, Detail.inline})  # + node text + inline
 ```
 
-`Layer` is a small orthogonal enum (`text`, `inline`, `sentences`, `tokens`, derived coords,
-later `annotations`/`layout`); the structural core (node table + spans) is always present.
-Presets are caller-defined `frozenset[Layer]`, documented as examples. New data categories
-are one additive `Layer`, never a refactor.
+- **`include` is a set of `Layer`s** — the parse dimensions of §3: `textual`, `markdown`,
+  `document`, `synthetic`, later `annotations`/`layout`. Enabling a layer builds and
+  serializes its nodes/views; enabling `document` auto-enables its dependency `markdown`.
+- **`detail` is a small set of payload sub-options** — `text` (per-node source text),
+  `inline` (inline nodes), `tokens`, derived coords — controlling richness *within* enabled
+  layers.
+
+The structural core (node table + `layer` + spans) is always present. Presets are
+caller-defined `frozenset`s, documented as examples. A new parse dimension is one additive
+`Layer`; a new payload category is one additive `Detail` — never a refactor. (One vocabulary:
+the earlier mixed `Layer` enum was split into `Layer` + `Detail` per E9; see the plan's DR-5.)
 
 ## 11. SpanRef and annotations
 
@@ -370,9 +408,17 @@ are quote-canonical; additive (existing behavior preserved).
 Non-goals: a parallel runtime `BlockDoc`/`SectionDoc`/`FlexDoc` Python model (DocGraph is
 a projection, not a competing editable model); blessed per-kind rollups or fixed detail
 levels; DOM/XPath/CSS selectors in `SpanRef` (plain-text-first); CommonMark/GFM rendering
-(flowmark covers normalization); replacing `TextNode` (HTML-`<div>` chunking); exact
-provider-keyed token counts (`estimate_tokens` is a heuristic); a thread-safety layer. The
-annotation, operation, provenance, and layout layers are schema-reserved but built later.
+(flowmark covers normalization); stored cross-layer edges (cross-layer relationships are
+offset-containment queries, §3); exact provider-keyed token counts (`estimate_tokens` is a
+heuristic); a thread-safety layer.
+
+**Later phases, not non-goals (E9).** The **synthetic layer** — re-expressing today's
+`TextNode`/`<div>` chunking as a layer keyed into the node table — and **cross-layer
+structural edits** (move/wrap/splice anchored on `SpanRef`, generalizing
+`div_insert_wrapped`) are deferred phases, not excluded. `TextNode` stays as-is meanwhile.
+The annotation, operation, provenance, and layout layers are likewise schema-reserved and
+built later. The Phase-1 hooks (the `layer` field, offset-containment `collect()`,
+`SpanRef`-anchored edits) keep these a small lift rather than a redesign.
 
 ## 14. Implementation status
 
@@ -395,9 +441,11 @@ annotation, operation, provenance, and layout layers are schema-reserved but bui
 - Unified document model plan (decision records, phases):
   [`plan-2026-05-29-unified-document-model.md`](project/specs/active/plan-2026-05-29-unified-document-model.md).
 - Research: the cross-language document-model survey
-  [`research-2026-05-29-document-model.md`](project/research/research-2026-05-29-document-model.md)
-  and the span-references survey
-  [`research-2026-05-30-span-references.md`](project/research/research-2026-05-30-span-references.md).
+  [`research-2026-05-29-document-model.md`](project/research/research-2026-05-29-document-model.md),
+  the span-references survey
+  [`research-2026-05-30-span-references.md`](project/research/research-2026-05-30-span-references.md),
+  and the layered-parsing brief
+  [`research-2026-05-30-multilayer-parsing.md`](project/research/research-2026-05-30-multilayer-parsing.md).
 - Completed block-aware plan (v0.4.0):
   [`plan-2026-05-26-block-aware-doc.md`](project/specs/archive/plan-2026-05-26-block-aware-doc.md).
 - flowmark v0.7.1 API: `flowmark.atomic_spans` (`iter_atomic_spans`,
