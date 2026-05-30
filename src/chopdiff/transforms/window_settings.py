@@ -23,6 +23,26 @@ class WindowSettings:
     min_overlap: int = 0
     separator: str = ""
 
+    def __post_init__(self):
+        if self.size < 0:
+            raise ValueError(f"WindowSettings.size must be >= 0: {self.size}")
+        if self.shift < 0:
+            raise ValueError(f"WindowSettings.shift must be >= 0: {self.shift}")
+        if self.min_overlap < 0:
+            raise ValueError(f"WindowSettings.min_overlap must be >= 0: {self.min_overlap}")
+        # A positive window with no shift would never advance.
+        if self.size > 0 and self.shift <= 0:
+            raise ValueError(f"WindowSettings.shift must be > 0 when size > 0: shift={self.shift}")
+        if self.min_overlap > self.size:
+            raise ValueError(
+                f"WindowSettings.min_overlap must be <= size: "
+                f"min_overlap={self.min_overlap}, size={self.size}"
+            )
+
+    def __bool__(self) -> bool:
+        """Falsy when there is no window (size 0), so `WINDOW_NONE` reads as no windowing."""
+        return bool(self.size)
+
     @override
     def __str__(self):
         return f"windowing size={self.size}, shift={self.shift}, min_overlap={self.min_overlap} {self.unit.value}"
