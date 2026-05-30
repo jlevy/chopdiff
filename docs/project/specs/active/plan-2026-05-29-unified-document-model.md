@@ -463,9 +463,10 @@ reparses and re-resolves the annotations back to nodes.
 3. **Rollup surface (E3/E4).** One `collect/counts/index` primitive with scope handles, and
    inline items as nodes (4a)? Or keep block-only rollups + a separate link index?
 4. **Detail axis (E5).** Cumulative `Detail` ladder backed by flags (5c)?
-5. **Schema versioning home.** Do we author the language-neutral JSON Schema artifact now
-   (research Option G) or start with Pydantic models that emit the schema and add the
-   standalone JSON Schema once the shape stabilizes?
+5. **Schema versioning home.** ✅ **SETTLED (2026-05-29): Pydantic as the authoring layer.**
+   The `DocOverview` schema is authored as Pydantic models (single source of truth), which
+   emit a JSON Schema; a standalone language-neutral artifact (JSON Schema, or a
+   TypeScript/Zod mirror) is formalized later once the shape stabilizes. See DR-3.
 6. **Scope of phase 1.** Smallest useful slice (see plan) — confirm it excludes
    annotations/operations/provenance/layout (schema-reserved, built later).
 7. **Reference selector set (E8/D5).** Persisted canonical = `source_span` + `text_quote`;
@@ -528,6 +529,22 @@ returns (not bloating `TextDoc`); the projection is lazily cached off the immuta
 `source_text` (decision 8), so the operative contract is "do not reassign `source_text`
 after parse." Editing is "edit `TextDoc`/source, then re-derive," with the editor edge
 bridging through the `Reference` model (E8/D5).
+
+### DR-3 — Schema authoring layer: Pydantic now, formal schema later (settles Open decision 5)
+
+**Decision (2026-05-29):** Author the `DocOverview` schema as **Pydantic models** — the
+single source of truth in Python — which also emit a JSON Schema. A standalone
+language-neutral artifact (formal JSON Schema, or a TypeScript/Zod mirror for clients) is
+derived and frozen later, once the shape stabilizes against real use cases.
+
+**Why:** fastest to build and validate against `TextDoc`; Pydantic gives validation plus
+JSON-Schema export for free; avoids prematurely freezing a hand-written schema before use
+cases prove the shape. The model ≠ format separation (research) holds: the Pydantic models
+*are* the authored contract; JSON Schema and Zod are projections of it.
+
+**Consequences:** keep parser-internal fields out of the stable models (in `metadata`);
+pin `offset_unit` (Unicode code points); when the shape stabilizes, publish the emitted
+JSON Schema as the cross-language artifact and consider a Zod mirror for TS clients.
 
 ## Implementation plan
 
