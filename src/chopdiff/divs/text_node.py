@@ -128,10 +128,17 @@ class TextNode:
         """
         return not self.children and self.contents.strip() == ""
 
+    @property
+    def class_names(self) -> tuple[str, ...]:
+        """The individual CSS classes on this node (`class="a b"` -> `("a", "b")`)."""
+        return tuple(self.class_name.split()) if self.class_name else ()
+
     def children_by_class_names(self, *class_names: str, recursive: bool = False) -> list[TextNode]:
+        wanted = set(class_names)
+
         def collect_children(node: TextNode) -> list[TextNode]:
             matching_children = [
-                child for child in node.children if child.class_name in class_names
+                child for child in node.children if wanted & set(child.class_names)
             ]
             if recursive:
                 for child in node.children:

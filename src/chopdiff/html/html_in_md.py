@@ -38,6 +38,22 @@ Attrs = dict[str, str | bool]
 
 _TAGS_WITH_PADDING = ["div", "p"]
 
+_TAG_NAME_RE = re.compile(r"^[A-Za-z][A-Za-z0-9-]*$")
+"""HTML tag names: a letter followed by letters/digits/hyphens (covers custom elements)."""
+
+_ATTR_NAME_RE = re.compile(r"^[A-Za-z_:][A-Za-z0-9_.:-]*$")
+"""HTML attribute names: no whitespace; letters/digits/`_`/`.`/`:`/`-`."""
+
+
+def _check_tag_name(tag: str) -> None:
+    if not _TAG_NAME_RE.match(tag):
+        raise ValueError(f"Invalid HTML tag name: {tag!r}")
+
+
+def _check_attr_name(name: str) -> None:
+    if not _ATTR_NAME_RE.match(name):
+        raise ValueError(f"Invalid HTML attribute name: {name!r}")
+
 
 def tag_with_attrs(
     tag: str,
@@ -51,7 +67,16 @@ def tag_with_attrs(
     """
     Create an HTML tag with optional class names and attributes.
     Boolean attribute values: True includes the attribute, False omits it.
+
+    Tag and attribute *names* are validated (values are escaped). Names are assumed to be
+    constants from calling code, not untrusted input; validation guards against malformed
+    or injection-shaped markup.
     """
+    _check_tag_name(tag)
+    if attrs:
+        for k in attrs:
+            _check_attr_name(k)
+
     class_value = ""
     if class_name is not None:
         if isinstance(class_name, str):
