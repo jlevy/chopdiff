@@ -722,6 +722,10 @@ updates" below for the per-section detail):
 
 - [ ] Make the structural block tree fully recursive (containers populate block children);
       keep top-level `blocks()` shape, add deep traversal. Density-invariant preserved.
+- [ ] Add `base_blocks(*, descend={list,ordered_list,list_item})` — the flat, depth-annotated
+      **sequential block list** (partition). Invariant: ordered, non-overlapping, complete
+      cover (reassembly reproduces the document); `depth` per base block. Terminology: *block
+      node* (recursive tree) vs *base block* (partition). (textdoc-spec §6.)
 - [ ] Model inline items as nodes with `parent` block and computed `section`/`sentence`.
 - [ ] Lazy-cache the node table on the immutable `source_text`; make `Section.blocks()`
       slice the cached tree (remove per-section reparse).
@@ -763,8 +767,11 @@ Per-section edits (the design doc carries the prose; this maps what changes):
   with byte/UTF-16 conversions as derived coords.
 - **§5 Block-type model** — note containers (blockquote, list item) fully populate block
   children; `ordered_list` already present.
-- **§6 Structural block tree** — recursive (containers populate children); a derived view
-  over the node table; density-invariant (unchanged correctness, fuller children).
+- **§6 Block views** — terminology (*block element*/*inline* vs *block node* vs *base
+  block*); the recursive structural tree (containers fully populate children;
+  density-invariant) **and** the flat `base_blocks()` sequential partition (ordered,
+  non-overlapping, complete cover; depth-annotated; reassembly reproduces the document); the
+  query-vs-partition distinction.
 - **§7 Sections and TOC** — section is a view; `Section`-scoped `collect()` for per-section
   slices/rollups.
 - **§8 Inline elements and links** — inline items are first-class nodes; links are

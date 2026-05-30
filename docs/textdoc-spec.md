@@ -48,6 +48,10 @@ Two surfaces, one design:
 - **Markdown-correspondent block types.** One-to-one with Markdown kinds (bullet vs.
   ordered lists distinct); each block has one top-level type; nesting is recursive and
   fully populated.
+- **Two block views.** A recursive **structural block tree** (for nesting/slicing/queries)
+  and a flat **sequential base-block list** (a complete, ordered, non-overlapping partition
+  whose reassembly reproduces the document) — so a pipeline can process or resequence a
+  document block by block.
 - **Density-invariant lists.** Tight and loose lists produce identical tallies.
 - **Source-canonical references.** A span reference is durable for annotations across edits
   (`SpanRef`, DR-6): a text quote is the canonical anchor, offsets are recomputable hints.
@@ -86,7 +90,9 @@ JSON still presents a `document` root with children as its top-level shape.
 canonical store:
 
 - the blank-line `Paragraph`/`Sentence` **editing view** (used by diff/window/wordtok);
-- the **structural block tree** (the Markdown backbone — slicing, nesting, per-item access);
+- the **structural block tree** (the recursive Markdown backbone — slicing, nesting,
+  per-item access);
+- the **sequential block list** (the flat, non-recursive *base-block* partition — §6);
 - the **section tree** (heading hierarchy);
 - the **inline/link index**.
 
@@ -145,10 +151,26 @@ blank-line-separated items, not N lists — so `len(list.children)` and any tall
 density-invariant. Density is metadata, not structure: a `tight: bool` on the list
 (CommonMark semantics); the flag never enters a tally.
 
-## 6. Structural block tree
+## 6. Block views: structural tree and sequential base-block list
 
-`TextDoc.blocks() -> list[Block]` is the block-tree view over the node table (lazy,
-cached):
+**Terminology.** To avoid overloading "block":
+
+- **block element** / **inline element** — the Markdown element *class* (CommonMark/mdast
+  sense): block-level (heading, paragraph, blockquote, list, list item, table, code, …) vs
+  inline (link, code span, emphasis, …).
+- **block node** — a node with a block kind in the recursive **structural block tree**
+  (`blocks()`); containers (blockquote, list, list item) contain child block nodes.
+- **base block** — a unit of the flat **sequential block list** (`base_blocks()`): a
+  complete, ordered, non-overlapping partition of the document into the units a pipeline
+  processes or a UI resequences.
+
+These are two views of the same node table, for two different jobs (and they must not be
+conflated — see §9: the tree supports *queries* that may overlap; the base-block list is a
+*partition* with a cover invariant).
+
+### Structural block tree — `TextDoc.blocks() -> list[Block]`
+
+The recursive view (lazy, cached):
 
 - `Block(type, span, children, tight)` — `span` is trimmed so `source[start:end]` is the
   exact text; `children` holds nested blocks. A `list`/`ordered_list` block's children are
@@ -164,6 +186,34 @@ carries an authoritative `element.span = (start, end)` read from marko's own sou
 positions (`flowmark.markdown_ast.block_span`), so chopdiff runs no block-detection regex of
 its own and makes no block-boundary decisions. The structure is cross-checked against marko
 in tests.
+
+### Sequential block list — `TextDoc.base_blocks() -> list[Block]`
+
+A flat, depth-annotated **partition** of the document: the ordered sequence of base blocks,
+each carrying a `depth`. It is the view for block-by-block pipelines and for outline UIs
+that move/resequence blocks (e.g. Notion-style drag-and-drop) — chopdiff does not implement
+such UIs, but the model supports addressing and reordering at this granularity.
+
+**Default frontier:** descend through list containers (`list`, `ordered_list`,
+`list_item`); **every other block is an atomic base block**, carrying its `depth`.
+Consequences:
+
+- A **blockquote is always one base block** (not descended), even if it contains a table.
+- A **list is never itself a base block**; each **item, at every nesting level, is its own
+  base block** with increasing `depth`, giving a flat-with-depth sequence. An item that
+  holds a nested list contributes its own content as a base block at depth *d*, and the
+  nested items follow at depth *d+1* (which is what keeps the partition non-overlapping).
+
+The frontier is parameterizable — `base_blocks(descend=...)`, default
+`{list, ordered_list, list_item}`; `descend=∅` collapses to the top-level blocks (a list is
+then one base block). One mechanism, sensible default — not a fixed menu.
+
+**Invariants** (validated and documented): the base-block list is **ordered** by position,
+**non-overlapping** by span, and a **complete cover** — reassembling the base blocks in
+order reproduces the document (at the normalized/editing level, the same way
+`reassemble()` joins paragraphs). So a pipeline may edit or **resequence** base blocks and
+reassemble; `depth` is mutable metadata (promoting a depth-2 item to depth-1 on a move is
+intended, not a violation — it just changes that block's rendered nesting).
 
 ## 7. Sections and TOC
 
@@ -216,6 +266,13 @@ Slice-by-block-type, per-section rollups, and element rollups are all expression
 one primitive; relationships are node edges. There are no `tables()`/`code_blocks()`
 shortcuts to maintain. (The v0.4.0 `block_type_counts()` convenience accessors are
 superseded by `collect()`; see §14.)
+
+**Query vs. partition — do not conflate.** `collect()` is a *query*: it gathers matching
+nodes and the results may **overlap** their containers (a table nested in a blockquote is
+returned by `collect(kinds={table}, recursive=True)` alongside the blockquote). That is
+correct for counting/gathering. The base-block list (§6) is a *partition*: a complete,
+ordered, **non-overlapping** cover for linear processing. Use `collect()` to ask "how many
+/ which"; use `base_blocks()` to iterate the document's content units.
 
 ## 10. DocOverview: the serialized projection
 
@@ -319,11 +376,12 @@ annotation, operation, provenance, and layout layers are schema-reserved but bui
   **top-level** `block_type_counts()`. At v0.4.0 `blocks()` does not yet populate
   blockquote/list-item children, so top-level counts do not see a nested table.
 - **In progress (this design):** the recursive node table (containers fully populate
-  children); the single `collect()` primitive (superseding and removing `block_type_counts()`,
-  the one semi-breaking change — migration: `Counter(n.kind for n in
-  doc.overview().collect(...))`); composable `include` layers; the `DocOverview` Pydantic
-  schema; and the `SpanRef` contract with exact resolution (fuzzy re-anchor wired behind it).
-  Tracked by epic `chopdiff-8q8q`; sequenced in
+  children); the `base_blocks()` sequential partition with its cover invariant; the single
+  `collect()` primitive (superseding and removing `block_type_counts()`, the one
+  semi-breaking change — migration: `Counter(n.kind for n in doc.overview().collect(...))`);
+  composable `include` layers; the `DocOverview` Pydantic schema; and the `SpanRef` contract
+  with exact resolution (fuzzy re-anchor wired behind it). Tracked by epic `chopdiff-8q8q`;
+  sequenced in
   [`plan-2026-05-29-unified-document-model.md`](project/specs/active/plan-2026-05-29-unified-document-model.md).
 
 ## 15. References
