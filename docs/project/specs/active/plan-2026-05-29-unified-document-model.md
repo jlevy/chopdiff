@@ -1,23 +1,21 @@
 # Feature: A flexible unified document model (DocOverview)
 
-**Date:** 2026-05-29 (last updated 2026-05-29)
+**Date:** 2026-05-29 (last updated 2026-05-30)
 
 **Author:** chopdiff maintainers
 
-**Status:** Draft — design nearly settled. **Eight of nine decisions are settled
-(2026-05-29):** DR-1 node-table-with-views, DR-2 `DocOverview` as a projection of `TextDoc`,
-DR-3 Pydantic schema authoring, DR-4 one general `collect()` rollup primitive (no blessed
-shortcuts), plus 4 (composable `include` layers, no ladder), 6 (minimal phase-1 scope), 8 (lazy-cache), 9 (count
-list-item wrapper paragraphs). **The one remaining open decision is 7 (reference
-selectors)**, under active research (alignment with Chrome Text Fragments / W3C selectors;
-syntactic offset spans vs quoted prefix/suffix spans).
+**Status:** Draft — **all nine decisions settled (2026-05-29 / 2026-05-30).** Decision
+records DR-1..DR-6 cover the architecture (node table; `DocOverview` projection; Pydantic
+authoring; one `collect()` rollup primitive; composable `include` layers; the `SpanRef`
+span-reference type), plus 6 (minimal phase-1 scope), 8 (lazy-cache), 9 (count list-item
+wrapper paragraphs). Ready to break Phase 1 into implementation beads.
 
-**Implementation status:** **None — design-stage.** No code has been written for this
-plan and none lands until the Open decisions are settled. It builds on the
-block-aware/normalized-form work shipped in v0.4.0 (exact spans, structural `blocks()`,
-sections, links, top-level `block_type_counts()`); everything proposed here —
-recursive/nested rollups, the `Reference` model, and the `DocOverview` projection — is not
-yet built. Tracked by epic `chopdiff-8q8q` with decisions gate `chopdiff-0vy6`.
+**Implementation status:** **None yet — design settled, ready to build.** All nine
+decisions are recorded (DR-1..DR-6); the next step is to break Phase 1 into implementation
+beads. It builds on the block-aware/normalized-form work shipped in v0.4.0 (exact spans,
+structural `blocks()`, sections, links, top-level `block_type_counts()`); everything
+proposed here — recursive/nested rollups, the `SpanRef` model, and the `DocOverview`
+projection — is not yet built. Tracked by epic `chopdiff-8q8q`.
 
 > **Inputs:** the survey in
 > [`research-2026-05-29-document-model.md`](../../research/research-2026-05-29-document-model.md)
@@ -98,7 +96,7 @@ one requirement."
 sub-document slicing, and transforms. Phase 1 of
 [`plan-2026-05-26-robustness-hardening.md`](plan-2026-05-26-robustness-hardening.md)
 should land first: `sub_doc`/`sub_paras` currently alias caller objects (the node
-table/`Reference` model wants safe copies), `filtered_transform` can skip its filter, and
+table/`SpanRef` model wants safe copies), `filtered_transform` can skip its filter, and
 div chunking mis-slices. The doc-model's source-grounding assumptions (exact spans,
 honest `from_text` normalization) are already satisfied in v0.4.0.
 
@@ -275,7 +273,7 @@ Carried from the tallies analysis and E2/E3: the node table derives from immutab
 - **Stability:** annotations (later) target node id **and** source span **and** text-quote,
   per W3C, so they survive a reparse.
 
-## E8. Reference and annotation targeting (dual addressing)
+## E8. Span references and annotation targeting (dual addressing)
 
 One scheme must let a caller reference the document while **reading** (a source line/span),
 while **editing in memory** (a parsed element — a table, a link — possibly via a bridged
@@ -431,51 +429,87 @@ categories are added as one more `Layer` (additive, no refactor).
 | Tree → exact structure or any rollup | containment tree view + rollup projections of one node set |
 | Single serializable JSON for UIs | `DocOverview` schema, id-addressed, parser-agnostic |
 | Optional levels of detail | composable `include` layers (no fixed ladder); default = core |
-| Reference anything (source / element / rendered) | one `Reference` with coordinated selectors (D5) |
+| Reference anything (source / element / rendered) | one `SpanRef` with coordinated selectors (D5) |
 | Persist source-grounded; edit by tree | save normalizes to source selectors; in-memory uses `node_id` |
 
-## D5. References, annotations, and persistence
+## D5. Span references (`SpanRef`), annotations, and persistence
 
-A single `Reference` (annotation target) underlies all addressing (E8, 8c):
+A single small **`SpanRef`** type underlies all addressing (E8, 8c). Its design follows the
+prior art surveyed in
+[`research-2026-05-30-span-references.md`](../../research/research-2026-05-30-span-references.md)
+(Chrome URL Text Fragments, W3C Web Annotation selectors, Hypothesis fuzzy anchoring,
+RFC 5147) — see that brief for syntaxes, links, and full trade-offs.
 
 ```
-Reference = {
-  node_id?,                       # transient in-memory handle (NOT persisted)
-  source_span?: {start, end},     # CANONICAL anchor (Unicode code points); persisted
-  text_quote?: {prefix, exact, suffix},   # robustness across edits/reparse
-  structural_path?,               # optional reparse-stable path (e.g. section>block index)
-  anchor?                         # reserved opaque id for a future CRDT/editor edge
+SpanRef = {
+  # Quoted span — CANONICAL, durable anchor (survives edits; Chrome-Text-Fragment shaped)
+  exact: str,
+  prefix?: str,        # ~32-128 chars of enclosing context, for uniqueness
+  suffix?: str,
+  # Syntactic span — exact within the current source; a recomputable HINT (code points)
+  start?: int,
+  end?: int,
+  # node_id: in-memory handle only, NEVER persisted
 }
-Annotation = { id, kind, target: Reference, body, metadata? }
+Annotation = { id, kind, target: SpanRef, body, metadata? }
 ```
 
-Rules:
+**Canonical = the quote; offset = a hint.** This is the key lesson from the research: every
+mature system (W3C `oa:Choice`, Hypothesis) treats the **text quote (`exact`+`prefix`/
+`suffix`) as the durable anchor** and **character offsets as accelerators**, because the
+quote survives restructuring and is fuzzy-matchable while offsets shift on any earlier
+edit. Within one parse the offset is exact (chopdiff retains `source_text`), so it is the
+fast path; across edits the quote is what recovers the target.
 
-- **model → source is total.** Constructing a `Reference` from any node fills `source_span`
-  from that node, so attaching at the model level (table, link) is automatically grounded
-  in the original source.
-- **source → model is re-resolution.** Given a `Reference`, find the node by `source_span`,
-  else `text_quote`, else `structural_path`. Used on load/reparse and when bridging from a
-  rendered selection.
-- **Persistence is source-grounded.** Saving drops the transient `node_id`; the saved
-  artifact is the **original document plus source-grounded annotations**. `DocOverview`
-  serializes annotations in its `annotations` layer with source-grounded targets; node ids
-  appear only in an in-memory/transport projection, never as the durable anchor.
+### Syntactic (offset) vs quoted (prefix/suffix) matching — trade-offs
+
+| | Syntactic offset span (`start`/`end`) | Quoted span (`exact`+`prefix`/`suffix`) |
+| --- | --- | --- |
+| Robust to edits elsewhere | ✘ shifts | ✅ survives |
+| Disambiguation of repeats | ✅ exact position | ✅ via prefix/suffix (✘ exact-only) |
+| Cost / compactness | ✅ two ints | proportional to quote + context |
+| Browser/Text-Fragment shaped | ✘ (no offsets in `#:~:text=`) | ✅ maps directly |
+| Sub-word / code targets | ✅ | ✘ (Text Fragments are word-boundary, case-insensitive) |
+
+So we keep **both**: offsets for exact, cheap, in-parse addressing; the quote for durable,
+portable, edit-surviving references. (Compare RFC 5147 `#char=`/`#line=` with `;md5=`
+integrity — offset + change-detection but no recovery — vs the quote's fuzzy recovery.)
+
+### Rules
+
+- **model → source is total.** Building a `SpanRef` from any node fills both the offset
+  (the node's `source_span`) and the quote (sliced from source + context), so attaching at
+  the model level (table, link) is automatically grounded in the original source.
+- **source → model is re-resolution.** Fast path: if the text at `start:end` still equals
+  `exact`, accept. Else fuzzy re-anchor via `exact`+`prefix`/`suffix` (offset as a search
+  hint, then full document), and update `start`/`end`. (Mirrors Hypothesis' strategy.)
+- **Persistence is quote-canonical and source-grounded.** Saving keeps the quote (durable)
+  and drops the transient `node_id`; offsets persist only as hints. The saved artifact is
+  the **original document plus source-grounded annotations**.
+- **Chrome Text Fragment** export is a lossy projection of the quote
+  (`#:~:text=[prefix-,]exact[,-suffix]`): prose only, word-boundary, case-insensitive;
+  truncate context for URL length. The directive is generated on demand, never stored.
 - **Rendered output references back.** HTML/render helpers emit `data-node-id` and
-  `data-source-span`, so a click/selection resolves to a node and thence to source.
+  `data-source-span` so a click/selection resolves to a node and thence to source.
+- **Offset unit is Unicode code points** (Python-native); provide a UTF-16 conversion for
+  JS interop (the W3C position-selector unit ambiguity is a known cross-language footgun).
+- **Deferred (not in v1):** an XPath/DOM `structural_path` (environment-specific) and an
+  opaque CRDT `anchor` slot — added only if a concrete need appears.
 
-Annotations are a **stand-off layer** (research's conceptual core): parsed structure
+Annotations are a **stand-off layer** (the research's conceptual core): parsed structure
 (sections, blocks, links) and added structure (summaries, notes, rewrite suggestions) are
-the same kind of thing — typed layers of grounded targets — so "annotate this table" and
-"give me the TOC" use one mechanism. Building the annotation layer is a later phase; this
-plan fixes the **`Reference` contract and resolution rules now** so the node model, the
-schema, and any editor bridge are designed around it from the start.
+the same kind of thing — typed layers of `SpanRef`-targeted records. **Building the
+annotation layer is a later phase**, and we expect to **revisit and refine it** (and
+possibly `SpanRef` itself) once v1 is in use; this plan only fixes the `SpanRef` contract
+and resolution rules now so the node model, schema, and editor bridge are designed around
+it. v1 is at least as expressive as a Chrome-style `exact`+`prefix`/`suffix` selector,
+which is the agreed floor.
 
-Worked use case (read → edit → save): open a Markdown doc; build the in-memory model (and
-optionally bridge to an editor); a user/AI annotates the parsed table and a link (model
-nodes); on save, those references resolve to source spans and serialize as *original
-Markdown + annotations targeting the original document's table/link spans*; reopening
-reparses and re-resolves the annotations back to nodes.
+Worked use case (read → edit → save): open a Markdown doc; build the in-memory model
+(optionally bridged to an editor); a user/AI annotates the parsed table and a link (model
+nodes); on save, the `SpanRef`s persist quote-canonical and serialize as *original Markdown
++ source-grounded annotations*; reopening reparses and re-resolves them to nodes (fast path
+when unchanged, fuzzy re-anchor when edited).
 
 ## Open decisions
 
@@ -507,27 +541,15 @@ reparses and re-resolves the annotations back to nodes.
    emit a JSON Schema; a standalone language-neutral artifact (JSON Schema, or a
    TypeScript/Zod mirror) is formalized later once the shape stabilizes. See DR-3.
 6. **Scope of phase 1.** ✅ **SETTLED (2026-05-29): minimal slice.** Phase 1 is the
-   recursive node model + `collect()` + `Reference` contract; annotations, operations,
+   recursive node model + `collect()` + `SpanRef` contract; annotations, operations,
    provenance, and layout are schema-reserved and built in later phases.
-7. **Reference selector set (E8/D5).** ⏳ **OPEN — under research (the one substantive
-   remaining decision).** We want a small `Reference` type that is source-canonical for
-   persistence and stays stable for annotations as the document changes, and we want to
-   align it with established prior art rather than invent a one-off. Considerations being
-   researched:
-   - **Alignment with Chrome URL Text Fragments** (`#:~:text=[prefix-,]start[,end][,-suffix]`)
-     and the **W3C Web Annotation** selectors (`TextQuoteSelector` exact/prefix/suffix,
-     `TextPositionSelector` start/end), plus fuzzy re-anchoring (Hypothesis / Apache
-     Annotator). Goal: our span syntax should be *convertible to/from* a Chrome text
-     directive in the future, so a document span and a browser highlight can share one form.
-   - **Multiple span kinds in one model:** a *syntactic* span tied to the original source
-     (offset/position — precise but brittle under edits) **and** a *quoted* span (exact
-     text with enclosing prefix/suffix markers chosen to make it unique — robust under
-     edits, browser-compatible). Decide whether `Reference` carries both coordinated
-     selectors (canonical source span + quote+prefix/suffix), which is canonical for
-     persistence, and how they re-resolve after edits/reparse.
-   - Whether to include a reparse-stable `structural_path` and the opaque CRDT `anchor`
-     slot now or defer. Confirm `node_id` is never persisted.
-   See the research brief in progress; this decision is settled after reviewing it.
+7. **Span-reference selector set (`SpanRef`) (E8/D5).** ✅ **SETTLED (2026-05-30): `SpanRef`
+   carries a quoted span (`exact`+`prefix`/`suffix`, the canonical durable anchor) and an
+   offset span (`start`/`end`, code points, a recomputable hint); quote-canonical
+   persistence; Chrome-Text-Fragment convertible; `node_id` never persisted; `structural_path`
+   and CRDT `anchor` deferred.** Informed by
+   [`research-2026-05-30-span-references.md`](../../research/research-2026-05-30-span-references.md).
+   See DR-6. (Named `SpanRef`, not `Reference`, to be specific.)
 8. **Computation/caching (E6).** ✅ **SETTLED (2026-05-29): lazy-cache** the node table off
    the immutable `source_text` (also fixes the quadratic per-section `Section.blocks()`
    re-parse). Memoization of a derived view is not a "stored count"; the contract is "do
@@ -558,7 +580,7 @@ forces every other structure to be a bespoke overlay with its own addressing. A 
 gives one id space for blocks *and* inline items, makes overlapping layers and "zoom =
 pick a view + level" cheap O(n) projections, and serializes to the flat, id-addressed JSON
 frontends want. (A single tree would have sufficed for analysis-only counts/slices, but
-not for annotations, the dual source/tree `Reference` model, or UI serialization.)
+not for annotations, the dual source/tree `SpanRef` model, or UI serialization.)
 
 **Consequences:** a node-table builder to write and test; discipline on id stability and
 span units (Unicode code points, decision 7/E7); container children become populated
@@ -585,7 +607,7 @@ it.
 returns (not bloating `TextDoc`); the projection is lazily cached off the immutable
 `source_text` (decision 8), so the operative contract is "do not reassign `source_text`
 after parse." Editing is "edit `TextDoc`/source, then re-derive," with the editor edge
-bridging through the `Reference` model (E8/D5).
+bridging through the `SpanRef` model (E8/D5).
 
 ### DR-3 — Schema authoring layer: Pydantic now, formal schema later (settles Open decision 5)
 
@@ -647,6 +669,32 @@ cleanly separable part of the Pydantic models so "include or not" is a clean per
 toggle; testing is linear (per layer), not combinatorial; document common compositions as
 examples.
 
+### DR-6 — Span references: `SpanRef` (quote canonical + offset hint) (settles Open decision 7)
+
+**Decision (2026-05-30):** A small **`SpanRef`** type (not `Reference` — too generic)
+carries two coordinated span kinds: a **quoted span** (`exact` + optional `prefix`/`suffix`)
+that is the **canonical durable anchor**, and an **offset span** (`start`/`end` in Unicode
+code points) that is a **recomputable hint**. Persistence is quote-canonical and
+source-grounded; `node_id` is an in-memory handle only and is never persisted. The quote is
+shaped to be **convertible to/from a Chrome URL Text Fragment** (lossy: prose,
+word-boundary, case-insensitive). A reparse-stable `structural_path` and a CRDT `anchor`
+slot are **deferred** until a concrete need appears. Full shape, rules, and the
+syntactic-vs-quoted trade-off table are in D5.
+
+**Why:** the surveyed prior art (see
+[`research-2026-05-30-span-references.md`](../../research/research-2026-05-30-span-references.md):
+Chrome Text Fragments, W3C Web Annotation `TextQuoteSelector`/`TextPositionSelector` +
+`oa:Choice`, Hypothesis fuzzy anchoring, RFC 5147) converges on storing the **text quote as
+the durable anchor with positions as accelerators** — quotes survive edits and re-anchor
+fuzzily; offsets shift. Carrying both gives exact cheap in-parse addressing *and*
+edit-surviving, browser-portable references, with one source-canonical form.
+
+**Consequences:** Phase 1 ships the `SpanRef` contract + exact (fast-path) resolution; the
+fuzzy re-anchor and the Chrome Text Fragment export are wired behind it (fuzzy path may be
+stubbed first). The **annotation layer is a later phase and is expected to be revisited and
+refined** once v1 is in use — `SpanRef` v1 is deliberately scoped to the Chrome-style
+`exact`+`prefix`/`suffix` floor, accepting later enhancement.
+
 ## Implementation plan
 
 Kept to two phases; phase 1 is the useful core, phase 2 is serialization polish. (No work
@@ -661,18 +709,18 @@ starts until "Open decisions" is settled.)
       slice the cached tree (remove per-section reparse).
 - [ ] Add the single `collect(*, kinds=, where=, recursive=, inline=)` query primitive
       with document / section / block scope handles. No per-kind rollup methods (DR-4).
-- [ ] Define the `Reference` type and resolution: `Reference.from_node(node)` (total
+- [ ] Define the `SpanRef` type and resolution: `SpanRef.from_node(node)` (total
       model→source), `resolve(reference, doc)` (source→model via span/quote/structural),
       and `to_persisted()` (drop transient `node_id`). No annotation *storage* yet — just
       the targeting contract the rest of the model is designed around.
 - [ ] Tests: nested tables/code in blockquotes and list items are counted and locatable;
-      per-section value+count rollups; density invariance; section slicing; `Reference`
+      per-section value+count rollups; density invariance; section slicing; `SpanRef`
       round-trips (node → source-grounded → re-resolved node) and survives a reparse.
 
 ### Phase 2: `DocOverview` serialization + detail levels
 
 - [ ] Pydantic/dataclass models for the schema (nodes, views, source, reserved
-      `annotations` layer with the `Reference` target shape); `offset_unit` pinned to
+      `annotations` layer with the `SpanRef` target shape); `offset_unit` pinned to
       Unicode code points; optional derived coords.
 - [ ] `TextDoc.overview(*, include=…)` builder + `Layer` set (no ladder); render helpers emit
       `data-node-id` / `data-source-span` so rendered selections resolve back to source.
@@ -692,7 +740,7 @@ starts until "Open decisions" is settled.)
   (including a layer adds only its part; the core is always present).
 - Coordinates: `source_span` round-trips against `source_text`; derived byte/UTF-16 spans
   agree on ASCII and a multi-byte sample.
-- References: a `Reference` built from a node carries the node's `source_span`; persisting
+- References: a `SpanRef` built from a node carries the node's `source_span`; persisting
   drops `node_id`; after a no-op reparse it re-resolves to the same node; after an edit
   that shifts offsets, `text_quote` still re-resolves it. An annotation created against a
   parsed table/link serializes with a source-grounded target.
