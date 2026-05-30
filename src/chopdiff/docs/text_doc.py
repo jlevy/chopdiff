@@ -35,7 +35,8 @@ from chopdiff.util.token_estimate import estimate_tokens
 
 if TYPE_CHECKING:
     from chopdiff.docs.block_tree import Block
-    from chopdiff.docs.node import Node, NodeKind, NodeTable
+    from chopdiff.docs.doc_graph import Detail, DocGraph
+    from chopdiff.docs.node import Layer, Node, NodeKind, NodeTable
 
 SYMBOL_PARA = "¶"
 
@@ -935,6 +936,23 @@ class TextDoc:
             inline=inline,
             contains=contains,
         )
+
+    def graph(
+        self,
+        *,
+        include: frozenset[Layer] | None = None,
+        detail: frozenset[Detail] = frozenset(),  # pyright: ignore[reportCallInDefaultInitializer]
+    ) -> DocGraph:
+        """
+        Build a `DocGraph` projection of this document. `include` selects which
+        layers to serialize (default: markdown + document); `detail` controls
+        payload richness (see `Detail`). See `chopdiff.docs.doc_graph` for the
+        full contract.
+        """
+        from chopdiff.docs.doc_graph import _DEFAULT_INCLUDE, build_doc_graph
+
+        effective_include = include if include is not None else _DEFAULT_INCLUDE
+        return build_doc_graph(self, include=effective_include, detail=detail)
 
     @override
     def __str__(self):

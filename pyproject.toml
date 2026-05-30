@@ -47,6 +47,7 @@ dependencies = [
     "cydifflib>=1.2.0",
     "regex>=2024.11.6",
     "selectolax>=0.3.32",
+    "pydantic>=2.13.4",
 ]
 
 [project.optional-dependencies]
