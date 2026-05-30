@@ -4,13 +4,13 @@
 
 **Author:** chopdiff maintainers
 
-**Status:** Draft — design firming up. This document walks through approaches
-("Exploration"), proposes a clean design ("Proposed design"), and records settled choices
-("Decision record"). **Four decisions are settled (2026-05-29): DR-1 node-table-with-views,
-DR-2 `DocOverview` as a projection of `TextDoc`, DR-3 Pydantic schema authoring, DR-4 one
-general `collect()` rollup primitive (no blessed shortcuts).** Remaining Open decisions: 4
-(detail axis), 6 (phase-1 scope), 7 (reference selectors), 8 (caching), 9 (list-item
-paragraph counting).
+**Status:** Draft — design nearly settled. **Eight of nine decisions are settled
+(2026-05-29):** DR-1 node-table-with-views, DR-2 `DocOverview` as a projection of `TextDoc`,
+DR-3 Pydantic schema authoring, DR-4 one general `collect()` rollup primitive (no blessed
+shortcuts), plus 4 (`Detail` ladder), 6 (minimal phase-1 scope), 8 (lazy-cache), 9 (count
+list-item wrapper paragraphs). **The one remaining open decision is 7 (reference
+selectors)**, under active research (alignment with Chrome Text Fragments / W3C selectors;
+syntactic offset spans vs quoted prefix/suffix spans).
 
 **Implementation status:** **None — design-stage.** No code has been written for this
 plan and none lands until the Open decisions are settled. It builds on the
@@ -485,23 +485,42 @@ reparses and re-resolves the annotations back to nodes.
    standard Python (`len`/`Counter`/comprehensions) documented with clear examples. Inline
    items are nodes (4a); relationships are node edges. No per-kind rollup methods, to keep
    the embeddable library's surface small. See DR-4.
-4. **Detail axis (E5).** Cumulative `Detail` ladder backed by flags (5c)?
+4. **Detail axis (E5).** ✅ **SETTLED (2026-05-29): cumulative `Detail` ladder
+   (`OUTLINE ⊂ BLOCKS ⊂ INLINE ⊂ FULL`) backed by independent include-flags (5c).**
 5. **Schema versioning home.** ✅ **SETTLED (2026-05-29): Pydantic as the authoring layer.**
    The `DocOverview` schema is authored as Pydantic models (single source of truth), which
    emit a JSON Schema; a standalone language-neutral artifact (JSON Schema, or a
    TypeScript/Zod mirror) is formalized later once the shape stabilizes. See DR-3.
-6. **Scope of phase 1.** Smallest useful slice (see plan) — confirm it excludes
-   annotations/operations/provenance/layout (schema-reserved, built later).
-7. **Reference selector set (E8/D5).** Persisted canonical = `source_span` + `text_quote`;
-   also include a reparse-stable `structural_path` now, or add it only when reattachment
-   robustness proves insufficient? And do we define the opaque `anchor` slot now (reserved,
-   unused) or defer it entirely? Confirm `node_id` is never persisted.
-8. **Computation/caching (E6).** Lazy-cache the node table off the immutable `source_text`
-   (recommended; also fixes the quadratic per-section `Section.blocks()` re-parse), or keep
-   pure recompute-on-call? Confirm memoization counts as "no stored counts."
-9. **List-item paragraph counting.** In recursive rollups, count the wrapper `Paragraph`
-   inside each list item as a `paragraph` (density-invariant, since tight and loose items
-   both wrap), or exclude it? Affects only the `paragraph` tally, not `table`/`code`/etc.
+6. **Scope of phase 1.** ✅ **SETTLED (2026-05-29): minimal slice.** Phase 1 is the
+   recursive node model + `collect()` + `Reference` contract; annotations, operations,
+   provenance, and layout are schema-reserved and built in later phases.
+7. **Reference selector set (E8/D5).** ⏳ **OPEN — under research (the one substantive
+   remaining decision).** We want a small `Reference` type that is source-canonical for
+   persistence and stays stable for annotations as the document changes, and we want to
+   align it with established prior art rather than invent a one-off. Considerations being
+   researched:
+   - **Alignment with Chrome URL Text Fragments** (`#:~:text=[prefix-,]start[,end][,-suffix]`)
+     and the **W3C Web Annotation** selectors (`TextQuoteSelector` exact/prefix/suffix,
+     `TextPositionSelector` start/end), plus fuzzy re-anchoring (Hypothesis / Apache
+     Annotator). Goal: our span syntax should be *convertible to/from* a Chrome text
+     directive in the future, so a document span and a browser highlight can share one form.
+   - **Multiple span kinds in one model:** a *syntactic* span tied to the original source
+     (offset/position — precise but brittle under edits) **and** a *quoted* span (exact
+     text with enclosing prefix/suffix markers chosen to make it unique — robust under
+     edits, browser-compatible). Decide whether `Reference` carries both coordinated
+     selectors (canonical source span + quote+prefix/suffix), which is canonical for
+     persistence, and how they re-resolve after edits/reparse.
+   - Whether to include a reparse-stable `structural_path` and the opaque CRDT `anchor`
+     slot now or defer. Confirm `node_id` is never persisted.
+   See the research brief in progress; this decision is settled after reviewing it.
+8. **Computation/caching (E6).** ✅ **SETTLED (2026-05-29): lazy-cache** the node table off
+   the immutable `source_text` (also fixes the quadratic per-section `Section.blocks()`
+   re-parse). Memoization of a derived view is not a "stored count"; the contract is "do
+   not reassign `source_text` after parse." Already de-risked by the robustness Phase-1
+   `sub_doc`/`sub_paras` copy fix.
+9. **List-item paragraph counting.** ✅ **SETTLED (2026-05-29): count it.** The wrapper
+   `Paragraph` inside each list item is counted as a `paragraph`; it is density-invariant
+   (tight and loose items both wrap), and excluding it would be a special case.
 
 (Folded in from the archived tallies note, whose four decisions are subsumed by 1, 3, 8,
 and 9 here.)
