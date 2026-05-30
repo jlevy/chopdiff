@@ -4,9 +4,11 @@
 
 **Author:** chopdiff maintainers
 
-**Status:** Draft — exploratory. This document first walks through approaches and
-trade-offs ("Exploration"), then proposes a clean design ("Proposed design"). The pivotal
-choices are listed in "Open decisions" and are **not yet settled**.
+**Status:** Draft — design firming up. This document walks through approaches
+("Exploration"), proposes a clean design ("Proposed design"), and records settled choices
+("Decision record"). **The two architectural decisions are settled (2026-05-29): DR-1
+node-table-with-views, DR-2 `DocOverview` as a projection of `TextDoc`.** The remaining
+seven Open decisions are smaller and still open.
 
 **Implementation status:** **None — design-stage.** No code has been written for this
 plan and none lands until the Open decisions are settled. It builds on the
@@ -445,15 +447,19 @@ reparses and re-resolves the annotations back to nodes.
 
 ## Open decisions
 
-1. **Node set vs single tree (E1).** Adopt the node-table-with-views (1b) with the
-   containment tree as the top-level JSON shape? (Recommended.) Includes the nested-block
-   exposure choice: fully populate container children (a table inside a blockquote/list
-   item becomes a node) while keeping the top-level `blocks()` shape and a `recursive`
-   opt-in for traversal/rollups. (See the archived
-   [tallies note](../archive/plan-2026-05-29-multilevel-block-tallies.md) axis A for the
-   detailed top-level-vs-recursive-vs-hybrid trade-off.)
-2. **Projection vs runtime object (E2).** `DocOverview` as a built projection over
-   `TextDoc` (2a), no competing runtime model? (Recommended.)
+1. **Node set vs single tree (E1).** ✅ **SETTLED (2026-05-29): node-table-with-views
+   (1b).** A stable node table (id + span) is canonical; the containment tree, section
+   tree, block list, and inline index are derived views, and the JSON presents a
+   `document` root with children as its top-level shape. Container children are fully
+   populated (a table inside a blockquote/list item is a node), with top-level `blocks()`
+   shape preserved and a `recursive` opt-in for traversal/rollups. See the Decision Record
+   and the archived [tallies note](../archive/plan-2026-05-29-multilevel-block-tallies.md)
+   axis A.
+2. **Projection vs runtime object (E2).** ✅ **SETTLED (2026-05-29): projection (2a).**
+   `DocOverview` is a derived projection/contract built from `TextDoc` (the Python core),
+   not a competing editable runtime model. It may be a rich value with query methods, but
+   source text / `TextDoc` stays canonical; edits go through `TextDoc`/source and
+   re-derive. See the Decision Record.
 3. **Rollup surface (E3/E4).** One `collect/counts/index` primitive with scope handles, and
    inline items as nodes (4a)? Or keep block-only rollups + a separate link index?
 4. **Detail axis (E5).** Cumulative `Detail` ladder backed by flags (5c)?
@@ -475,6 +481,53 @@ reparses and re-resolves the annotations back to nodes.
 
 (Folded in from the archived tallies note, whose four decisions are subsumed by 1, 3, 8,
 and 9 here.)
+
+## Decision record
+
+### DR-1 — Canonical structure: node table with derived views (settles Open decision 1)
+
+**Decision (2026-05-29):** Store the document structure as a **stable node table**
+(`Node{id, kind, parent, children, source_span, attrs}`) covering blocks, inline items,
+and headings. The block containment tree, section tree, block list, link index, and token
+stream are **derived views** (arrays of node ids / filters), not the canonical store. The
+serialized JSON presents a `document` root with `children` as its top-level shape, so the
+tree remains a first-class view.
+
+**Why:** chopdiff has several hierarchies that overlap and do not nest — a section spans
+sibling blocks and is not a subtree of the block tree; links are inline ranges;
+annotations target arbitrary spans. A single canonical tree privileges one hierarchy and
+forces every other structure to be a bespoke overlay with its own addressing. A node table
+gives one id space for blocks *and* inline items, makes overlapping layers and "zoom =
+pick a view + level" cheap O(n) projections, and serializes to the flat, id-addressed JSON
+frontends want. (A single tree would have sufficed for analysis-only counts/slices, but
+not for annotations, the dual source/tree `Reference` model, or UI serialization.)
+
+**Consequences:** a node-table builder to write and test; discipline on id stability and
+span units (Unicode code points, decision 7/E7); container children become populated
+(additive to `Block.children`, noted in the changelog). Over-modeling is bounded by the
+minimal Phase-1 scope (decision 6).
+
+### DR-2 — `DocOverview` is a projection of `TextDoc`, not a runtime model (settles Open decision 2)
+
+**Decision (2026-05-29):** `DocOverview` is a **derived projection / serialized contract**
+built from `TextDoc` (the Python core). It may be returned as a rich value with
+`collect/counts/index` query methods, but it is **read-mostly and not canonical**: source
+text / `TextDoc` is the source of truth, and edits go through `TextDoc`/source and
+re-derive. No competing editable runtime document model.
+
+**Why:** keeping source canonical avoids the central failure mode — a rich in-memory model
+drifting away from the actual Markdown (the ProseMirror/CRDT trap, where Markdown becomes
+secondary). It minimizes new public surface, reuses `TextDoc`'s spans/sections/links/size
+machinery, and keeps `DocOverview` honest as a cross-language contract (Python and a future
+TS client are both implementations of one schema). A first-class runtime object is
+reserved for the day a genuine runtime boundary (e.g. live collaborative editing) requires
+it.
+
+**Consequences:** query/rollup methods live on the small derived object `overview()`
+returns (not bloating `TextDoc`); the projection is lazily cached off the immutable
+`source_text` (decision 8), so the operative contract is "do not reassign `source_text`
+after parse." Editing is "edit `TextDoc`/source, then re-derive," with the editor edge
+bridging through the `Reference` model (E8/D5).
 
 ## Implementation plan
 
