@@ -722,8 +722,8 @@ updates" below for the per-section detail):
 
 - [ ] Make the structural block tree fully recursive (containers populate block children);
       keep top-level `blocks()` shape, add deep traversal. Density-invariant preserved.
-- [ ] Add `base_blocks(*, list_depth=6)` — the flat, depth-annotated **sequential block
-      list** (partition). `list_depth` controls list decomposition (default 6; `-1`
+- [ ] Add `base_blocks(*, item_partition_depth=6)` — the flat, depth-annotated **sequential block
+      list** (partition). `item_partition_depth` controls list decomposition (default 6; `-1`
       unlimited; `0` lists unsplit); blockquotes always atomic. Invariant: ordered,
       non-overlapping, complete cover whose reassembly reproduces the document (exact except
       normalized paragraph-break whitespace; exact via offsets). A base block is a block

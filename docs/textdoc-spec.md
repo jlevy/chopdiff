@@ -202,16 +202,16 @@ item, at every nesting level, is its own base block** with increasing `depth`
 (flat-with-depth). An item holding a nested list contributes its own content at depth *d*
 and its nested items follow at *d+1*, which keeps the partition non-overlapping.
 
-How deep lists decompose is one numeric parameter, `base_blocks(list_depth=6)`:
+How deep lists decompose is one numeric parameter, `base_blocks(item_partition_depth=6)`:
 
-- `list_depth = N` (default **6** — deep enough for normal nested lists): split list items
+- `item_partition_depth = N` (default **6** — deep enough for normal nested lists): split list items
   down to *N* nesting levels; list content nested deeper than *N* stays whole inside its
   depth-*N* base block (avoids pathological fan-out on very deep lists).
-- `list_depth = -1`: unlimited — split at every nesting level.
-- `list_depth = 0`: lists are not split — each list is a single base block (coarse mode,
+- `item_partition_depth = -1`: unlimited — split at every nesting level.
+- `item_partition_depth = 0`: lists are not split — each list is a single base block (coarse mode,
   i.e. the top-level blocks).
 
-Blockquotes are always one base block regardless of `list_depth`.
+Blockquotes are always one base block regardless of `item_partition_depth`.
 
 **Invariants** (validated and documented): the base-block list is **ordered** by position,
 **non-overlapping** by span, and a **complete cover**. Reassembling the base blocks in order
