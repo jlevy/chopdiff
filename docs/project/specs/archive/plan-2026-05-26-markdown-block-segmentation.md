@@ -344,7 +344,7 @@ For analytics, distinguish block kind from category:
 
 Callers can then tally by exact Markdown kind or by broad analysis category.
 
-### Size And Tally Semantics
+### Size and Tally Semantics
 
 The tally API should use the existing `TextUnit` enum so analytics line up with
 `TextDoc`:
@@ -396,7 +396,7 @@ Sections should be derived from Markdown headings:
 Section rollups should preserve the same block filters as document tallies so a caller
 can compare, for example, prose word counts by section while excluding tables and code.
 
-### Relationship To PR #7
+### Relationship to PR #7
 
 Assume PR #7 may land first as an interim API for release users.
 This spec should build on that baseline rather than requiring it to be reverted.
@@ -462,7 +462,7 @@ Potential later API, not required in the first implementation:
 
 ## Implementation Plan
 
-### Phase 0: Land And Stabilize PR #7 Baseline
+### Phase 0: Land and Stabilize PR #7 Baseline
 
 - [ ] Re-export `BlockType` from `src/chopdiff/docs/__init__.py`.
 - [ ] Make `TextDoc.filtered()` copy paragraphs and sentences rather than aliasing the
@@ -488,7 +488,7 @@ Potential later API, not required in the first implementation:
   not introduce a new package artifact, but still review the lockfile diff under
   `SUPPLY-CHAIN-SECURITY.md`.
 
-### Phase 2: Block Semantics And TextDoc Integration
+### Phase 2: Block Semantics and TextDoc Integration
 
 - [ ] Define which node types produce default blocks and which are containers.
 - [ ] Add offset-based `TextDoc` range APIs needed by block analytics, after the
@@ -515,7 +515,7 @@ Potential later API, not required in the first implementation:
 - [ ] Add tests for root content before the first heading, nested headings, sibling
   headings, and filtered prose-only section word counts.
 
-### Phase 4: Documentation, Tests, And PR Resolution
+### Phase 4: Documentation, Tests, and PR Resolution
 
 - [ ] Add tests for paragraphs, headings, blockquotes, nested lists, task lists, ordered
   lists, loose lists, tables, fenced code with blank lines, indented code, HTML blocks,

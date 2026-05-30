@@ -16,7 +16,7 @@
 > document as several coexisting, independently-enabled parses over one immutable source,
 > and is that a coherent, novel, and useful framework?** It also develops, in the layered
 > context, **how durable span references (Chrome Text Fragments, W3C selectors, fuzzy
-> anchoring) anchor an annotation/reference layer** that survives reparse and edits —
+> anchoring) anchor an annotation/reference layer** that survives reparse and edits,
 > consolidating the span-reference brief into the layered model rather than leaving it as a
 > separate concern.
 
@@ -50,12 +50,12 @@ for all.
 
 This is the conceptual core behind both `DocGraph` (the serialized, language-neutral
 projection of the layers) and `TextDoc` (the Python parsing/analysis API that builds and
-queries them). The non-tree insight itself is *not* new — overlapping-markup data models
+queries them). The non-tree insight itself is *not* new; overlapping-markup data models
 (GODDAG, LMNL, TAG) and multi-tier NLP annotation (UIMA, annotation graphs) established it
 decades ago, and the academic community explicitly retracted the "text is one hierarchy"
 thesis (OHCO) in 1996. What is underexplored, and where this framework aims to contribute,
 is **packaging that insight as a small, embeddable, source-grounded, JSON-serializable
-library with à-la-carte layer enablement and an explicit dependency graph** — rather than a
+library with à-la-carte layer enablement and an explicit dependency graph**, rather than a
 full markup meta-language or a heavyweight NLP framework. Getting that framework right is
 what buys flexibility for downstream uses we have not yet imagined.
 
@@ -64,14 +64,14 @@ what buys flexibility for downstream uses we have not yet imagined.
 1. Is "one immutable source, many coexisting independently-enabled parse layers" a
    coherent model, or does it collapse into either a single tree or an unmanageable graph?
 2. What prior art exists for *multiple* coordinated structural layers over one text (as
-   opposed to one tree + external annotations), and where does each fall short of a
+   opposed to one tree and external annotations), and where does each fall short of a
    general framework?
 3. How do Chopdiff's existing parses (`TextDoc`, block/section, `TextNode` divs) map onto
    layers, and which are genuinely independent vs dependent?
-4. What is the right relationship primitive *across* layers — stored edges, or computed
-   offset containment — and when does containment break (overlap, mid-block boundaries)?
-5. How should layers be classified by *purpose* — comprehension/reading vs
-   manipulation/rewriting vs both — and does that classification inform the API?
+4. What is the right relationship primitive *across* layers (stored edges, or computed
+   offset containment), and when does containment break (overlap, mid-block boundaries)?
+5. How should layers be classified by *purpose* (comprehension/reading vs
+   manipulation/rewriting vs both), and does that classification inform the API?
 6. What are the three implementation strata (contract `DocGraph` / parsing API `TextDoc` /
    serialization) and which one carries the flexibility?
 7. What is the hardest open problem (offset invalidation under edits) and how do related
@@ -82,7 +82,7 @@ what buys flexibility for downstream uses we have not yet imagined.
 
 ## Scope
 
-Included: the *layering* question specifically — coexisting parses, enablement and
+Included: the *layering* question specifically: coexisting parses, enablement and
 dependencies, cross-layer relationships, layer purpose taxonomy, how this reframes the
 node-table-with-views architecture already recommended in the broad survey, and **how
 durable span references anchor an annotation/reference layer** (consolidating and building
@@ -98,7 +98,7 @@ dependency selection and no implementation code here.
 ### Prior art: multiple coordinated layers over one source
 
 The layered framing is novel as a *practical embeddable library design*, but the
-underlying idea — that one text needs several coexisting structures — has a long and mostly
+underlying idea (that one text needs several coexisting structures) has a long and mostly
 academic lineage. The recurring lesson across four traditions is the same: **the single
 tree is the thing that breaks, and the fix is to share one anchor space (text leaves or
 character offsets) across independent structural layers.** That is exactly the
@@ -113,38 +113,38 @@ The text-encoding community hit the single-tree wall directly and produced a seq
 non-tree data models:
 
 - **SGML CONCUR** (ISO 8879:1986) already allowed multiple DTDs over one document, each a
-  different hierarchy — the conceptual precedent for concurrent layers, though rarely
+  different hierarchy, the conceptual precedent for concurrent layers, though rarely
   implemented.
 - **MECS** and its successor **TexMECS** (Huitfeldt; Sperberg-McQueen) permit elements to
   *overlap* rather than nest; TexMECS drops even MECS's same-type non-overlap restriction.
 - **GODDAG** (Sperberg-McQueen & Huitfeldt, 2000/2004) is the canonical data structure:
   multiple markup trees share the same ordered leaf (text) nodes, and overlap is
-  represented by nodes with multiple parents — a DAG over shared leaves. This is the direct
+  represented by nodes with multiple parents, forming a DAG over shared leaves. This is the direct
   ancestor of "many trees, one anchor space."
 - **LMNL** (Tennison & Piez, 2002) replaces the element hierarchy with named *ranges* over
   a string plus structured *annotations*; ranges freely overlap and hierarchy is *derived,
-  not prescribed* — strikingly close to "spans over source, views derived by containment."
+  not prescribed*, strikingly close to "spans over source, views derived by containment."
 - **XConcur** (Witt & Schonefeld) layers N independent XML hierarchies over one source,
   each separately extractable and validatable; XConcur-CL adds cross-layer constraints.
 - **TAG / TAGML** (Huygens ING, 2017) models text as a property *hypergraph*: hyperedges
   connect a markup node to multiple text nodes, so overlap and discontinuity are native.
 - **Standoff properties** (rooted in 1990s TIPSTER) keep annotations as offset-keyed
-  `{start, end, type}` records over immutable text — the lightweight, JSON-friendly end of
+  `{start, end, type}` records over immutable text, the lightweight, JSON-friendly end of
   this spectrum, and the closest in spirit to chopdiff's intended weight.
 
 The takeaway: every one of these abandoned the single tree, and the durable common
-denominator is *shared leaves / shared offsets + independent structural layers*. Chopdiff's
+denominator is *shared leaves / shared offsets and independent structural layers*. Chopdiff's
 contribution is not the non-tree insight (well-established) but packaging it as a small,
 enable-by-need, source-grounded, serializable model rather than a markup meta-language.
 
 #### Stand-off and multi-tier annotation (NLP / linguistics)
 
 The linguistics tradition independently arrived at "many layers, one immutable source,"
-and crucially treats layers as *tiers* — flat, independent segmentations rather than one
+and crucially treats layers as *tiers*: flat, independent segmentations rather than one
 hierarchy:
 
 - **UIMA CAS** supports multiple *views*, each with its own Subject of Analysis and its own
-  annotation index, all sharing one type system and CAS — the closest enterprise ancestor
+  annotation index, all sharing one type system and CAS, the closest enterprise ancestor
   of typed layers over a shared base.
 - **NIF 2.0** anchors all annotation to RFC 5147 character-offset URIs over an immutable
   `Context` string; independent layers (POS, entities, parses) are just different RDF
@@ -152,11 +152,11 @@ hierarchy:
   lingua franca.
 - **ELAN** and **Praat TextGrid** use stacked, independent *tiers* over one media timeline
   (utterance / word / phoneme / gesture), with ELAN distinguishing independent from
-  dependent tiers — a direct precedent for the layer *dependency* idea (sections depend on
+  dependent tiers, a direct precedent for the layer *dependency* idea (sections depend on
   headings the way a word tier depends on an utterance tier).
 - **Annotation graphs** (Bird & Liberman, 2001) formalize all of this: annotations are
   labeled edges over shared anchor nodes; different annotation types are independent
-  subgraphs, no single tree privileged — the closest formal statement of "node table with
+  subgraphs, no single tree privileged, the closest formal statement of "node table with
   typed layers."
 
 #### Multi-grammar / layered parsing in tools
@@ -169,22 +169,22 @@ evidence the approach is implementable and performant:
   same buffer; editors literally call these "language layers" and they nest recursively.
   This is the strongest engineering precedent for *enabling* parsers per region/dimension.
 - **LSP semantic tokens** are an offset-keyed annotation layer *on top of* syntax
-  highlighting — a semantic layer that needs type information the grammar layer cannot
+  highlighting, a semantic layer that needs type information the grammar layer cannot
   provide, merged with it at render time. Precedent for "comprehension layer over a
   structural layer."
 - **TextMate / VS Code injection grammars** and **Emacs Polymode / MMM-Mode** add scoped
-  sub-grammars or multiple major modes to regions of one buffer — the same layering at the
+  sub-grammars or multiple major modes to regions of one buffer, the same layering at the
   editor level.
 
 #### The OHCO thesis and its overlapping-hierarchy critique
 
 The academic framing of exactly why one tree is insufficient:
 
-- **OHCO** — "What is Text, Really?" (DeRose, Durand, Mylonas, Renear, 1990) — argued text
+- **OHCO:** "What is Text, Really?" (DeRose, Durand, Mylonas, Renear, 1990). Argued text
   *is* an Ordered Hierarchy of Content Objects, the theoretical justification for SGML/XML
   tree markup.
-- **The retraction** — "Refining Our Notion of What Text Really Is" (Renear, Mylonas,
-  Durand, 1996) — three of the same authors concede, after TEI experience, that real
+- **The retraction:** "Refining Our Notion of What Text Really Is" (Renear, Mylonas,
+  Durand, 1996). Three of the same authors concede, after TEI experience, that real
   documents exhibit *multiple concurrent overlapping hierarchies* and that no version of
   OHCO survives counterexample. This is the canonical statement that a document is **not**
   a single tree.
@@ -193,15 +193,15 @@ Chopdiff's model is, in effect, the post-OHCO position operationalized: do not p
 hierarchy; keep several as layers over a shared anchor space, and compute relationships
 between them on demand.
 
-### The backing document: source + node table keyed to offsets
+### The backing document: source and node table keyed to offsets
 
 The substrate every layer shares is small and boring on purpose:
 
-- **Immutable `source_text`.** Canonical, never mutated in place; edits produce a new
+- **Immutable `source_text`:** Canonical, never mutated in place; edits produce a new
   source and a reparse (see the broad survey's "Markdown source should remain canonical").
-- **Offset coordinate system.** Unicode code points (settled; matches Python `str`
+- **Offset coordinate system:** Unicode code points (settled; matches Python `str`
   indexing and W3C text selectors; UTF-16/byte conversions are derived, not canonical).
-- **A node table.** Each node has a stable id (within one parse), a `kind`, a
+- **A node table:** Each node has a stable id (within one parse), a `kind`, a
   `source_span` `[start, end)` in code points, and a `layer` it belongs to. The table is
   the meeting place: nodes from different layers coexist because they are all just spans
   into the same string.
@@ -218,25 +218,25 @@ The four dimensions the project has identified, restated as layers with their in
 | --- | --- | --- | --- |
 | **Textual** | paragraphs, sentences, word tokens | `source_text` | — |
 | **Markdown structure** | block elements (recursive), inline (links, code, emphasis) | `source_text` | — |
-| **Document structure** | section / heading hierarchy + TOC | headings | Markdown structure |
+| **Document structure** | section / heading hierarchy and TOC | headings | Markdown structure |
 | **Synthetic structure** | explicit `<div>` / `<span>` regions, chunk groupings | `source_text` (tag scan only) | — |
 
 Three properties follow:
 
-1. **Most layers parse straight from the source.** Textual, Markdown, and synthetic
+1. **Most layers parse straight from the source:** Textual, Markdown, and synthetic
    layers each need only `source_text`. They can be enabled in any combination. Only the
    document-structure layer has a hard upstream dependency (sections are derived from
-   Markdown headings). The dependency graph is shallow — a DAG, mostly flat.
+   Markdown headings). The dependency graph is shallow: a DAG, mostly flat.
 
-2. **Enablement is a configuration, not an architecture fork.** A document can be held
+2. **Enablement is a configuration, not an architecture fork:** A document can be held
    with only the synthetic layer on (the cheap div-chunking path: carve `<div>` regions,
-   process chunks, reassemble — *no* Markdown or sentence parsing). Or textual+Markdown
+   process chunks, reassemble—*no* Markdown or sentence parsing). Or textual+Markdown
    for analysis. Or all four. The `TextNode`-as-separable-subsystem design that exists
    today is, in this framing, simply "the synthetic layer with the others left off." That
    resolves the separable-vs-unified tension: it is the same model at different enablement
    levels, not two architectures.
 
-3. **Cost tracks enablement.** Sentence splitting and full Markdown inline parsing are the
+3. **Cost tracks enablement:** Sentence splitting and full Markdown inline parsing are the
    expensive layers; a structural `<div>` scan is cheap. Pricing parsing by layer lets a
    caller pay only for what a use case needs.
 
@@ -252,8 +252,8 @@ is interval containment/overlap, not tree navigation:
 
 This is the payoff of the shared coordinate system: in-band metadata discovered during
 parsing (a `data-timestamp` span from the synthetic layer) and an out-of-band annotation
-attached externally (a SpanRef) become *the same kind of thing* — a span carrying a
-payload — and relate to every other layer by the same containment query. The bridge
+attached externally (a SpanRef) become *the same kind of thing*, a span carrying a
+payload, and relate to every other layer by the same containment query. The bridge
 between in-band and out-of-band metadata is structural, not manual.
 
 ### Referencing portions of a document: span references as a layer
@@ -262,8 +262,8 @@ An out-of-band annotation needs a way to say *which* portion of the document it 
 and that reference must survive two things the layered model takes for granted: reparse
 (the node table is a cache, rebuilt from source, so node ids are not durable) and edits
 (offsets shift). A raw offset pair fails both. The mature systems all converge on the same
-answer — **store multiple coordinated selectors, make a text quote canonical, treat offsets
-as a hint** — and that answer is what makes references a well-behaved *layer* rather than a
+answer: **store multiple coordinated selectors, make a text quote canonical, treat offsets
+as a hint.** That answer is what makes references a well-behaved *layer* rather than a
 fragile pointer. This section consolidates the span-reference brief into the layered model.
 
 #### How the major formats reference a span
@@ -276,26 +276,26 @@ fragile pointer. This section consolidates the span-reference brief into the lay
   "orange"), whitespace-flexible, and each piece must sit within one block-level element.
   Critically, there is **no robustness fallback**: if no match is found the fragment is
   *silently ignored*. The spec itself calls text fragments "less stable than document
-  structure" — they are designed for *transient* links (search result highlights, sharing),
+  structure"; they are designed for *transient* links (search result highlights, sharing),
   not durable anchors. `-`, `,`, `&` in content are percent-encoded; the `:~:` directive is
   stripped from script-visible URLs; a user gesture is required (anti-abuse). Supported in
   Chrome/Edge/Opera/Safari and Firefox (2024+); feature-detect via
   `document.fragmentDirective`.
 - **W3C Web Annotation selectors.** The reference vocabulary: `TextQuoteSelector`
-  (`exact` + `prefix` + `suffix` — most robust, context disambiguates and the quote enables
-  fuzzy re-match); `TextPositionSelector` (`start`/`end` integer offsets — fast but brittle,
+  (`exact` + `prefix` + `suffix`; most robust, context disambiguates and the quote enables
+  fuzzy re-match); `TextPositionSelector` (`start`/`end` integer offsets; fast but brittle,
   and the spec **never resolved code-points vs UTF-16**, a real interop hazard);
-  `RangeSelector` (start/end via XPath/CSS — DOM-tied). Composition is first-class:
+  `RangeSelector` (start/end via XPath/CSS; DOM-tied). Composition is first-class:
   `refinedBy` (e.g. a section fragment refined by a quote) and `oa:Choice` (ordered
-  alternatives — the fallback mechanism). This is the menu chopdiff's reference type draws
+  alternatives, the fallback mechanism). This is the menu chopdiff's reference type draws
   from.
-- **Hypothesis / Apache Annotator — fuzzy anchoring (the battle-tested practice).** Stores
-  *three* selectors per annotation (Range + TextPosition + TextQuote) and re-anchors in
+- **Hypothesis / Apache Annotator, fuzzy anchoring (the battle-tested practice).** Stores
+  *three* selectors per annotation (Range, TextPosition, and TextQuote) and re-anchors in
   priority order: (1) DOM range, verified against the quote; (2) position offsets, verified
   against the quote; (3) quote fuzzy-search *hinted* by the offset; (4) quote full-document
   fuzzy search. Fuzzy matching uses Google diff-match-patch (Bitap) with a hint offset and
-  threshold; ~32 chars of prefix/suffix are stored. **None of the three is "canonical" — but
-  the quote is what makes recovery possible**, and offsets are recomputed on success.
+  threshold; ~32 chars of prefix/suffix are stored. **None of the three is "canonical," but
+  the quote is what makes recovery possible;** offsets are recomputed on success.
 - **RFC 5147 (`text/plain`) and W3C Media Fragments** (for comparison). Pure offset/line
   identifiers (`#char=0,99`, `#line=10,19`, `t=10,20`), optionally with `;length=`/`;md5=`
   **integrity checks** that *detect* change but offer no recovery. Useful precedent for
@@ -312,7 +312,7 @@ fragile pointer. This section consolidates the span-reference brief into the lay
 | Multi-selector ensemble | Best | Excellent | Larger | Hypothesis, `oa:Choice` |
 
 The lesson is consistent across all of them, and it is the offset-unit pitfall too:
-`len("🤦🏼‍♂️")` is 5 code points, 7 UTF-16 units, 17 UTF-8 bytes — so the unit must be
+`len("🤦🏼‍♂️")` is 5 code points, 7 UTF-16 units, 17 UTF-8 bytes, so the unit must be
 declared. Chopdiff pins **Unicode code points** (Python-native, matches W3C text selection)
 and treats UTF-16/byte forms as derived conversions.
 
@@ -340,24 +340,24 @@ prefix/suffix+exact model; refinement (multiple coordinated selectors, structura
 
 This is exactly what makes references a *layer* in the framework rather than a pointer:
 
-- **The annotation/reference layer is the out-of-band layer.** It is ordered and
+- **The annotation/reference layer is the out-of-band layer:** It is ordered and
   overlap-tolerant (a SpanRef can straddle paragraphs), so by the nesting-guarantee rule its
   view is a list, not a tree. It is the one layer whose nodes are authored externally rather
-  than parsed from source — but it anchors to the same offset coordinate space as every
+  than parsed from source, but it anchors to the same offset coordinate space as every
   parsed layer, so cross-layer containment queries work unchanged ("which section / block /
   sentence contains this annotation?").
-- **Re-anchoring is the layered model's reparse, applied to references.** When source
+- **Re-anchoring is the layered model's reparse, applied to references:** When source
   changes the node table is rebuilt; a SpanRef re-resolves to nodes by the Hypothesis order
-  — offset hint verified against `exact`, then offset-hinted fuzzy, then full-document fuzzy
-  — and its offsets are recomputed. Persistence is quote-canonical precisely because node
+  (offset hint verified against `exact`, then offset-hinted fuzzy, then full-document fuzzy)
+  and its offsets are recomputed. Persistence is quote-canonical precisely because node
   ids and offsets do not survive reparse; the quote does.
-- **In-band and out-of-band unify through SpanRef.** A parsed in-band span (a
+- **In-band and out-of-band unify through SpanRef:** A parsed in-band span (a
   `<span data-timestamp>` from the synthetic layer) is *already* source-grounded, so it can
   emit a SpanRef for free; an externally-authored annotation *is* a SpanRef plus a payload.
   One reference mechanism serves both, which is why the in-band/out-of-band bridge is
   structural.
 - **Chrome Text Fragment export is a lossy projection** of a SpanRef: emit
-  `#:~:text=[prefix-,]exact[,-suffix]` for prose where word-boundary + case-insensitive
+  `#:~:text=[prefix-,]exact[,-suffix]` for prose where word-boundary and case-insensitive
   matching is acceptable, truncating context to ~50 chars for URL length, and drop the
   offsets. Do *not* store the Text-Fragment URL itself (it is a rendering) or DOM/XPath
   selectors (environment-specific). This gives shareable, browser-native deep links out of
@@ -396,12 +396,12 @@ organizing axis because it predicts which views and operations a layer needs:
 | Synthetic structure (divs/chunks) | **Manipulation / processing** | chunking for LLM passes, wrapping results, surgical splice-back |
 
 The practical reading: **manipulation-oriented layers (synthetic divs, base blocks) are
-the workhorses for data processing** — you chunk, transform, and reassemble against them,
+the workhorses for data processing**: you chunk, transform, and reassemble against them,
 and they must support exact reassembly. **Comprehension-oriented layers (sentences,
-sections-as-TOC) are for understanding** — they must be cheap to project and query but
+sections-as-TOC) are for understanding**: they must be cheap to project and query but
 need not round-trip. Layers that serve **both** (Markdown blocks, sections) are where the
 design must be most careful, since they are read *and* written. Building document visuals
-(zoomable outlines, rendered overlays) draws on both kinds at once — a comprehension view
+(zoomable outlines, rendered overlays) draws on both kinds at once: a comprehension view
 of structure used as a manipulation handle.
 
 ### Three implementation strata, and where flexibility lives
@@ -409,17 +409,17 @@ of structure used as a manipulation handle.
 The broad survey's "model ≠ format ≠ implementation" applies directly, with the layered
 model as the thing being separated:
 
-1. **`DocGraph` — the contract.** A language-neutral, JSON-serializable projection of the
+1. **`DocGraph`, the contract:** A language-neutral, JSON-serializable projection of the
    enabled layers: source record, node table, per-layer views, annotations. One format,
    implementable in any language, parameterized by *which layers and what detail* are
    included. This is what crosses process and language boundaries.
-2. **`TextDoc` — the parsing/analysis API.** The programmatic surface that builds layers
+2. **`TextDoc`, the parsing/analysis API:** The programmatic surface that builds layers
    from source and answers queries. Python today; could be reimplemented elsewhere. It is
    *an* implementation of the contract, not the contract.
-3. **Serialization** — JSON now; Protobuf/columnar later — a projection of `DocGraph`, not
+3. **Serialization:** JSON now; Protobuf/columnar later. A projection of `DocGraph`, not
    the model.
 
-The flexibility the project cares about lives in **stratum 1 + the layer framework**: if
+The flexibility the project cares about lives in **stratum 1 and the layer framework**: if
 the parsing layer yields these flexible, independently-enabled, offset-keyed layered
 objects, then any consumer (a Python pipeline, a TS client, a visual UI, an annotation
 store) gets exactly the layers/detail it needs from one format. The Python API can evolve
@@ -433,7 +433,7 @@ resolve this three ways, each cited in the prior briefs:
 
 - **Reparse from canonical source** (our default): edits produce new source, layers
   rebuild. Simple; the layer framework is built for this.
-- **Red-green / lossless trees**: immutable nodes + positions computed on demand, so
+- **Red-green / lossless trees**: immutable nodes and positions computed on demand, so
   identity survives reparse (compiler/IDE world).
 - **CRDT ids**: per-element stable ids survive arbitrary edits (collaborative world).
 
@@ -445,14 +445,14 @@ cache" invalidates all enabled layers at once.
 
 ## Key Insights
 
-- **Documents are not one tree; they are several parses sharing a coordinate system.** The
-  node-table-with-views architecture is not a compromise — it is the honest model. (This is
+- **Documents are not one tree; they are several parses sharing a coordinate system:** The
+  node-table-with-views architecture is not a compromise; it is the honest model. (This is
   the OHCO critique, recast for a practical library.)
-- **Separable vs unified is a false dichotomy.** `TextNode`-style structural-only work is
+- **Separable vs unified is a false dichotomy:** `TextNode`-style structural-only work is
   "the synthetic layer enabled alone." Unified and separable are the same model at
   different enablement levels, so we keep the cheap structural path *and* gain cross-layer
   queries when more layers are on.
-- **Offset containment is the universal cross-layer relationship.** Within a layer, use its
+- **Offset containment is the universal cross-layer relationship:** Within a layer, use its
   tree/list; across layers, use intervals. This is always defined, even when nesting is
   not, so overlap never breaks the model.
 - **Layers carry a nesting guarantee** (well-nested → tree view; ordered → list view),
@@ -460,12 +460,12 @@ cache" invalidates all enabled layers at once.
 - **Layer purpose predicts layer requirements**: manipulation layers must round-trip
   exactly; comprehension layers must be cheap to project; "both" layers are where rigor
   matters most.
-- **Flexibility lives in the contract + framework, not the Python API.** If the parsing
+- **Flexibility lives in the contract and framework, not the Python API:** If the parsing
   layer emits flexible, enable-by-need, offset-keyed layered graphs, every downstream use
-  — including ones not yet imagined — is a projection, not a refactor.
-- **In-band and out-of-band metadata unify.** A discovered `data-*` span and an attached
+  (including ones not yet imagined) is a projection, not a refactor.
+- **In-band and out-of-band metadata unify:** A discovered `data-*` span and an attached
   annotation are both payload-carrying spans; one framework serves both.
-- **A reference is a layer, not a pointer.** Durable span references (quote canonical,
+- **A reference is a layer, not a pointer:** Durable span references (quote canonical,
   offsets as hints, node id never persisted) anchor the out-of-band annotation layer to the
   same offset space as parsed layers, so they survive reparse via fuzzy re-anchoring
   (Hypothesis order) and relate to every other layer by containment. Chrome Text Fragments
@@ -474,7 +474,7 @@ cache" invalidates all enabled layers at once.
 ## Comparison Matrix
 
 How prior approaches handle *multiple structural dimensions over one source*. Axes:
-**Multi-layer** (≥2 coexisting structural parses, not one tree + notes); **Overlap** (can
+**Multi-layer** (≥2 coexisting structural parses, not one tree and notes); **Overlap** (can
 layers cross-cut / overlap without contradiction); **Source-grounded** (offsets into
 canonical source); **Enablement** (layers turned on à la carte); **Cross-layer query**
 (relate layers without re-parsing). ✅ strong / ◐ partial / ✘ weak.
@@ -492,21 +492,21 @@ canonical source); **Enablement** (layers turned on à la carte); **Cross-layer 
 
 ## Recommendations
 
-> Draft — to refine after the prior-art pass and a use-case walk-through.
+> Draft, to refine after the prior-art pass and a use-case walk-through.
 
 1. **Adopt the layered framing as the conceptual core of `DocGraph`/`TextDoc`:** one
-   immutable source + a node table keyed to code-point offsets + independently-enabled
+   immutable source, a node table keyed to code-point offsets, and independently-enabled
    parse layers, with cross-layer relationships computed by offset containment.
 2. **Model the four current dimensions as the first layers** (textual, Markdown structure,
    document structure, synthetic structure), with the dependency DAG explicit (sections →
    Markdown headings). Keep the dependency graph shallow.
-3. **Make enablement a parameter, not a fork.** Preserve the cheap structural-only path
+3. **Make enablement a parameter, not a fork:** Preserve the cheap structural-only path
    (today's `TextNode`) as "synthetic layer alone"; do not require full parsing for
    structural chunking.
 4. **Give each layer a declared nesting guarantee** (tree vs ordered list), generalizing
    `blocks()`/`base_blocks()`.
 5. **Keep the contract (`DocGraph`) language-neutral and parameterized by enabled
-   layers + detail;** treat `TextDoc` as one implementation and serialization as a
+   layers and detail;** treat `TextDoc` as one implementation and serialization as a
    projection.
 6. **Resolve cross-layer relations by interval logic, never stored cross-layer edges,** so
    overlap is always representable.
@@ -521,7 +521,7 @@ canonical source); **Enablement** (layers turned on à la carte); **Cross-layer 
       anchoring, `SpanRef`) and tie them to the annotation layer.
 - [ ] Walk every existing use case (synthetic chunking, in-band metadata, surgical edit,
       section move, zoomable UI) through the layered lens and confirm each needs only
-      offset-keyed spans + per-layer views + containment queries.
+      offset-keyed spans, per-layer views, and containment queries.
 - [ ] Decide how `TextNode`/div parsing is expressed as the synthetic layer (reuse the
       existing parser; key its nodes into the shared table).
 - [ ] Specify the layer-enablement API and dependency resolution in the TextDoc spec.
@@ -554,7 +554,7 @@ Local:
 - [TextDoc](../../../src/chopdiff/docs/text_doc.py)
 - [TextNode](../../../src/chopdiff/divs/text_node.py)
 
-External — overlapping / concurrent markup:
+**External:** overlapping / concurrent markup:
 
 - [SGML CONCUR (Library of Congress format description)](https://www.loc.gov/preservation/digital/formats/fdd/fdd000465.shtml)
 - [MECS (Huitfeldt)](https://xml.coverpages.org/MECS-200105.html)
@@ -567,7 +567,7 @@ External — overlapping / concurrent markup:
 - [TAG paper (Haentjens Dekker & Birnbaum, Balisage 2017)](https://www.balisage.net/Proceedings/vol21/html/HaentjensDekker01/BalisageVol21-HaentjensDekker01.html)
 - [Standoff properties editor](https://github.com/argimenes/standoff-properties-editor)
 
-External — stand-off / multi-tier annotation:
+**External:** stand-off / multi-tier annotation:
 
 - [UIMA Overview & SDK (CAS, Sofa, views)](https://uima.apache.org/d/uimaj-current/oas.html)
 - [NIF 2.0 Core specification](https://persistence.uni-leipzig.org/nlp2rdf/specification/core.html)
@@ -575,19 +575,19 @@ External — stand-off / multi-tier annotation:
 - [Praat TextGrid](https://www.fon.hum.uva.nl/praat/manual/TextGrid.html)
 - [Annotation graphs (Bird & Liberman, 2001)](https://arxiv.org/abs/cs/0010033)
 
-External — layered parsing in tools:
+**External:** layered parsing in tools:
 
 - [Tree-sitter multi-language parsing](https://tree-sitter.github.io/tree-sitter/using-parsers/3-advanced-parsing.html)
 - [LSP semantic tokens (3.17 spec)](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/)
 - [TextMate injection grammars](https://macromates.com/blog/2012/injection-grammars-project-variables/) / [VS Code syntax highlighting](https://code.visualstudio.com/api/language-extensions/syntax-highlight-guide)
 - [Polymode](https://polymode.github.io/) / [MMM Mode](https://mmm-mode.sourceforge.net/)
 
-External — OHCO and its critique:
+**External:** OHCO and its critique:
 
 - [OHCO: "What is Text, Really?" (DeRose et al., 1990)](https://link.springer.com/article/10.1007/BF02941632)
 - [Overlapping-hierarchy critique (Renear et al., 1996)](https://www.ideals.illinois.edu/items/9468)
 
-External — span references / annotation targeting (see also the span-reference brief):
+**External:** span references / annotation targeting (see also the span-reference brief):
 
 - [WICG Scroll-To-Text-Fragment spec](https://wicg.github.io/scroll-to-text-fragment/) / [README](https://github.com/WICG/scroll-to-text-fragment/blob/main/README.md)
 - [MDN Text Fragments](https://developer.mozilla.org/en-US/docs/Web/URI/Reference/Fragment/Text_fragments)

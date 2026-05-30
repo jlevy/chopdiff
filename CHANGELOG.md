@@ -9,18 +9,18 @@ All notable changes to chopdiff are documented here. This project uses
 Makes `TextDoc` block-aware end to end: an exact-span structural block tree, a section
 hierarchy with rolled-up stats, inline-link rollups, and link-aware sentence spans. The
 structural view is the canonical normalized form, with every other view (sections,
-block-type slices, tallies) derived from it — no stored counts. Block boundaries and
+block-type slices, tallies) derived from it: no stored counts. Block boundaries and
 spans now come straight from flowmark's parser, so chopdiff carries no Markdown
 block-detection regex of its own.
 
-### Breaking changes
+### Breaking Changes
 
 - **`BlockType.list` is now bullet-only; ordered lists are `BlockType.ordered_list`.**
   Ordered-ness is carried from marko's `List.ordered`. Callers that matched
-  `BlockType.list` to cover *both* list kinds now miss ordered lists — match
+  `BlockType.list` to cover *both* list kinds now miss ordered lists; match
   `{BlockType.list, BlockType.ordered_list}` for either.
 
-### New features
+### New Features
 
 - **Opt-in structural block tree with exact spans.** `TextDoc.blocks()` returns a
   `Block(type, span, children, tight)` tree whose boundaries and `[start, end)` spans
@@ -43,8 +43,8 @@ block-detection regex of its own.
   `Sentence` exposes a document-relative `span`; `TextDoc.source_text` is retained so
   each unit's `original_text` round-trips into the source. `TextDoc.block_at_offset(o)`
   and `sentence_at_offset(o)` invert spans.
-- **Inline-link rollups + link-aware sentence spans.** `Link(text, url, title, span)`
-  via `Paragraph.links()`, `Section.links()`, and `TextDoc.links()` — identity from
+- **Inline-link rollups and link-aware sentence spans.** `Link(text, url, title, span)`
+  via `Paragraph.links()`, `Section.links()`, and `TextDoc.links()`—identity from
   flowmark's `extract_links` (reference links resolve across the whole document), spans
   recovered from `iter_atomic_spans`. The default sentence splitter is now
   `flowmark.atomic_spans.split_sentences_with_spans`, so sentence spans are exact for
@@ -70,7 +70,7 @@ block-detection regex of its own.
   reviewed first-party cool-off exception in `SUPPLY-CHAIN-SECURITY.md`. No new
   transitive dependencies over 0.7.0.
 
-### Full changelog
+### Full Changelog
 
 https://github.com/jlevy/chopdiff/compare/v0.3.0...v0.4.0
 
@@ -80,7 +80,7 @@ This is a cleanup release that hardens the build, makes `TextDoc` source-referen
 Markdown-block-aware, and removes the mandatory `tiktoken` (network) dependency. It
 contains several intentional breaking changes for a cleaner API.
 
-### Breaking changes
+### Breaking Changes
 
 - **Token counting is now a dependency-free estimate.** The `tiktoken` dependency is
   removed (along with `requests`/`urllib3` at install time), so chopdiff no longer
@@ -109,7 +109,7 @@ contains several intentional breaking changes for a cleaner API.
 - **Removed the unused `chopdiff` console-script entry point.** chopdiff is a library
   with no CLI; the entry point pointed at a non-existent `main`.
 
-### New features
+### New Features
 
 - **Markdown block-type classification.** `BlockType` (heading, paragraph, list, table,
   code, blockquote, html, footnote) and `Paragraph.block_type`, classified by parsing
@@ -130,6 +130,6 @@ contains several intentional breaking changes for a cleaner API.
 - The release workflow now installs from the committed lockfile (`--locked`) for
   reproducible release builds.
 
-### Full changelog
+### Full Changelog
 
 https://github.com/jlevy/chopdiff/compare/v0.2.6...v0.3.0

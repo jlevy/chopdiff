@@ -22,7 +22,7 @@ name is `chopdiff`.
 **Note:** These steps assume you already have a GitHub repo with your code pushed.
 If you used [`uvx uvtemplate`](https://github.com/jlevy/uvtemplate), it handles repo
 creation for you. If you’re setting up manually, create an **empty** GitHub repo (no
-README, no .gitignore, no license — the template already provides these) and push your
+README, no .gitignore, no license; the template already provides these) and push your
 code to it. See the
 [README](https://github.com/jlevy/simple-modern-uv#option-2-use-copier-and-git-yourself)
 for details.
@@ -64,7 +64,7 @@ for details.
 
    - Submit to create the release.
 
-5. **Confirm it publishes to PyPI**
+5. **Confirm it publishes to PyPI:**
 
    - Watch for the release workflow in the GitHub Actions tab.
 
@@ -107,11 +107,11 @@ Follow this checklist for each new release.
 
    Use [semantic versioning](https://semver.org/):
 
-   - **Patch** (e.g., `v0.5.8` → `v0.5.9`): Bug fixes, minor changes
+   - **Patch:** (e.g., `v0.5.8` → `v0.5.9`) Bug fixes, minor changes
 
-   - **Minor** (e.g., `v0.5.9` → `v0.6.0`): New features, backward-compatible
+   - **Minor:** (e.g., `v0.5.9` → `v0.6.0`) New features, backward-compatible
 
-   - **Major** (e.g., `v0.6.0` → `v1.0.0`): Breaking changes
+   - **Major:** (e.g., `v0.6.0` → `v1.0.0`) Breaking changes
 
    **Pre-1.0 convention:** while the version is still `0.x`, breaking changes bump the
    **minor** version (e.g. `v0.2.6` → `v0.3.0`) rather than the major version, which is

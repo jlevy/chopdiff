@@ -623,7 +623,7 @@ Recommendation:
 - Return a structured transform report with accepted windows, skipped windows, scores,
   and rejected diffs.
 
-## P3 Findings And Cleanup
+## P3 Findings and Cleanup
 
 ### Root package API is empty
 
@@ -741,7 +741,7 @@ Recommendation:
 
 ## Subsystem Design Assessment
 
-### Package And Release Design
+### Package and Release Design
 
 Strengths:
 
@@ -827,7 +827,7 @@ Recommendations:
   convenience APIs.
 - If sentinel collisions matter, add escaping or reserve-token validation.
 
-### Diff Filtering And Token Mapping
+### Diff Filtering and Token Mapping
 
 Strengths:
 
@@ -877,7 +877,7 @@ Recommendations:
 - Add strict mode for rewrite/extraction.
 - Consider representing rewrite results as `{text, replacements, skipped, warnings}`.
 
-### Div Parsing And Chunking
+### Div Parsing and Chunking
 
 Strengths:
 
@@ -933,24 +933,24 @@ Strengths:
 
 Coverage gaps:
 
-- Installed console script.
-- Wheel install/import smoke test.
-- Empty documents.
-- Exact preservation and offset contracts.
-- Subdocument mutation aliasing.
-- `filtered_transform` without windowing.
-- Div-leading chunking.
-- Multi-sentence paragraph windows.
-- TokenMapping large replacement validation.
-- HTML nested self-closing same-name tags.
-- Strict error paths and malformed inputs.
+- Installed console script
+- Wheel install/import smoke test
+- Empty documents
+- Exact preservation and offset contracts
+- Subdocument mutation aliasing
+- `filtered_transform` without windowing
+- Div-leading chunking
+- Multi-sentence paragraph windows
+- TokenMapping large replacement validation
+- HTML nested self-closing same-name tags
+- Strict error paths and malformed inputs
 
 Recommendation:
 
 - Add focused regression tests for each P1/P2 finding before broad refactors.
 - Keep the tests small and behavior-oriented.
 
-### Modern Python And tbd Guideline Compliance
+### Modern Python and tbd Guideline Compliance
 
 What is already good:
 
@@ -1013,7 +1013,7 @@ Consolidate and clarify:
 - Add OS matrix CI or document Linux-only support if dependencies constrain it.
 - Revisit dependency lower bounds and optional extras naming.
 
-## Dependency And Upgrade Notes
+## Dependency and Upgrade Notes
 
 The dependency setup is modern and comparatively strong:
 

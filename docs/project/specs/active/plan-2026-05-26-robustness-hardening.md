@@ -1,4 +1,4 @@
-# Feature: Robustness Hardening And Regression Coverage
+# Feature: Robustness Hardening and Regression Coverage
 
 **Date:** 2026-05-26 (fully re-reviewed and revised 2026-05-29 against current v0.4.0 code)
 
@@ -22,21 +22,21 @@ This is the foundation the document-model work builds on (see "Sequencing"), so 
 land first where its fixes touch offsets, sub-document copy semantics, and transform
 safety.
 
-## Resolved since the original review
+## Resolved Since the Original Review
 
 These findings are **fixed in current code** (v0.3.0/v0.4.0 and this branch's work);
 re-verified 2026-05-29. They are recorded here so the spec is honest about scope and not
 re-done:
 
-- **Broken console script** — `[project.scripts]` was removed; the package is library-only
+- **Broken console script:** `[project.scripts]` was removed; the package is library-only
   (`pyproject.toml` has no scripts; `src/chopdiff/__init__.py` is empty).
-- **Sentence offsets not absolute** — offsets are now an `Offsets(doc_offset, block_offset)`
+- **Sentence offsets not absolute:** offsets are now an `Offsets(doc_offset, block_offset)`
   record with absolute `doc_offset`; `source_text[sent.span] == sent.original_text` holds.
-- **`from_text` "exact preservation" doc mismatch** — the docstring and README now state
+- **`from_text` "exact preservation" doc mismatch:** the docstring and README now state
   the normalization contract honestly (`source_text` is retained for exact spans;
   `reassemble()` is normalized, not byte-for-byte).
-- **Publish workflow** installs from the lockfile (`uv sync --all-extras --locked`).
-- **Noisy test output** — the `@tally_calls` decorators are gated (`level="warning"`,
+- **Publish workflow:** installs from the lockfile (`uv sync --all-extras --locked`).
+- **Noisy test output:** the `@tally_calls` decorators are gated (`level="warning"`,
   `min_total_runtime=5`), so a normal `uv run pytest` is quiet.
 
 ## Goals
@@ -54,11 +54,11 @@ re-done:
 
 - No new LLM integrations or transform features.
 - No Markdown/HTML parser rewrite.
-- No parser-backed block segmentation here (done — shipped in v0.4.0).
-- No silent change to text-normalization semantics without tests + release-note callout.
+- No parser-backed block segmentation here (done; shipped in v0.4.0).
+- No silent change to text-normalization semantics without tests and release-note callout.
 - No long-term backward-compat shims unless explicitly confirmed.
 
-## Sequencing and relationship to other plans
+## Sequencing and Relationship to Other Plans
 
 Two active efforts: this hardening spec and
 [`plan-2026-05-29-unified-document-model.md`](plan-2026-05-29-unified-document-model.md)
@@ -71,7 +71,7 @@ Two active efforts: this hardening spec and
    filter, or chunking that mis-slices would inherit those bugs. These are also outright
    safety/data-loss bugs that should not wait. The doc-model is gated on its open decisions
    anyway, so Phase 1 here fits in that window.
-2. **Then the unified document model Phase 1** (recursive node model + rollups), once its
+2. **Then the unified document model Phase 1** (recursive node model and rollups), once its
    decisions are settled.
 3. **Hardening Phases 2–3 (HTML polish, class matching, API surface) interleave with or
    follow** the doc-model work; they are not prerequisites.
@@ -99,7 +99,7 @@ originally-proposed fix still applies.
 Three phases, fewest needed. Phase 1 is the correctness/safety core (do first); Phases 2–3
 are smaller-blast-radius hardening and cleanup.
 
-### Phase 1: Core correctness and safety
+### Phase 1: Core Correctness and Safety
 
 - [ ] **`filtered_transform` enforces `diff_filter` without windowing.** Today the
       no-window path (`sliding_transforms.py`, `if not windowing or not windowing.size:`)
@@ -112,7 +112,7 @@ are smaller-blast-radius hardening and cleanup.
       `Sentence` objects (`text_doc.py`: `sub_paras` does `paragraphs[start:end+1]`;
       `sub_doc` reuses middle paragraphs and shares `Sentence` objects), so a word-window
       `filtered_transform` calling `remove_window_br` mutates the caller's document. Fix:
-      deep-copy on slice by default (matching `filtered()`), or — if a view API is wanted —
+      deep-copy on slice by default (matching `filtered()`), or, if a view API is wanted,
       add explicit `view_*` methods and make mutating helpers copy first (see Open
       Questions). Tests: mutating a sub-doc/sub-para does not change the parent; a
       word-window transform leaves the input `TextDoc` unchanged.
@@ -139,7 +139,7 @@ are smaller-blast-radius hardening and cleanup.
       accepted. Fix: `__post_init__` validation; add `__bool__` returning `bool(self.size)`
       so `WINDOW_NONE` is falsy (the no-window check currently relies on `not
       windowing.size`). Preserve `WINDOW_NONE` as the sentinel.
-- [ ] **Word-window stitching failure semantics + error-message bug.** On a too-short
+- [ ] **Word-window stitching failure semantics and error-message bug.** On a too-short
       aligned window the code `log.error(...)` and `continue`s (silent partial output); a
       separate path `raise ValueError("...%s...", n, toks)` passes `%s` args that are never
       interpolated (the message renders as a raw tuple). Alignment accepts any score. Fix:
@@ -147,7 +147,7 @@ are smaller-blast-radius hardening and cleanup.
       (`on_alignment_failure="raise"|"skip"|"keep_original"`, default `raise`); optionally a
       score threshold. Tests: short-window alignment raises a readable error by default.
 - [ ] **`TokenDiff.apply_to()` validates source identity.** It checks only that input length
-      equals `left_size()` and then **ignores `original_wordtoks` entirely** — output is
+      equals `left_size()` and then **ignores `original_wordtoks` entirely**: output is
       rebuilt from `op.right` and the `original_index` cursor is dead code, so a diff applied
       to a different same-length token list silently produces wrong output. Fix: verify each
       consumed `op.left` segment against `original_wordtoks[idx:idx+len(op.left)]`, raising
@@ -160,11 +160,11 @@ are smaller-blast-radius hardening and cleanup.
       reasonable `max_diff_frac`.
 - [ ] **Empty-document `as_wordtoks(bof_eof=True)`.** Raises `IndexError` via `last_index()`
       (`paragraphs[-1]`); `first_index()` returns an invalid `SentIndex(0,0)` on an empty
-      doc. Fix: define empty-doc behavior — yield just `BOF_TOK`/`EOF_TOK`, or raise a clear
+      doc. Fix: define empty-doc behavior: yield just `BOF_TOK`/`EOF_TOK`, or raise a clear
       `ValueError`; guard `first_index`/`last_index`. Tests: empty-doc wordtoks behave as
       defined.
 
-### Phase 2: HTML helpers and smaller contracts
+### Phase 2: HTML Helpers and Smaller Contracts
 
 - [ ] **`html_find_tag()` nested self-closing same-name tags.** `_find_balanced_closing_tag`
       treats a nested `<div .../>` as an opener, so `<div id=outer>before <div id=inner/>
@@ -186,7 +186,7 @@ are smaller-blast-radius hardening and cleanup.
 - [ ] **`TimestampExtractor.extract_preceding()` exception cause.** Re-raises
       `ContentNotFound` without `from e`. Fix: chain with `from e`. Also revisit the global
       `B904` ignore in `pyproject.toml` (prefer per-line `# noqa: B904` so the check stays
-      on elsewhere — a small repo-wide cleanup).
+      on elsewhere, a small repo-wide cleanup).
 - [ ] **Class matching for parsed divs.** `CLASS_NAME_PATTERN` matches only double-quoted
       `class="..."`, stores the whole attribute as one `class_name` string, and
       `children_by_class_names()` uses exact equality, so `class="chunk selected"` won't
@@ -199,9 +199,9 @@ are smaller-blast-radius hardening and cleanup.
       document `Tag.attrs` as best-effort/limited, or broaden the parse. Prefer documenting
       unless a consumer needs full attrs.
 
-### Phase 3: API surface, examples, and docs
+### Phase 3: API Surface, Examples, and Docs
 
-- [ ] **Root package API + naming.** `import chopdiff` exposes nothing (`__init__.py`
+- [ ] **Root package API and naming.** `import chopdiff` exposes nothing (`__init__.py`
       empty). Decide root-level convenience exports vs. library-only with submodule imports;
       coordinate with the `DocGraph`/public-API direction so this is decided once.
 - [ ] **Examples follow project rules.** Use `pathlib.Path` for file I/O; remove or
@@ -259,7 +259,7 @@ one bead per phase: `chopdiff-pytp` (Phase 1, P1), `chopdiff-y0cd` (Phase 2, P2)
 ## References
 
 - [`docs/project/review/senior-engineering-review-chopdiff-pre-v0.3.0.md`](../../review/senior-engineering-review-chopdiff-pre-v0.3.0.md)
-  (findings + 2026-05-29 reconciliation)
+  (findings and 2026-05-29 reconciliation)
 - [`plan-2026-05-29-unified-document-model.md`](plan-2026-05-29-unified-document-model.md)
   (sequencing; resolves the `from_text`/offset questions)
 - [`docs/textdoc-spec.md`](../../../textdoc-spec.md) (design of record)

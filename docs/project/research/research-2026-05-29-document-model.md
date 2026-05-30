@@ -37,9 +37,9 @@ Three framing claims organize the conclusions:
    JSON and Python are projections of it.
 
 2. **The most durable architecture is not a single universal tree.** It is a
-   source-grounded document graph with several derived views — Markdown block structure,
+   source-grounded document graph with several derived views (Markdown block structure,
    section hierarchy, inline/link index, sentence/token `TextDoc` view, optional
-   rendered-layout geometry — plus external annotations that target nodes or spans. A
+   rendered-layout geometry) plus external annotations that target nodes or spans. A
    single tree cannot express all of these because they overlap and cross-cut; a node
    table with typed layers can.
 
@@ -50,7 +50,7 @@ Three framing claims organize the conclusions:
    later use case proves that extra runtime object is worth the public API surface.
 
 A corollary of (2): the "zoomable UI" and "multiple structural views" use cases are not
-separate requirements. They are the same requirement — one model projected to many views
+separate requirements. They are the same requirement: one model projected to many views
 at many granularities.
 
 ## Questions to Answer
@@ -74,21 +74,21 @@ at many granularities.
 
 Included:
 
-- Markdown and Markdown-derived structures.
-- HTML DOM and Markdown-to-HTML DOM workflows.
+- Markdown and Markdown-derived structures
+- HTML DOM and Markdown-to-HTML DOM workflows
 - Editor document models: ProseMirror, Tiptap, Slate, Lexical, Quill Delta, and the
-  block-id-first models (Editor.js, BlockNote, Notion).
+  block-id-first models (Editor.js, BlockNote, Notion)
 - Parser-level systems: Marko, mdast/unist, CommonMark/cmark-gfm, djot, Tree-sitter, and
-  Lezer.
-- Cross-format ASTs: Pandoc.
+  Lezer
+- Cross-format ASTs: Pandoc
 - Stable-identity systems: lossless/red-green syntax trees (Roslyn, rowan, libSyntax) and
-  CRDT rich-text (Yjs, Automerge, Loro).
+  CRDT rich-text (Yjs, Automerge, Loro)
 - Annotation targeting models: W3C Web Annotation and the NLP stand-off tradition (UIMA
-  CAS, brat, GATE).
+  CAS, brat, GATE)
 - Layout-aware document extraction for visual/page overlays (PDF.js, Docling,
-  Unstructured).
-- Semantic XML models (DocBook, JATS, TEI) as discipline references.
-- The data-model / serialization / implementation separation and what it implies.
+  Unstructured)
+- Semantic XML models (DocBook, JATS, TEI) as discipline references
+- The data-model / serialization / implementation separation and what it implies
 
 Excluded for now:
 
@@ -109,11 +109,11 @@ windowed transformations.
 
 Relevant strengths:
 
-- Fast, simple linear analysis.
-- Source-referenced paragraph and sentence offsets.
-- Existing `TextUnit` size machinery.
-- Word-token diffs and mappings useful for transform validation and stitching.
-- Coarse Markdown block classification through Marko/Flowmark.
+- Fast, simple linear analysis
+- Source-referenced paragraph and sentence offsets
+- Existing `TextUnit` size machinery
+- Word-token diffs and mappings useful for transform validation and stitching
+- Coarse Markdown block classification through Marko/Flowmark
 
 Relevant limitations:
 
@@ -161,19 +161,19 @@ different from resurrecting the archived `MarkdownDoc` as a second Python-side m
 
 ## Findings
 
-### The deliverable is a data model, not a format and not an implementation
+### The Deliverable Is a Data Model, Not a Format and Not an Implementation
 
 A document "model" conflates three layers that should be designed and versioned
 independently:
 
-- **Conceptual model** — the entities and relationships: a source, a stable node table,
+- **Conceptual model:** the entities and relationships: a source, a stable node table,
   spans, typed layers (sections, blocks, links, sentences, divs), and external
   annotations. This is the contract.
-- **Serialization** — how the model is written down for transport and storage. JSON is
+- **Serialization:** how the model is written down for transport and storage. JSON is
   the target, but JSON is a projection, not the model. The model should also be
   expressible as Protobuf/FlatBuffers or an in-memory columnar form without changing the
   contract.
-- **Implementation** — Python dataclasses today; possibly a TypeScript mirror for the
+- **Implementation:** Python dataclasses today; possibly a TypeScript mirror for the
   client, or a Rust/WASM core later. None of these is the model either.
 
 Why this matters concretely:
@@ -181,18 +181,18 @@ Why this matters concretely:
 - The public JSON schema must be **boring and parser-agnostic**: no Marko class names, no
   Python type tags, no field that only makes sense in one runtime. A field like
   `marko_node_type` belongs in optional `metadata`, never in the stable record.
-- The model should be specified in a language-neutral artifact — a JSON Schema plus a
-  prose spec, or a single IDL — so a TypeScript client and a Python core are two
+- The model should be specified in a language-neutral artifact (a JSON Schema plus a
+  prose spec, or a single IDL) so a TypeScript client and a Python core are two
   implementations of one contract, not two models that drift. This is the discipline LSP
   uses: the protocol is the spec; editors and servers are implementations.
 - IDs and spans are the cross-language lingua franca. As long as every node has a stable
   `id` and a `source_span` in well-defined units, any language can cooperate on the same
-  document. **The offset unit must be pinned in the spec** — UTF-8 byte offsets vs UTF-16
-  code units vs Unicode scalar values — because JS strings are UTF-16-indexed, Python
+  document. **The offset unit must be pinned in the spec**: UTF-8 byte offsets vs UTF-16
+  code units vs Unicode scalar values, because JS strings are UTF-16-indexed, Python
   strings are scalar-value-indexed, and PDF/OCR tools count differently. This one detail
   is where cross-language document models silently diverge.
 
-### Coordinate systems are a first-class design choice
+### Coordinate Systems Are a First-Class Design Choice
 
 The fact-check pass makes this stronger than a footnote:
 
@@ -214,16 +214,16 @@ consumer needs byte offsets or browser/editor offsets, expose explicit derived f
 conversion tables such as `byte_span`, `utf16_span`, and `line_column_span`. Do not
 overload one `start`/`end` pair with multiple coordinate systems.
 
-### Zoom and views are one requirement, not two
+### Zoom and Views Are One Requirement, Not Two
 
 "Visual/zoom UI" and "multiple structural views" collapse into one requirement: **a
 single model that supports cheap projection to many views at many granularities.** "Zoom"
 is just choosing which view and which level to render:
 
-- Zoomed out: the section tree / TOC (a view).
-- Mid zoom: the block list, or a section's blocks (a view).
-- Zoomed in: sentences, links, tokens, inline structure (views).
-- Visual overlay: geometry attached by node id (a view).
+- Zoomed out: the section tree / TOC (a view)
+- Mid zoom: the block list, or a section's blocks (a view)
+- Zoomed in: sentences, links, tokens, inline structure (views)
+- Visual overlay: geometry attached by node id (a view)
 
 So the unified requirement is: *one stable node set, addressable by id, from which
 section tree, block tree, linear token stream, link index, and layout overlay are all
@@ -239,11 +239,11 @@ node table + typed span layers can.
 
 The strongest systems keep several identifiers for the same target:
 
-- A structural node id.
-- A source span in original input coordinates.
-- A text-quote selector with prefix/suffix for robustness after edits.
-- Optional rendered-layout coordinates for visual UI.
-- Optional path selectors for DOM/XML/editor models.
+- A structural node id
+- A source span in original input coordinates
+- A text-quote selector with prefix/suffix for robustness after edits
+- Optional rendered-layout coordinates for visual UI
+- Optional path selectors for DOM/XML/editor models
 
 This matters because any single targeting scheme fails under some transformation:
 
@@ -256,7 +256,7 @@ This matters because any single targeting scheme fails under some transformation
 The W3C Web Annotation model is the best reference for targeting: its selectors include
 text position, text quote, fragment, CSS, XPath, data position, and SVG. The lesson is
 not to adopt JSON-LD wholesale, but to store multiple selectors per target. (The NLP
-stand-off tradition — UIMA CAS, brat, GATE — is the deeper reference for layering many
+stand-off tradition (UIMA CAS, brat, GATE) is the deeper reference for layering many
 annotations over one immutable source; see below.)
 
 ### Markdown ASTs
@@ -265,7 +265,7 @@ annotations over one immutable source; see below.)
 
 Marko is the best near-term parser fit: it is already in the dependency graph and
 Flowmark uses it. It provides a Python AST and GFM support through extensions. The main
-gap is source spans — Marko elements do not expose exact spans by default — but Marko's
+gap is source spans: Marko elements do not expose exact spans by default, but Marko's
 `Source` object maintains a moving parse position and `Parser.parse_source()` is small
 enough to wrap for span annotation. Local verification on the locked Marko 2.2.2 source
 confirms this is still plausible; PyPI now lists Marko 2.2.3 (2026-05-28), which should
@@ -307,8 +307,8 @@ first path; hold djot as the fallback.
 Pandoc is the strongest cross-format AST and transformation model: it parses many input
 formats into an intermediate AST, exposes JSON filters, and writes many output formats.
 Excellent for normalized conversion and broad transformations. The gap is source
-grounding — Pandoc's AST is a normalized intermediate representation, not an exact source
-map back to Markdown byte offsets — and it is an external runtime concern.
+grounding: Pandoc's AST is a normalized intermediate representation, not an exact source
+map back to Markdown byte offsets, and it is an external runtime concern.
 **Recommendation:** use Pandoc as an optional export/import bridge or validation tool,
 not the canonical source-grounded model.
 
@@ -352,22 +352,22 @@ analytics. **Recommendation:** secondary references only.
 #### Quill Delta
 
 A clean JSON format that represents both documents and changes; excellent for
-operational-transform-style rich text. The gap is structural expressiveness — less
+operational-transform-style rich text. The gap is structural expressiveness: less
 natural for section trees, nested block semantics, and source spans.
 **Recommendation:** borrow the "document plus operations" idea, not the linear Delta
 format as the main model.
 
-#### Block-JSON editors: Editor.js, BlockNote, Notion
+#### Block-JSON Editors: Editor.js, BlockNote, Notion
 
 The block-id-first models are closer to the stated use cases ("annotate nodes," "move
 sections") than the position-map or nested-node editors:
 
-- **Editor.js**: dead-simple `{blocks: [{id, type, data}]}` JSON; trivial to consume
+- **Editor.js:** dead-simple `{blocks: [{id, type, data}]}` JSON; trivial to consume
   cross-language; weak inline/source grounding.
-- **BlockNote**: a block model with stable block ids built on ProseMirror/Tiptap —
-  block-level identity (good for move/annotate) with ProseMirror editing underneath.
-- **Notion block model**: every block has an id and a parent; the whole document is a
-  block tree addressed by id — the canonical example of "blocks as the unit of
+- **BlockNote:** a block model with stable block ids built on ProseMirror/Tiptap,
+  providing block-level identity (good for move/annotate) with ProseMirror editing underneath.
+- **Notion block model:** every block has an id and a parent; the whole document is a
+  block tree addressed by id, the canonical example of "blocks as the unit of
   addressing, annotation, and reorganization."
 
 These validate that a **block-id-addressed JSON** is the ergonomic shape for client UIs
@@ -381,7 +381,7 @@ differentiator.
 
 Excellent at concrete syntax trees with byte ranges and incremental parsing; nodes expose
 byte ranges and descendant lookup by byte/point. Strong fit for editor-grade source
-mapping. The gap is semantic modeling — it produces a syntax tree, not a document model
+mapping. The gap is semantic modeling: it produces a syntax tree, not a document model
 with sections, prose semantics, links, annotations, and normalized writing.
 **Recommendation:** useful later if client-side incremental Markdown parsing becomes a
 priority; not needed for the first Python-backed model.
@@ -389,7 +389,7 @@ priority; not needed for the first Python-backed model.
 #### Lezer and CodeMirror
 
 Lezer is CodeMirror's parser system: compact syntax trees with from/to positions,
-incremental parsing, and Markdown support. Same gap as Tree-sitter — a syntax/editor
+incremental parsing, and Markdown support. Same gap as Tree-sitter: a syntax/editor
 layer, not the full semantic overview. **Recommendation:** a possible client-side editor
 and live syntax view, fed by or synchronized with the canonical source-grounded JSON.
 
@@ -397,7 +397,7 @@ and live syntax view, fed by or synchronized with the canonical source-grounded 
 
 Two well-developed traditions solve "stable node identity," each for a different regime.
 
-#### Lossless / red-green syntax trees (identity under reparse)
+#### Lossless / Red-Green Syntax Trees (Identity under Reparse)
 
 The strongest prior art for "exact source grounding with stable structural identity" is
 the lossless syntax tree used by modern compilers and IDEs:
@@ -406,7 +406,7 @@ the lossless syntax tree used by modern compilers and IDEs:
   (whitespace/comments) but *not* absolute position; a lazily-created "red" facade
   computes absolute positions on demand. Because trivia is in the tree, the tree
   reproduces the source byte-for-byte and node identity is independent of position.
-- **rowan / rust-analyzer** and **Swift libSyntax/SwiftSyntax**: the same pattern —
+- **rowan / rust-analyzer** and **Swift libSyntax/SwiftSyntax:** the same pattern,
   full-fidelity, lossless, position-on-demand.
 
 Two lessons map directly onto Chopdiff: (1) `TextNode` already reaches for this with
@@ -417,20 +417,20 @@ compiler word for exactly Chopdiff's promise to preserve whitespace and reassemb
 verbatim; the model should keep trivia first-class rather than reconstruct separators
 heuristically on reassemble.
 
-#### CRDT rich-text (identity under live edits)
+#### CRDT Rich-Text (Identity under Live Edits)
 
 CRDTs have largely superseded operational transforms for local-first and collaborative
 documents:
 
-- **Yjs, Automerge, Loro**: every character/element carries a stable unique id, so a
+- **Yjs, Automerge, Loro:** every character/element carries a stable unique id, so a
   range pinned to ids survives arbitrary concurrent edits with no reattachment
   heuristics. All three have clean JSON/binary export.
 
-The hardest annotation problem — reattaching after edits — is *solved* by id-per-element
+The hardest annotation problem, reattaching after edits, is *solved* by id-per-element
 when the document is being actively edited. Span+quote selectors are right for the
 read-mostly, reparse-from-source path; CRDT ids are right for a live collaborative
 editor. **Recommendation:** defer CRDTs to the client edge (do not make a CRDT canonical
-— it makes Markdown secondary, the same failure mode as making ProseMirror canonical);
+since it makes Markdown secondary, the same failure mode as making ProseMirror canonical);
 keep the option open by allowing annotation targets to carry an opaque `anchor` id
 alongside span/quote.
 
@@ -443,12 +443,12 @@ many independent layers" is the stand-off markup tradition:
   as external typed annotations carrying offset ranges, with multiple "views" over one
   Sofa. Almost exactly the proposed architecture, with a mature type system and decades
   of NLP tooling.
-- **GATE, brat, WebAnno**: practical stand-off annotation stores and UIs; brat's
+- **GATE, brat, WebAnno:** practical stand-off annotation stores and UIs; brat's
   offset-range model and visualization are a good concrete reference.
-- **W3C Web Annotation**: the web-native targeting model with multiple selectors.
+- **W3C Web Annotation:** the web-native targeting model with multiple selectors.
 
 The unifying insight: **sections, links, AI summaries, and human notes are all the same
-kind of thing — a typed layer of offset-grounded (or node-grounded) annotations over an
+kind of thing: a typed layer of offset-grounded (or node-grounded) annotations over an
 immutable source.** This is stronger than a "views + separate annotations" split: if the
 model treats every derived structure as a layer, then "give me an AI summary of section
 3" and "give me the TOC" use one mechanism. Parsing produces the base layers; AI and
@@ -456,11 +456,11 @@ humans add more. **Recommendation:** make stand-off layering the conceptual core
 W3C selectors so a layer can reattach after a reparse or edit (store node id *and* source
 span *and* text-quote).
 
-### Dual addressing: source-canonical references, tree-convenient handles
+### Dual Addressing: Source-Canonical References, Tree-Convenient Handles
 
-A reference to "a piece of the document" must work in four contexts — reading the source,
+A reference to "a piece of the document" must work in four contexts: reading the source,
 editing the parsed tree (possibly via a bridged editor), saving, and interacting with
-rendered output — and those contexts disagree about what is stable:
+rendered output, and those contexts disagree about what is stable:
 
 - The **source** is canonical and is what persists; a saved reference must be
   source-grounded (span + quote), because node ids are meaningful only within one parse.
@@ -471,7 +471,7 @@ rendered output — and those contexts disagree about what is stable:
 The resolution is asymmetric. **Model → source is total**: every node carries a
 `source_span`, so attaching at the model level (a table, a link) is automatically grounded
 in the original document. **Source → model is re-resolution**: after a (re)parse, match by
-span, then by text-quote, then by a structural path. That yields one rule set — edit
+span, then by text-quote, then by a structural path. That yields one rule set: edit
 against tree handles, **persist source-grounded**, re-resolve to nodes on load, and emit
 `data-node-id` / `data-source-span` in rendered HTML so UI selections round-trip. An
 editor-bridge path (ProseMirror/block-JSON in memory) then serializes annotations *through*
@@ -480,7 +480,7 @@ depends on a transient editor or parse identity. This is W3C multi-selector targ
 persistence discipline: name which selector is *canonical* (source span), which is
 *convenient* (node id), and which is *robust* (quote / structural path).
 
-### Source Maps And Transform Provenance
+### Source Maps and Transform Provenance
 
 Source maps are not a document model, but they are a useful pattern for normalized
 rewriting. ECMA-426 standardizes a JSON source map format for bidirectional mapping from
@@ -521,7 +521,7 @@ information to source-grounded nodes where alignment is possible.
 ### Semantic XML Models
 
 DocBook, JATS, and TEI show mature semantic document modeling: rich element vocabularies,
-validation, and long-term publishing workflows. The tradeoff is complexity — too
+validation, and long-term publishing workflows. The tradeoff is complexity: too
 heavyweight for a Markdown-first, AI-assisted workflow. **Recommendation:** borrow the
 discipline of explicit semantic roles and schemas, but keep the Chopdiff model lighter
 and JSON-native. (TEI also has its own stand-off tradition, reinforcing the layering
@@ -538,7 +538,7 @@ direction.)
   cross-language graph projection. Avoid a parallel Python document model until a real
   runtime boundary requires it.
 - **Model ≠ format ≠ implementation.** The contract is a language-neutral schema; JSON
-  and Python are projections. Pin the offset unit in the spec — the first version should
+  and Python are projections. Pin the offset unit in the spec; the first version should
   use Unicode code points for `source_span`, with explicit byte/UTF-16 conversion fields
   when needed.
 - **A graph is more honest than one tree.** Markdown blocks form one hierarchy; sections
@@ -546,24 +546,24 @@ direction.)
   a linear sequence; links are inline ranges; layout groups by page/column/line;
   annotations are external claims. The practical model is a node graph with derived
   indexes and named views.
-- **Zoom and views are the same requirement** — stable ids + random access + overlapping
+- **Zoom and views are the same requirement:** stable ids + random access + overlapping
   layers makes every view and zoom level a cheap projection.
 - **One mechanism for all structure.** Stand-off layering (UIMA/W3C) unifies parsed
   structure (sections, blocks, links) and added structure (AI summaries, human notes) as
   typed layers over immutable source.
-- **JSON should be stable and boring** — explicit discriminated records, no
+- **JSON should be stable and boring:** explicit discriminated records, no
   parser-internal class names; parser specifics live in `metadata`.
-- **Annotations should be separate from the parse** — portable across reparses, many
+- **Annotations should be separate from the parse:** portable across reparses, many
   independent layers over the same model.
 - **References are dual-addressed, source-canonical.** Reference parsed elements by node id
   in memory, but persist source-grounded (span + quote): model→source resolution is total
   (every node has a span), source→model is robust re-resolution, and rendered output carries
   node id + source span so selections round-trip. Save keeps the original document plus
   source-grounded annotations; the tree is the editing convenience, not the durable anchor.
-- **Visual analysis is an overlay** — visual geometry is not document structure; for
+- **Visual analysis is an overlay:** visual geometry is not document structure; for
   Markdown, source structure drives the model and geometry attaches to nodes separately.
   For PDFs/OCR, geometry may be the only reliable initial grounding.
-- **Stable identity is a solved problem, twice** — red-green trees give identity under
+- **Stable identity is a solved problem, twice:** red-green trees give identity under
   reparse (compiler world); CRDT ids give it under live edits (collaborative world). Use
   the first for the canonical pipeline; reserve the second for the edit edge.
 - **Generated output needs provenance, not a second truth.** Source-map-style
@@ -675,7 +675,7 @@ share node ids; serializes cleanly and stays parser-agnostic at the public bound
 and validation.
 **Assessment:** Recommended architectural north star.
 
-### Model specification
+### Model Specification
 
 #### Option G: Specify the model as a language-neutral schema (recommended)
 
@@ -708,7 +708,7 @@ Use Editor.js/BlockNote/ProseMirror/CRDT JSON as the canonical model.
 up Chopdiff's grounding moat.
 **Assessment:** client-projection and ergonomics references only, not canonical.
 
-### Eliminated early
+### Eliminated Early
 
 - **Pandoc as canonical (Option D):** source grounding is not its design center; external
   runtime. Kept only as a bridge.
@@ -720,24 +720,24 @@ up Chopdiff's grounding moat.
 Build a source-grounded `DocGraph` projection (Option B + F), specified as a
 language-neutral contract (Option G), with these components:
 
-1. **Source record** — original text or external reference; content hash; source format
+1. **Source record:** original text or external reference; content hash; source format
    and parser metadata. Pin `source_span` to Unicode code points here, and expose
    explicit derived byte/UTF-16 coordinates when needed.
-2. **Stable node table** — `id`, `kind`, `role`, `parent`, `children`, `source_span`,
+2. **Stable node table:** `id`, `kind`, `role`, `parent`, `children`, `source_span`,
    optional `analysis_span`, and `attrs`; parser-specific details hidden behind stable
    public fields (in `metadata`).
-3. **Views** (all derived projections sharing node ids) — `blocks` (parser-backed block
+3. **Views** (all derived projections sharing node ids): `blocks` (parser-backed block
    order), `sections` (heading tree + TOC), `links` (inline link/image/reference index),
    `sentences` (`TextDoc` index), `tokens` (word-token index on request), `divs`
    (explicit HTML/div structure), `layout` (optional rendered/imported geometry).
-4. **Annotations** — stored separately, as typed stand-off layers targeting nodes or
+4. **Annotations:** stored separately, as typed stand-off layers targeting nodes or
    ranges with multiple selectors: node id; source span; text quote with prefix/suffix;
    optional opaque anchor (for future CRDT); optional DOM path; optional visual bbox.
-5. **Operations and provenance** — high-level records for manipulations: move section;
+5. **Operations and provenance:** high-level records for manipulations: move section;
    replace block; insert after node; rewrite span; normalize document. Apply to source
    (or to a normalized Markdown AST), emit new Markdown, attach generated↔original
    mapping records, then reparse and validate.
-6. **Normalized output** — Flowmark remains the likely Markdown normalizer; Pandoc an
+6. **Normalized output:** Flowmark remains the likely Markdown normalizer; Pandoc an
    optional cross-format bridge.
 
 Borrow the **red-green pattern** (immutable nodes + computed positions, trivia
@@ -804,39 +804,39 @@ and UTF-16 spans are optional derived coordinates, not substitutes for the canon
 
 ## Use Case Mapping
 
-### Dynamic zoomable UI
+### Dynamic Zoomable UI
 
 Section tree for top-level navigation; block list for medium zoom; sentence/link/token
 views for detail zoom; optional layout overlay for rendered positioning; DOM rendering
-with `data-node-id` for browser interaction. (All are projections of the one node table —
+with `data-node-id` for browser interaction. (All are projections of the one node table;
 see "zoom and views are one requirement.")
 
-### AI and human annotations
+### AI and Human Annotations
 
 External annotation records as typed stand-off layers; W3C-inspired target selectors;
 node ids for fast lookup; source spans and text quotes for reattachment after edits;
 layers for summaries, claims, TODOs, rewrite suggestions, citations, visual comments, and
 human review.
 
-### Link identification and reference
+### Link Identification and Reference
 
 Parser-backed inline nodes from Marko; link records with text, URL, title, source span,
 containing block, containing sentence, and containing section; separate treatment of
 inline links, reference links, autolinks, images, and raw HTML anchors.
 
-### Section moves and semantic reorganization
+### Section Moves and Semantic Reorganization
 
 Section view for selecting move targets; source spans for exact extraction when safe;
 parser-backed normalized rewrite when exact extraction is unsafe; operation records to
 describe the move before emitting new Markdown; reparse and diff to validate.
 
-### Normalized Markdown rewriting
+### Normalized Markdown Rewriting
 
 Parser-backed Markdown blocks for structure; Flowmark for normalization; `TextDoc` token
 diffs for validating how much changed; optional Pandoc bridge if the output format is not
 Markdown.
 
-### Visual document analysis
+### Visual Document Analysis
 
 Browser-rendered HTML layout for Markdown; PDF.js layout for PDF views;
 Docling/Unstructured-style imported element coordinates for non-Markdown sources; layout
@@ -844,40 +844,40 @@ overlay keyed by node ids when alignment is possible.
 
 ## Implementation Implications
 
-### Near-term additions
+### Near-Term Additions
 
 - Add computed `[start, end)` spans to `Paragraph` and `Sentence`, using Unicode code
-  point offsets to match current `TextDoc` indexing.
-- Add `block_at_offset` and `sentence_at_offset`.
-- Add a clear source-text retention/accessor strategy for exact span slicing.
+  point offsets to match current `TextDoc` indexing
+- Add `block_at_offset` and `sentence_at_offset`
+- Add a clear source-text retention/accessor strategy for exact span slicing
 - Add parser-backed structural blocks as a `TextDoc` overlay/projection, not a parallel
-  Python document model.
-- Add heading-derived sections and TOC.
-- Add link extraction with spans.
+  Python document model
+- Add heading-derived sections and TOC
+- Add link extraction with spans
 
-### Medium-term additions
+### Medium-Term Additions
 
 - Add a JSON Schema (language-neutral) plus Pydantic/dataclass serialization for
   `DocGraph`; pin the offset unit and add conversion helpers for UTF-8 bytes and
-  UTF-16 code units.
-- Add annotation target records (stand-off layers).
-- Add operation records for structural transforms.
-- Add provenance records for normalized/generated output, source-map style.
-- Add a layout overlay type.
-- Add browser rendering helpers that emit `data-node-id`.
+  UTF-16 code units
+- Add annotation target records (stand-off layers)
+- Add operation records for structural transforms
+- Add provenance records for normalized/generated output, source-map style
+- Add a layout overlay type
+- Add browser rendering helpers that emit `data-node-id`
 - Define the model→views projection contract and confirm each view is O(n) from the node
-  table.
+  table
 
-### Later additions
+### Later Additions
 
 - Add a ProseMirror/Tiptap or block-JSON adapter if live rich-text editing becomes
-  important.
+  important
 - Add a Lezer/CodeMirror adapter if client-side incremental Markdown parsing becomes
-  important.
+  important
 - Add a CRDT anchor option on annotation targets if collaborative editing becomes
-  important.
-- Add a Pandoc bridge for cross-format conversion.
-- Add PDF.js/Docling import alignment for visual documents.
+  important
+- Add a Pandoc bridge for cross-format conversion
+- Add PDF.js/Docling import alignment for visual documents
 
 ## Risks
 
@@ -907,7 +907,7 @@ overlay keyed by node ids when alignment is possible.
    and expose byte/UTF-16 conversions explicitly.
 4. Adopt **stand-off layering** (UIMA/W3C) as the conceptual core: source + stable node
    table + typed span layers; parsed structure and AI/human annotations are all layers.
-5. Treat **zoom and views as one requirement** — validate the model against stable ids +
+5. Treat **zoom and views as one requirement:** validate the model against stable ids +
    random access + overlapping layers.
 6. Use **Marko** first (aligned with Flowmark and the Python stack); hold **djot** as the
    fallback parser if Marko span attachment is too costly.
@@ -974,7 +974,7 @@ Local:
 - [Markdown block segmentation plan (archived)](../specs/archive/plan-2026-05-26-markdown-block-segmentation.md)
 - [Supply-chain security](../../../SUPPLY-CHAIN-SECURITY.md)
 
-External — Markdown / cross-format ASTs:
+External, Markdown and cross-format ASTs:
 
 - [Marko API Reference](https://marko-py.readthedocs.io/en/latest/api.html)
 - [Marko Built-in Extensions](https://marko-py.readthedocs.io/en/latest/extensions.html)
@@ -989,7 +989,7 @@ External — Markdown / cross-format ASTs:
 - [Pandoc filters](https://pandoc.org/filters.html)
 - [Pandoc Lua filters](https://pandoc.org/lua-filters.html)
 
-External — DOM / editors:
+External, DOM and editors:
 
 - [DOMParser](https://developer.mozilla.org/en-US/docs/Web/API/DOMParser/parseFromString)
 - [Document Object Model](https://developer.mozilla.org/docs/Web/API/Document_Object_Model)
@@ -1003,11 +1003,11 @@ External — DOM / editors:
 - [Editor.js output data](https://editorjs.io/base-concepts/#editor-js-output-data)
 - [BlockNote document structure](https://www.blocknotejs.org/docs/foundations/document-structure)
 
-External — incremental parsers / lossless trees / CRDTs:
+External, incremental parsers, lossless trees, and CRDTs:
 
 - [Tree-sitter Python node API](https://tree-sitter.github.io/py-tree-sitter/classes/tree_sitter.Node.html)
 - [Lezer reference](https://lezer.codemirror.net/docs/ref/)
-- [Roslyn syntax trees (red-green) — Eric Lippert](https://ericlippert.com/2012/06/08/red-green-trees/)
+- [Roslyn syntax trees (red-green), Eric Lippert](https://ericlippert.com/2012/06/08/red-green-trees/)
 - [Roslyn syntax tree docs](https://learn.microsoft.com/en-us/dotnet/csharp/roslyn-sdk/work-with-syntax)
 - [rowan (rust-analyzer syntax trees)](https://github.com/rust-analyzer/rowan)
 - [SwiftSyntax](https://github.com/swiftlang/swift-syntax)
@@ -1015,7 +1015,7 @@ External — incremental parsers / lossless trees / CRDTs:
 - [Automerge](https://automerge.org/docs/documents/)
 - [Loro](https://loro.dev/docs)
 
-External — annotation / layout / semantic XML:
+External, annotation, layout, and semantic XML:
 
 - [W3C Web Annotation Data Model](https://www.w3.org/TR/annotation-model/)
 - [UIMA CAS reference](https://uima.apache.org/d/uimaj-current/references.html)

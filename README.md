@@ -11,15 +11,15 @@ have minimal dependencies.
 At its core is `TextDoc`, an in-memory data structure that consolidates several views of
 a document:
 
-- **Markdown block structure** — headings, lists, tables, code, blockquotes, …
-- **Markdown inline structure** — links and other inline elements
-- **Language structure** — paragraphs, sentences, words, and the spacing between them
-- **Document structure** — section hierarchy and TOC
+- **Markdown block structure:** headings, lists, tables, code, blockquotes, …
+- **Markdown inline structure:** links and other inline elements
+- **Language structure:** paragraphs, sentences, words, and the spacing between them
+- **Document structure:** section hierarchy and TOC
 
 Every unit is anchored back to the original text by exact character offset, so nothing is
 copied and nothing drifts. Markdown parsers give you a block/inline tree but not
 sentences, sizes, or rollups; NLP tools give you sentences but not Markdown structure or
-exact source mapping. `TextDoc` is both — good for **textual analysis of a fixed
+exact source mapping. `TextDoc` is both: good for **textual analysis of a fixed
 document** (spans, sizes, sections, link rollups) and as an **editable model** you can
 modify in place and then reassemble into a clean, normalized new document.
 
