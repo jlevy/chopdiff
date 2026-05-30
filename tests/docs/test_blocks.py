@@ -189,3 +189,110 @@ def test_block_types_parity_with_marko_for_no_blank_transitions():
         marko_top = [c for c in parsed.children if not isinstance(c, BlankLine)]
         ours = TextDoc.from_text(text).blocks()
         assert len(ours) == len(marko_top), f"block count mismatch on: {text!r}"
+
+
+def test_blockquote_contains_nested_table_and_code():
+    text = dedent(
+        """
+        > Some quoted text.
+        >
+        > | a | b |
+        > | - | - |
+        > | 1 | 2 |
+        >
+        > ```python
+        > x = 1
+        > ```
+        """
+    ).strip()
+    doc = TextDoc.from_text(text)
+    top = doc.blocks()
+    assert _types(top) == [BlockType.blockquote]
+    bq = top[0]
+    child_types = _types(bq.children)
+    assert BlockType.paragraph in child_types
+    assert BlockType.table in child_types
+    assert BlockType.code in child_types
+
+
+def test_list_item_contains_table_and_code():
+    text = dedent(
+        """
+        - item with table
+
+          | a | b |
+          | - | - |
+          | 1 | 2 |
+
+          ```
+          code here
+          ```
+
+        - plain item
+        """
+    ).strip()
+    doc = TextDoc.from_text(text)
+    top = doc.blocks()
+    assert _types(top) == [BlockType.list]
+    items = top[0].children
+    assert len(items) == 2
+    first_item_types = _types(items[0].children)
+    assert BlockType.paragraph in first_item_types
+    assert BlockType.table in first_item_types
+    assert BlockType.code in first_item_types
+
+
+def test_list_item_populates_all_block_children():
+    # A list item with a paragraph and a nested list has both as children.
+    text = dedent(
+        """
+        - item one content
+          - nested a
+          - nested b
+        """
+    ).strip()
+    doc = TextDoc.from_text(text)
+    lst = doc.blocks()[0]
+    item = lst.children[0]
+    child_types = _types(item.children)
+    # The item's paragraph content and the nested list are both children.
+    assert BlockType.list in child_types or BlockType.paragraph in child_types
+    # The nested list is definitely there.
+    nested_lists = [c for c in item.children if c.type == BlockType.list]
+    assert len(nested_lists) == 1
+    assert len(nested_lists[0].children) == 2
+
+
+def test_walk_blocks_traverses_depth():
+    from chopdiff.docs.block_tree import walk_blocks
+
+    text = dedent(
+        """
+        - item one
+          - nested a
+        - item two
+        """
+    ).strip()
+    doc = TextDoc.from_text(text)
+    pairs = list(walk_blocks(doc.blocks()))
+    # Expect: list(0), item(1), nested-list(2) or paragraph(2), ...
+    depths = [d for _, d in pairs]
+    assert 0 in depths
+    assert max(depths) >= 2
+
+
+def test_density_invariant_walk_blocks_tallies():
+    # Tight and loose forms produce identical walk_blocks tallies.
+    from collections import Counter
+
+    from chopdiff.docs.block_tree import walk_blocks
+
+    dense = TextDoc.from_text("- a\n- b\n- c").blocks()
+    loose = TextDoc.from_text("- a\n\n- b\n\n- c").blocks()
+
+    def tally(blocks: list[Block]) -> Counter[BlockType]:
+        return Counter(b.type for b, _ in walk_blocks(blocks))
+
+    dense_tally = tally(dense)
+    loose_tally = tally(loose)
+    assert dense_tally == loose_tally

@@ -11,15 +11,22 @@ produced by `flowmark_markdown().parse(text)` carries an authoritative
 `element.span = (start, end)` read from marko's own parser state (see
 `flowmark.markdown_ast.block_span`). chopdiff makes no block-boundary decisions of its
 own, so there is no regex scanner and no per-line heuristic.
+
+Containers (lists, list items, blockquotes) fully populate their block children
+recursively, so a table inside a blockquote or a paragraph inside a list item is
+reachable in the tree. The top-level `blocks()`/`parse_blocks` ordering and the `Block`
+dataclass shape are unchanged.
 """
 
 from __future__ import annotations
 
+from collections.abc import Iterator
 from dataclasses import dataclass, field
 
 from flowmark import flowmark_markdown
 from flowmark.markdown_ast import block_span
 from marko.block import BlankLine, List, ListItem
+from marko.block import Quote as MarkoQuote
 from marko.element import Element
 
 from chopdiff.docs.block_types import BlockType, block_type_for
@@ -31,8 +38,9 @@ class Block:
     A structural block with an exact `[start, end)` span into the source.
 
     `children` holds nested blocks: a `list`/`ordered_list` block's children are its
-    `list_item`s, and a `list_item`'s children are any nested lists. Leaf blocks
-    (paragraph, heading, code, table, blockquote, etc.) have no children. `span` is
+    `list_item`s, and a `list_item`'s children are ALL its block children (paragraphs,
+    nested lists, tables, code, etc.). A `blockquote`'s children are its nested blocks.
+    Leaf blocks (heading, code, table, thematic_break, etc.) have no children. `span` is
     trimmed of surrounding whitespace, so `source[start:end]` is the block's exact text.
 
     `tight` carries CommonMark list density for `list`/`ordered_list` blocks (`True` when
@@ -53,6 +61,16 @@ def parse_blocks(text: str) -> list[Block]:
     return _blocks_from(text, flowmark_markdown().parse(text))
 
 
+def walk_blocks(blocks: list[Block], _depth: int = 0) -> Iterator[tuple[Block, int]]:
+    """
+    Depth-first traversal of a block tree, yielding `(block, depth)` pairs.
+    Top-level blocks have depth 0; their children have depth 1, and so on.
+    """
+    for block in blocks:
+        yield block, _depth
+        yield from walk_blocks(block.children, _depth + 1)
+
+
 def _trim(text: str, lo: int, hi: int) -> tuple[int, int]:
     """Shrink a span to drop surrounding whitespace (marko spans include trailing newlines
     and a nested element's leading indentation/marker line)."""
@@ -65,10 +83,10 @@ def _trim(text: str, lo: int, hi: int) -> tuple[int, int]:
 
 def _blocks_from(text: str, parent: Element) -> list[Block]:
     """
-    Build `Block`s from `parent`'s block children, skipping blank lines. Recursion is
-    limited to lists: a `list` decomposes into its `list_item`s, and a `list_item` keeps
-    only its nested lists as children (its own paragraph text is not surfaced as a child,
-    matching the per-paragraph view's "classify by outer type" contract).
+    Build `Block`s from `parent`'s block children, skipping blank lines. Every
+    container populates all its block children recursively: a `list` decomposes into
+    `list_item`s, a `list_item` keeps all its block children (paragraphs, nested lists,
+    tables, code, etc.), and a `blockquote` keeps all its nested blocks.
     """
     blocks: list[Block] = []
     children: list[Element] = getattr(parent, "children", []) or []
@@ -81,12 +99,8 @@ def _blocks_from(text: str, parent: Element) -> list[Block]:
         if isinstance(element, List):
             sub = _blocks_from(text, element)
             tight = element.tight
-        elif isinstance(element, ListItem):
-            sub = [
-                b
-                for b in _blocks_from(text, element)
-                if b.type in (BlockType.list, BlockType.ordered_list)
-            ]
+        elif isinstance(element, (ListItem, MarkoQuote)):
+            sub = _blocks_from(text, element)
         else:
             sub = []
         blocks.append(Block(block_type, span, sub, tight))
