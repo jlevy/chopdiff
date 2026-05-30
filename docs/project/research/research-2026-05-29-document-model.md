@@ -45,7 +45,7 @@ Three framing claims organize the conclusions:
 
 3. **For Chopdiff, the near-term Python API should remain `TextDoc`-centered.** The
    active implementation plan extends `TextDoc` with spans, sections, blocks, and links.
-   `DocOverview` is the better name for the future language-neutral serialized
+   `DocGraph` is the better name for the future language-neutral serialized
    graph/contract derived from `TextDoc`, not a competing Python document model unless a
    later use case proves that extra runtime object is worth the public API surface.
 
@@ -156,7 +156,7 @@ The current project specs already point in the right direction:
 
 This research reinforces those specs and makes the "derived overlay" architecture
 explicit: keep source text and `TextDoc` as core linear grounding, add specialized views
-on top, and define `DocOverview` as the serialized graph/schema projection. That is
+on top, and define `DocGraph` as the serialized graph/schema projection. That is
 different from resurrecting the archived `MarkdownDoc` as a second Python-side model.
 
 ## Findings
@@ -208,7 +208,7 @@ The fact-check pass makes this stronger than a footnote:
   positions in the editor string model. Source maps use generated/original line and
   column positions, and ECMA-426 specifies UTF-16 columns for JavaScript/CSS source maps.
 
-Recommendation: the first `DocOverview` schema should make `source_span` use
+Recommendation: the first `DocGraph` schema should make `source_span` use
 `unicode_code_points`, matching Python `TextDoc` offsets and W3C text selectors. Where a
 consumer needs byte offsets or browser/editor offsets, expose explicit derived fields or
 conversion tables such as `byte_span`, `utf16_span`, and `line_column_span`. Do not
@@ -270,7 +270,7 @@ gap is source spans — Marko elements do not expose exact spans by default — 
 enough to wrap for span annotation. Local verification on the locked Marko 2.2.2 source
 confirms this is still plausible; PyPI now lists Marko 2.2.3 (2026-05-28), which should
 not be adopted until it clears the repository's cool-off policy. **Recommendation:** use
-Marko first for parser-backed `TextDoc.blocks()` / `DocOverview` derivation,
+Marko first for parser-backed `TextDoc.blocks()` / `DocGraph` derivation,
 matching the current Python stack and avoiding a new parser dependency.
 
 #### mdast and unist
@@ -533,7 +533,7 @@ direction.)
   serialized, annotated, and transformed; edits should ultimately produce new source text
   and then reparse. This avoids the hardest class of bugs: a rich document model drifting
   away from the actual Markdown file.
-- **`TextDoc` is the implementation core; `DocOverview` is the contract.** The
+- **`TextDoc` is the implementation core; `DocGraph` is the contract.** The
   active plan should keep extending `TextDoc` in place while the schema layer defines a
   cross-language graph projection. Avoid a parallel Python document model until a real
   runtime boundary requires it.
@@ -627,7 +627,7 @@ annotations don't naturally belong in a linear text model.
 **Assessment:** useful for spans and simple convenience APIs, too constraining as the
 full architecture.
 
-#### Option B: Add a parser-backed `DocOverview` projection
+#### Option B: Add a parser-backed `DocGraph` projection
 
 Keep `TextDoc` as the linear text model; add a serialized graph projection that owns
 source metadata, parser-backed nodes, sections, links, annotations, provenance, and
@@ -636,7 +636,7 @@ indexes back into `TextDoc`.
 **Pros:** preserves existing `TextDoc` behavior; exact Markdown structure where
 blank-line paragraphs are insufficient; natural JSON model for UI and annotations; can
 evolve without breaking diff/window code; aligns with the active plan by making
-`DocOverview` a contract/projection rather than a competing Python API.
+`DocGraph` a contract/projection rather than a competing Python API.
 **Cons:** requires careful mapping between parser spans and `TextDoc` spans; adds a
 schema/projection layer that must be versioned and tested.
 **Assessment:** Recommended.
@@ -717,7 +717,7 @@ up Chopdiff's grounding moat.
 
 ## Recommended Direction
 
-Build a source-grounded `DocOverview` projection (Option B + F), specified as a
+Build a source-grounded `DocGraph` projection (Option B + F), specified as a
 language-neutral contract (Option G), with these components:
 
 1. **Source record** — original text or external reference; content hash; source format
@@ -748,7 +748,7 @@ first-class) for the eventual structural tree, and the **stand-off layering** mo
 
 ```json
 {
-  "schema": "chopdiff.doc_overview.v1",
+  "schema": "chopdiff.doc_graph.v1",
   "source": {
     "format": "markdown",
     "offset_unit": "unicode_code_points",
@@ -858,7 +858,7 @@ overlay keyed by node ids when alignment is possible.
 ### Medium-term additions
 
 - Add a JSON Schema (language-neutral) plus Pydantic/dataclass serialization for
-  `DocOverview`; pin the offset unit and add conversion helpers for UTF-8 bytes and
+  `DocGraph`; pin the offset unit and add conversion helpers for UTF-8 bytes and
   UTF-16 code units.
 - Add annotation target records (stand-off layers).
 - Add operation records for structural transforms.
@@ -900,7 +900,7 @@ overlay keyed by node ids when alignment is possible.
 
 1. Keep `TextDoc` as the canonical Python linear analysis layer.
 2. Extend `TextDoc` with parser-backed structural overlays in the near term; define
-   `DocOverview` as the language-neutral serialized graph projection. Do not add a
+   `DocGraph` as the language-neutral serialized graph projection. Do not add a
    parallel `MarkdownDoc` runtime API unless a concrete boundary justifies it.
 3. Specify the model as a **language-neutral contract** (JSON Schema + prose), with Python
    (and later TypeScript) as implementations; pin `source_span` to Unicode code points
@@ -928,7 +928,7 @@ overlay keyed by node ids when alignment is possible.
 
 ## Next Steps
 
-- [ ] Use `DocOverview` for the serialized graph/schema projection; keep `TextDoc`
+- [ ] Use `DocGraph` for the serialized graph/schema projection; keep `TextDoc`
       as the near-term Python implementation surface unless a later boundary requires a
       separate runtime object.
 - [ ] Add exact span accessors and offset-lookup APIs to `TextDoc`

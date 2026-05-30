@@ -1,7 +1,7 @@
-# TextDoc and DocOverview: Design Specification
+# TextDoc and DocGraph: Design Specification
 
 **Status:** Definitive front-to-back design of chopdiff's document model: the `TextDoc`
-Python core and the `DocOverview` serialized projection. The design is settled (decision
+Python core and the `DocGraph` serialized projection. The design is settled (decision
 records DR-1..DR-6 in
 [`plan-2026-05-29-unified-document-model.md`](project/specs/active/plan-2026-05-29-unified-document-model.md));
 see §14 for what is implemented (v0.4.0) versus in progress. Dated plans under
@@ -28,7 +28,7 @@ Two surfaces, one design:
 
 - **`TextDoc`** is the **Python core** — the in-process object for parsing, analysis,
   rollups, transforms, and editable reassembly.
-- **`DocOverview`** is the **serialized, language-neutral projection** of the same content
+- **`DocGraph`** is the **serialized, language-neutral projection** of the same content
   — a JSON contract for frontends, cross-language clients, and annotations. It is derived
   from `TextDoc`, not a competing model (DR-2).
 
@@ -55,7 +55,7 @@ Two surfaces, one design:
 - **Density-invariant lists.** Tight and loose lists produce identical tallies.
 - **Source-canonical references.** A span reference is durable for annotations across edits
   (`SpanRef`, DR-6): a text quote is the canonical anchor, offsets are recomputable hints.
-- **Cross-language contract.** `DocOverview` is a boring, parser-agnostic JSON schema
+- **Cross-language contract.** `DocGraph` is a boring, parser-agnostic JSON schema
   (Pydantic-authored, DR-3); Python and any future TypeScript/Rust client are
   implementations of one contract.
 - **Dual use.** Analysis of a fixed document *and* an editable model: modify units,
@@ -113,7 +113,7 @@ forced migration of the editing unit.
 - `Sentence` — `text` (normalized, editable; what wordtoks/diffs/reassemble use), `Offsets`,
   `span`, verbatim `original_text` computed from the span.
 - `Offsets(doc_offset, block_offset)` — `doc_offset` absolute; `block_offset` relative to
-  the parent. **Offset unit is Unicode code points** (Python-native); `DocOverview` may
+  the parent. **Offset unit is Unicode code points** (Python-native); `DocGraph` may
   expose derived `byte_span`/`utf16_span` for byte- or browser-oriented consumers, but the
   canonical `source_span` is code points (the cross-language footgun the W3C position
   selector left unresolved).
@@ -255,17 +255,17 @@ query primitive, no blessed per-kind rollups** (DR-4):
 collect(*, kinds=None, where=None, recursive=False, inline=False) -> list[Node]
 ```
 
-at document / section / block scope (`ov`, `ov.section(id)`, `ov.node(id)`). `kinds=`
+at document / section / block scope (`dg`, `dg.section(id)`, `dg.node(id)`). `kinds=`
 selects by node kind (the typed common case); `where=` is a `Node -> bool` predicate escape
 hatch; `recursive` descends into children; `inline` includes inline nodes. It returns
 **nodes** (each with `span`, `attrs`, edges). **Counts, values, and groupings are standard
 Python** over the result — documented with worked examples, not separate methods:
 
 ```python
-ov.collect(kinds={NodeKind.table}, recursive=True)        # the tables (values + spans)
-len(ov.collect(kinds={NodeKind.table}, recursive=True))   # how many
-Counter(n.kind for n in ov.collect(recursive=True))       # tally by kind
-ov.section(s3).collect(kinds={NodeKind.link}, recursive=True)   # links in section 3
+dg.collect(kinds={NodeKind.table}, recursive=True)        # the tables (values + spans)
+len(dg.collect(kinds={NodeKind.table}, recursive=True))   # how many
+Counter(n.kind for n in dg.collect(recursive=True))       # tally by kind
+dg.section(s3).collect(kinds={NodeKind.link}, recursive=True)   # links in section 3
 ```
 
 Slice-by-block-type, per-section rollups, and element rollups are all expressions of this
@@ -280,15 +280,15 @@ correct for counting/gathering. The base-block list (§6) is a *partition*: a co
 ordered, **non-overlapping** cover for linear processing. Use `collect()` to ask "how many
 / which"; use `base_blocks()` to iterate the document's content units.
 
-## 10. DocOverview: the serialized projection
+## 10. DocGraph: the serialized projection
 
-`DocOverview` is the JSON contract derived from `TextDoc` (DR-1, DR-2), authored as Pydantic
+`DocGraph` is the JSON contract derived from `TextDoc` (DR-1, DR-2), authored as Pydantic
 models that emit a JSON Schema (DR-3). Boring and parser-agnostic — no marko/Python class
 names in stable fields. Shape (abbreviated):
 
 ```
-DocOverview = {
-  schema: "chopdiff.doc_overview.v1",
+DocGraph = {
+  schema: "chopdiff.doc_graph.v1",
   source:  { format, offset_unit: "unicode_code_points", sha256, text? },
   nodes:   [ Node, ... ],                       # the canonical node table
   views:   { toc, blocks, links, sentences },   # arrays of node ids (projections)
@@ -296,12 +296,12 @@ DocOverview = {
 }
 ```
 
-`TextDoc.overview(*, include=...)` builds/serializes it. **Payload size is controlled by a
+`TextDoc.graph(*, include=...)` builds/serializes it. **Payload size is controlled by a
 composable set of optional layers** — not a fixed ladder (DR-5):
 
 ```python
-overview()                                    # structural core only (small)
-overview(include={Layer.text, Layer.inline})  # + node text and inline nodes
+graph()                                    # structural core only (small)
+graph(include={Layer.text, Layer.inline})  # + node text and inline nodes
 ```
 
 `Layer` is a small orthogonal enum (`text`, `inline`, `sentences`, `tokens`, derived coords,
@@ -357,7 +357,7 @@ diff/sliding-window/wordtok machinery operates on this editing view unchanged.
 The structural node table is a pure function of the immutable `source_text` (sentence edits
 touch the editing view, not `source_text`), so it and its derived views are lazily cached;
 the operative contract is "do not reassign `source_text` after parse." Edit by editing the
-`TextDoc`/source and re-deriving `DocOverview`; an editor bridge resolves annotations through
+`TextDoc`/source and re-deriving `DocGraph`; an editor bridge resolves annotations through
 `SpanRef`. Render helpers emit `data-node-id` / `data-source-span` so a rendered selection
 resolves to a node and thence to source.
 
@@ -367,7 +367,7 @@ Invariants: offset-anchored (code points); node ids stable within a parse; one c
 form (node table) with derived views (no duplicated content, no stored counts); references
 are quote-canonical; additive (existing behavior preserved).
 
-Non-goals: a parallel runtime `BlockDoc`/`SectionDoc`/`FlexDoc` Python model (DocOverview is
+Non-goals: a parallel runtime `BlockDoc`/`SectionDoc`/`FlexDoc` Python model (DocGraph is
 a projection, not a competing editable model); blessed per-kind rollups or fixed detail
 levels; DOM/XPath/CSS selectors in `SpanRef` (plain-text-first); CommonMark/GFM rendering
 (flowmark covers normalization); replacing `TextNode` (HTML-`<div>` chunking); exact
@@ -384,8 +384,8 @@ annotation, operation, provenance, and layout layers are schema-reserved but bui
 - **In progress (this design):** the recursive node table (containers fully populate
   children); the `base_blocks()` sequential partition with its cover invariant; the single
   `collect()` primitive (superseding and removing `block_type_counts()`, the one
-  semi-breaking change — migration: `Counter(n.kind for n in doc.overview().collect(...))`);
-  composable `include` layers; the `DocOverview` Pydantic schema; and the `SpanRef` contract
+  semi-breaking change — migration: `Counter(n.kind for n in doc.graph().collect(...))`);
+  composable `include` layers; the `DocGraph` Pydantic schema; and the `SpanRef` contract
   with exact resolution (fuzzy re-anchor wired behind it). Tracked by epic `chopdiff-8q8q`;
   sequenced in
   [`plan-2026-05-29-unified-document-model.md`](project/specs/active/plan-2026-05-29-unified-document-model.md).

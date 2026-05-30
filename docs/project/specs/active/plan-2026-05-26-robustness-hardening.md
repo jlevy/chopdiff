@@ -62,11 +62,11 @@ re-done:
 
 Two active efforts: this hardening spec and
 [`plan-2026-05-29-unified-document-model.md`](plan-2026-05-29-unified-document-model.md)
-(the `DocOverview` design, gated on its open decisions). Recommended order:
+(the `DocGraph` design, gated on its open decisions). Recommended order:
 
 1. **Core hardening first (Phase 1 here).** The unified document model extends `TextDoc`
    and reuses its offsets, sub-document slicing, and transform machinery. Building the
-   `DocOverview` projection and its source-grounded `Reference` model on top of
+   `DocGraph` projection and its source-grounded `Reference` model on top of
    `sub_doc`/`sub_paras` that alias caller objects, a `filtered_transform` that can skip its
    filter, or chunking that mis-slices would inherit those bugs. These are also outright
    safety/data-loss bugs that should not wait. The doc-model is gated on its open decisions
@@ -80,7 +80,7 @@ Two compatibility-sensitive questions from the original review are now **answere
 doc-model direction**, not re-opened here:
 
 - *Exact `from_text` preservation?* No `preserve=True` mode. `from_text` stays normalizing;
-  `source_text` is retained for exact spans; byte-for-byte exactness is a `DocOverview`
+  `source_text` is retained for exact spans; byte-for-byte exactness is a `DocGraph`
   concern (source canonical), per the unified plan and `textdoc-spec.md`.
 - *Offset semantics?* Settled: absolute `Offsets`, shipped.
 
@@ -203,7 +203,7 @@ are smaller-blast-radius hardening and cleanup.
 
 - [ ] **Root package API + naming.** `import chopdiff` exposes nothing (`__init__.py`
       empty). Decide root-level convenience exports vs. library-only with submodule imports;
-      coordinate with the `DocOverview`/public-API direction so this is decided once.
+      coordinate with the `DocGraph`/public-API direction so this is decided once.
 - [ ] **Examples follow project rules.** Use `pathlib.Path` for file I/O; remove or
       implement the dead `--output` flag in `examples/insert_para_breaks.py`.
 - [ ] Fix any remaining stale docs/typos surfaced during the work; run final validation

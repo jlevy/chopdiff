@@ -1,11 +1,11 @@
-# Feature: A flexible unified document model (DocOverview)
+# Feature: A flexible unified document model (DocGraph)
 
 **Date:** 2026-05-29 (last updated 2026-05-30)
 
 **Author:** chopdiff maintainers
 
 **Status:** Draft — **all nine decisions settled (2026-05-29 / 2026-05-30).** Decision
-records DR-1..DR-6 cover the architecture (node table; `DocOverview` projection; Pydantic
+records DR-1..DR-6 cover the architecture (node table; `DocGraph` projection; Pydantic
 authoring; one `collect()` rollup primitive; composable `include` layers; the `SpanRef`
 span-reference type), plus 6 (minimal phase-1 scope), 8 (lazy-cache), 9 (count list-item
 wrapper paragraphs). Ready to break Phase 1 into implementation beads.
@@ -14,7 +14,7 @@ wrapper paragraphs). Ready to break Phase 1 into implementation beads.
 decisions are recorded (DR-1..DR-6); the next step is to break Phase 1 into implementation
 beads. It builds on the block-aware/normalized-form work shipped in v0.4.0 (exact spans,
 structural `blocks()`, sections, links, top-level `block_type_counts()`); everything
-proposed here — recursive/nested rollups, the `SpanRef` model, and the `DocOverview`
+proposed here — recursive/nested rollups, the `SpanRef` model, and the `DocGraph`
 projection — is not yet built. Tracked by epic `chopdiff-8q8q`.
 
 > **Inputs:** the survey in
@@ -41,11 +41,11 @@ tree** but a **stable node set addressable by id, plus typed layers and derived 
 Sections cross-cut block containment, links are inline ranges, annotations are arbitrary;
 a single hierarchy cannot hold all of them, but a node table with span/id addressing makes
 every tree, slice, and rollup a cheap projection. `TextDoc` remains the Python core;
-**`DocOverview`** is the serialized, language-neutral projection.
+**`DocGraph`** is the serialized, language-neutral projection.
 
 ## Goals
 
-- One **unified JSON schema** (`DocOverview`) for the fully processed document,
+- One **unified JSON schema** (`DocGraph`) for the fully processed document,
   reusable and serializable into frontend UIs.
 - Recover the **exact original document structure** (containment tree) *and* the **section
   tree** as derived views of the same node set.
@@ -62,7 +62,7 @@ every tree, slice, and rollup a cheap projection. `TextDoc` remains the Python c
 ## Non-Goals
 
 - A parallel runtime Python document model competing with `TextDoc` (the research is
-  explicit: extend `TextDoc`; `DocOverview` is a projection/contract).
+  explicit: extend `TextDoc`; `DocGraph` is a projection/contract).
 - Live collaborative editing, CRDForms, or a rich-text editor model as canonical (client
   edge only; keep an opaque `anchor` slot open).
 - Perfect byte-for-byte source-preserving Markdown surgery (normalized rewrite is the
@@ -160,14 +160,14 @@ so consumers that just want the tree ignore the extra indexes.
 
 ## E2. Canonical store: extend `TextDoc`, or a standalone object?
 
-- **Option 2a — `DocOverview` is purely a serialized projection** built on demand
+- **Option 2a — `DocGraph` is purely a serialized projection** built on demand
   from `TextDoc` (+ its block tree, sections, links). No new long-lived runtime object;
   `TextDoc` stays the core.
-  - *Pros:* matches the research ("extend TextDoc; DocOverview is the contract"); no
+  - *Pros:* matches the research ("extend TextDoc; DocGraph is the contract"); no
     parallel model to keep in sync; reuses spans/sections/links already built.
   - *Cons:* the projection logic lives somewhere (a builder); repeated builds cost unless
     cached.
-- **Option 2b — a first-class `DocOverview` runtime object** that owns the node table
+- **Option 2b — a first-class `DocGraph` runtime object** that owns the node table
   and is the primary API.
   - *Pros:* one object to pass around; natural home for query methods.
   - *Cons:* a second document model competing with `TextDoc`; the research explicitly
@@ -319,7 +319,7 @@ Two consequences to design in:
   source-grounded annotations*. Future on-disk formats store annotations this way.
 - **Editor-bridge round-trip.** When editing in memory (optionally bridged to a ProseMirror
   /block-JSON editor model), annotations attach to model nodes; on serialize they resolve
-  to source spans and ride out through `DocOverview` to *original document + annotations
+  to source spans and ride out through `DocGraph` to *original document + annotations
   that reference original-document structures*; on reopen, a reparse re-resolves them to
   nodes. Rendered HTML carries `data-node-id` / `data-source-span` so a UI selection maps
   back to a node and thence to source.
@@ -331,14 +331,14 @@ Two consequences to design in:
 This is the recommended synthesis (1b + 2a + 3c + 4a + 5c + lazy cache), to be confirmed
 under "Decisions."
 
-## D1. The `DocOverview` schema
+## D1. The `DocGraph` schema
 
 A single JSON object, boring and parser-agnostic (no Marko/Python class names in stable
 fields — those go in `metadata`). Shape (abbreviated; see the research JSON sketch):
 
 ```
-DocOverview = {
-  schema: "chopdiff.doc_overview.v1",
+DocGraph = {
+  schema: "chopdiff.doc_graph.v1",
   source:  { format, offset_unit: "unicode_code_points", sha256, text? },
   nodes:   [ Node, ... ],            # the stable node set (block + inline families)
   views:   { toc, blocks, links, sentences, ... },   # arrays of node ids (projections)
@@ -368,7 +368,7 @@ A builder turns a `TextDoc` (+ its cached recursive block tree, sections, links)
 node table, lazily and cached on the immutable source. Public surface (additive), kept
 deliberately minimal — **one general query primitive, no blessed per-kind rollups** (DR-4):
 
-- `TextDoc.overview(*, include=...) -> DocOverview` — build/serialize; `include` is a set of
+- `TextDoc.graph(*, include=...) -> DocGraph` — build/serialize; `include` is a set of
   optional layers, default = structural core only (DR-5).
 - **One query primitive**, at document / section / block scope:
   ```python
@@ -380,35 +380,35 @@ deliberately minimal — **one general query primitive, no blessed per-kind roll
 - **Values, counts, and groupings are standard Python over the result**, documented with
   clear examples, not separate methods:
   ```python
-  ov.collect(kinds={NodeKind.table}, recursive=True)            # the tables (values + spans)
-  len(ov.collect(kinds={NodeKind.table}, recursive=True))       # how many
-  Counter(n.kind for n in ov.collect(recursive=True))           # tally by kind
+  dg.collect(kinds={NodeKind.table}, recursive=True)            # the tables (values + spans)
+  len(dg.collect(kinds={NodeKind.table}, recursive=True))       # how many
+  Counter(n.kind for n in dg.collect(recursive=True))           # tally by kind
   {k: list(g) for k, g in groupby(... )}                        # group as needed
   ```
-- Scope handles: `ov` (document), `ov.section(id)`, `ov.node(id)`; each exposes `collect`,
+- Scope handles: `dg` (document), `dg.section(id)`, `dg.node(id)`; each exposes `collect`,
   so rollups are uniform across scopes.
 - Relationships are node edges, not a separate rollup: `node.parent`, `node.ancestors`,
   `node.section`, `node.sentence` (for inline). "links in section 3" =
-  `ov.section(s3).collect(kinds={NodeKind.link}, recursive=True)`; pair with their block
+  `dg.section(s3).collect(kinds={NodeKind.link}, recursive=True)`; pair with their block
   via `[(n, n.parent) for n in ...]`.
 
 This makes the structural block tree fully recursive (containers populate children),
 fixing the tallies gap: a table inside a blockquote or list item is a node and is found.
 The existing v0.4.0 convenience accessors (`TextDoc.block_type_counts()`,
 `Section.block_type_counts()`) are **superseded by `collect()`** and are removed when the
-unified model lands (migration: `Counter(n.kind for n in ov.collect(...))`); this is a
+unified model lands (migration: `Counter(n.kind for n in dg.collect(...))`); this is a
 semi-breaking change for the next minor.
 
 ## D3. Detail / payload control
 
-`overview(*, include=...)` takes a **set of optional layers** to materialize/serialize; the
+`graph(*, include=...)` takes a **set of optional layers** to materialize/serialize; the
 structural core (node table: ids, kinds, parent/children, `source_span`) is always present,
 everything else is opt-in. There is **no fixed level ladder** (DR-5) — a caller composes
 exactly the layers they need:
 
 ```python
-overview()                                   # structural core only (small)
-overview(include={Layer.text, Layer.inline}) # + node text and inline nodes
+graph()                                   # structural core only (small)
+graph(include={Layer.text, Layer.inline}) # + node text and inline nodes
 ```
 
 `Layer` is a small orthogonal enum (`text`, `inline`, `sentences`, `tokens`, derived
@@ -426,7 +426,7 @@ categories are added as one more `Layer` (additive, no refactor).
 | Recursively collect blocks + inline + relationships | recursive `collect(inline=True)`; parent/section/sentence edges |
 | Full recursive structure | fully-populated containment tree in `nodes` |
 | Tree → exact structure or any rollup | containment tree view + rollup projections of one node set |
-| Single serializable JSON for UIs | `DocOverview` schema, id-addressed, parser-agnostic |
+| Single serializable JSON for UIs | `DocGraph` schema, id-addressed, parser-agnostic |
 | Optional levels of detail | composable `include` layers (no fixed ladder); default = core |
 | Reference anything (source / element / rendered) | one `SpanRef` with coordinated selectors (D5) |
 | Persist source-grounded; edit by tree | save normalizes to source selectors; in-memory uses `node_id` |
@@ -523,7 +523,7 @@ Summary index; rationale and consequences are in the Decision Record below.
    and the archived [tallies note](../archive/plan-2026-05-29-multilevel-block-tallies.md)
    axis A.
 2. **Projection vs runtime object (E2).** ✅ **SETTLED (2026-05-29): projection (2a).**
-   `DocOverview` is a derived projection/contract built from `TextDoc` (the Python core),
+   `DocGraph` is a derived projection/contract built from `TextDoc` (the Python core),
    not a competing editable runtime model. It may be a rich value with query methods, but
    source text / `TextDoc` stays canonical; edits go through `TextDoc`/source and
    re-derive. See the Decision Record.
@@ -538,7 +538,7 @@ Summary index; rationale and consequences are in the Decision Record below.
    materialize/serialize (default = structural core); presets are caller-defined, not
    blessed. Same simplicity+flexibility principle as DR-4. See DR-5.
 5. **Schema versioning home.** ✅ **SETTLED (2026-05-29): Pydantic as the authoring layer.**
-   The `DocOverview` schema is authored as Pydantic models (single source of truth), which
+   The `DocGraph` schema is authored as Pydantic models (single source of truth), which
    emit a JSON Schema; a standalone language-neutral artifact (JSON Schema, or a
    TypeScript/Zod mirror) is formalized later once the shape stabilizes. See DR-3.
 6. **Scope of phase 1.** ✅ **SETTLED (2026-05-29): minimal slice.** Phase 1 is the
@@ -585,9 +585,9 @@ span units (Unicode code points, decision 7/E7); container children become popul
 (additive to `Block.children`, noted in the changelog). Over-modeling is bounded by the
 minimal Phase-1 scope (decision 6).
 
-### DR-2 — `DocOverview` is a projection of `TextDoc`, not a runtime model (settles Open decision 2)
+### DR-2 — `DocGraph` is a projection of `TextDoc`, not a runtime model (settles Open decision 2)
 
-**Decision (2026-05-29):** `DocOverview` is a **derived projection / serialized contract**
+**Decision (2026-05-29):** `DocGraph` is a **derived projection / serialized contract**
 built from `TextDoc` (the Python core). It may be returned as a rich value with
 a `collect()` query method, but it is **read-mostly and not canonical**: source
 text / `TextDoc` is the source of truth, and edits go through `TextDoc`/source and
@@ -596,12 +596,12 @@ re-derive. No competing editable runtime document model.
 **Why:** keeping source canonical avoids the central failure mode — a rich in-memory model
 drifting away from the actual Markdown (the ProseMirror/CRDT trap, where Markdown becomes
 secondary). It minimizes new public surface, reuses `TextDoc`'s spans/sections/links/size
-machinery, and keeps `DocOverview` honest as a cross-language contract (Python and a future
+machinery, and keeps `DocGraph` honest as a cross-language contract (Python and a future
 TS client are both implementations of one schema). A first-class runtime object is
 reserved for the day a genuine runtime boundary (e.g. live collaborative editing) requires
 it.
 
-**Consequences:** query/rollup methods live on the small derived object `overview()`
+**Consequences:** query/rollup methods live on the small derived object `graph()`
 returns (not bloating `TextDoc`); the projection is lazily cached off the immutable
 `source_text` (decision 8), so the operative contract is "do not reassign `source_text`
 after parse." Editing is "edit `TextDoc`/source, then re-derive," with the editor edge
@@ -609,7 +609,7 @@ bridging through the `SpanRef` model (E8/D5).
 
 ### DR-3 — Schema authoring layer: Pydantic now, formal schema later (settles Open decision 5)
 
-**Decision (2026-05-29):** Author the `DocOverview` schema as **Pydantic models** — the
+**Decision (2026-05-29):** Author the `DocGraph` schema as **Pydantic models** — the
 single source of truth in Python — which also emit a JSON Schema. A standalone
 language-neutral artifact (formal JSON Schema, or a TypeScript/Zod mirror for clients) is
 derived and frozen later, once the shape stabilizes against real use cases.
@@ -649,7 +649,7 @@ one is broadly needed.
 ### DR-5 — Detail/payload control: composable `include` layers, no fixed ladder (settles Open decision 4)
 
 **Decision (2026-05-29):** Control serialized payload size with a **set of optional
-layers** — `overview(*, include=...)` over a small orthogonal `Layer` enum (`text`,
+layers** — `graph(*, include=...)` over a small orthogonal `Layer` enum (`text`,
 `inline`, `sentences`, `tokens`, derived coords, later `annotations`/`layout`). The
 structural core (node table + spans) is always present; everything else is opt-in. **No
 fixed `OUTLINE/BLOCKS/INLINE/FULL` ladder.** Presets are caller-defined `frozenset[Layer]`,
@@ -701,18 +701,18 @@ concise design doc for the document model.
 
 ### Phase 0: make `docs/textdoc-spec.md` current (do first)
 
-Fold the settled DocOverview design into the design of record before writing code, so the
+Fold the settled DocGraph design into the design of record before writing code, so the
 implementation is built against current docs. Concrete edits (see "Design-of-record
 updates" below for the per-section detail):
 
 - [ ] §3 normalized form: canonical normalized form is the **node table**; `TextDoc` is the
-      Python core/editing view, `DocOverview` the derived projection/contract (DR-1, DR-2).
+      Python core/editing view, `DocGraph` the derived projection/contract (DR-1, DR-2).
 - [ ] §6 structural tree: containers fully populate children (recursive); the block tree is
       a derived view; density-invariant.
 - [ ] §8 inline: inline items are nodes; links via `collect(kinds={link})`.
 - [ ] §9 derived views: the single `collect()` primitive (DR-4) replaces
       `block_type_counts()`; composable `include` layers (DR-5); drop "top-level only".
-- [ ] New section: **DocOverview** node model + JSON schema (Pydantic authoring, views,
+- [ ] New section: **DocGraph** node model + JSON schema (Pydantic authoring, views,
       layers, coordinates = Unicode code points), and **`SpanRef`** + the (later) annotation
       stand-off layer (DR-3, DR-6).
 - [ ] §11 invariants: node-id stability within a parse; quote-canonical references; no
@@ -741,12 +741,12 @@ updates" below for the per-section detail):
       per-section value+count rollups; density invariance; section slicing; `SpanRef`
       round-trips (node → source-grounded → re-resolved node) and survives a reparse.
 
-### Phase 2: `DocOverview` serialization + detail levels
+### Phase 2: `DocGraph` serialization + detail levels
 
 - [ ] Pydantic/dataclass models for the schema (nodes, views, source, reserved
       `annotations` layer with the `SpanRef` target shape); `offset_unit` pinned to
       Unicode code points; optional derived coords.
-- [ ] `TextDoc.overview(*, include=…)` builder + `Layer` set (no ladder); render helpers emit
+- [ ] `TextDoc.graph(*, include=…)` builder + `Layer` set (no ladder); render helpers emit
       `data-node-id` / `data-source-span` so rendered selections resolve back to source.
 - [ ] Round-trip + golden tests; a tiny UI fixture is out of scope here (later phase).
 - [ ] Author the standalone language-neutral JSON Schema once the shape is confirmed
@@ -758,11 +758,11 @@ Phase 0 makes `docs/textdoc-spec.md` the single current, comprehensive, concise 
 Per-section edits (the design doc carries the prose; this maps what changes):
 
 - **§1 Purpose / §2 Goals** — add that the serialized normalized-form contract is
-  `DocOverview` (language-neutral, frontend-serializable); `TextDoc` is the Python core.
+  `DocGraph` (language-neutral, frontend-serializable); `TextDoc` is the Python core.
   Goals add: cross-language JSON contract, source-canonical references, simplicity +
   flexibility (one query primitive, composable layers — no blessed menus).
 - **§3 The normalized form** — the **node table is canonical**; the block tree, section
-  tree, inline index, and token stream are derived views; `DocOverview` is the projection
+  tree, inline index, and token stream are derived views; `DocGraph` is the projection
   of `TextDoc` (DR-1, DR-2).
 - **§4 Core types and offsets** — define `Node{id, kind, parent, children, source_span,
   attrs}`; node ids stable within a parse; **pin the offset unit to Unicode code points**
@@ -782,12 +782,12 @@ Per-section edits (the design doc carries the prose; this maps what changes):
   settled single `collect(*, kinds=, where=, recursive=, inline=)` primitive (DR-4);
   counts/values via standard Python; **remove `block_type_counts()`** (superseded; migration
   note); payload via composable `include` layers (DR-5).
-- **New section — DocOverview schema** — node table + views + reserved layers; Pydantic
+- **New section — DocGraph schema** — node table + views + reserved layers; Pydantic
   authoring (DR-3); `include` layers; coordinates.
 - **New section — `SpanRef` and annotations** — the span-reference type (quote canonical +
   offset hint; Chrome-Text-Fragment convertible; DR-6); the stand-off annotation layer as a
   later phase expected to be refined.
-- **§10 Editing and serialization** — `DocOverview` serialization with `include` layers;
+- **§10 Editing and serialization** — `DocGraph` serialization with `include` layers;
   edit `TextDoc`/source then re-derive; rendered `data-node-id`/`data-source-span`.
 - **§11 Invariants and non-goals** — node-id stability within a parse; quote-canonical
   references; no blessed rollups/levels; offset unit pinned. Non-goals: no parallel runtime
@@ -796,7 +796,7 @@ Per-section edits (the design doc carries the prose; this maps what changes):
   survey, and this plan.
 
 When Phase 0 lands, the `block_type_counts()` removal is the one semi-breaking changelog
-item (migration: `Counter(n.kind for n in doc.overview().collect(...))`).
+item (migration: `Counter(n.kind for n in doc.graph().collect(...))`).
 
 ## Testing Strategy
 
@@ -805,7 +805,7 @@ item (migration: `Counter(n.kind for n in doc.overview().collect(...))`).
 - Density invariance: tight vs loose lists give identical structural rollups.
 - Section slicing: every view/rollup scoped to a section matches a whole-document filter
   restricted to that section's span; spans stay within `section.span`.
-- Serialization: `DocOverview` round-trips; ids are stable within a parse; stable
+- Serialization: `DocGraph` round-trips; ids are stable within a parse; stable
   fields contain no parser-internal names; `include` layers compose (including a layer adds
   only its part; the structural core is always present).
 - Coordinates: `source_span` round-trips against `source_text`; derived byte/UTF-16 spans

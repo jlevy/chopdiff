@@ -17,9 +17,9 @@ tbd show <id>      # details + working notes (e.g. tbd show chopdiff-1x4u)
 
 ## Active plans
 
-### Flexible unified document model (DocOverview) — `docs/project/specs/active/`
+### Flexible unified document model (DocGraph) — `docs/project/specs/active/`
 
-Design-stage. A source-grounded, JSON-serializable `DocOverview` projected from `TextDoc`:
+Design-stage. A source-grounded, JSON-serializable `DocGraph` projected from `TextDoc`:
 a stable node set + derived views + flexible value/count rollups at any scope
 (doc/section/block), recursive, over blocks and inline items, with a dual-addressing
 reference model (source-canonical, tree-convenient) and optional detail levels. Subsumes
