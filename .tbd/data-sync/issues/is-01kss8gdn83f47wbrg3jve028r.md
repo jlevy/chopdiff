@@ -3,9 +3,9 @@ type: is
 id: is-01kss8gdn83f47wbrg3jve028r
 title: "[epic] Flexible unified document model (DocGraph): node table, layers, collect(), SpanRef, and serialized projection"
 kind: epic
-status: open
+status: closed
 priority: 2
-version: 17
+version: 18
 spec_path: docs/project/specs/active/plan-2026-05-29-unified-document-model.md
 labels: []
 dependencies: []
@@ -25,6 +25,8 @@ child_order_hints:
   - is-01ksxchatt9gc8cpg1c5zv5y3z
   - is-01ksxchb6p1gs5d2vj2p5n18jz
 created_at: 2026-05-29T06:59:50.056Z
-updated_at: 2026-05-30T21:27:12.342Z
+updated_at: 2026-05-31T06:45:25.532Z
+closed_at: 2026-05-31T06:45:25.531Z
+close_reason: Phases 1-2 implemented end to end (node model, recursive tree, base_blocks, node table+inline, collect, SpanRef, DocGraph Pydantic projection). Phases 3-4 (synthetic layer, cross-layer edits) deferred by design.
 ---
 Unified JSON-serializable DocumentOverview projected from TextDoc: stable node set + derived views + flexible value/count rollups at any scope (doc/section/block), recursive, incl. inline items and block<->inline relationships, optional detail levels. Exploration + proposed design in spec; gated on Open decisions.
