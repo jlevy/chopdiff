@@ -5,7 +5,7 @@ from chopdiff.divs.text_node import TextNode
 
 DIV_TAGS = re.compile(r"(<div\b[^>]*>|</div>)", re.IGNORECASE)
 
-CLASS_NAME_PATTERN = re.compile(r"\bclass=\"([^\"]+)\"", re.IGNORECASE)
+CLASS_NAME_PATTERN = re.compile(r"""\bclass=(?P<q>["'])(.+?)(?P=q)""", re.IGNORECASE)
 
 
 def parse_divs(text: str, skip_whitespace: bool = True) -> TextNode:
@@ -94,7 +94,7 @@ def _parse_divs_recursive(
         else:
             # Opening tag. Create a new child node and recurse.
             class_match = CLASS_NAME_PATTERN.search(tag)
-            class_name = class_match.group(1) if class_match else None
+            class_name = class_match.group(2) if class_match else None
 
             child_node = TextNode(
                 original_text=text,

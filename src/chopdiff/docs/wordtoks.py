@@ -1,6 +1,6 @@
 """
 Support for treating text as a sequence of word, punctuation, whitespace
-(word, setnence, and paragraph breaks), or HTML tags as tokens, which we call
+(word, sentence, and paragraph breaks), or HTML tags as tokens, which we call
 "wordtoks".
 
 Also works well with Markdown. Wordtoks make it possible to do word-oriented
@@ -204,6 +204,11 @@ class Tag:
 def parse_tag(wordtok: str | None = None) -> Tag | None:
     """
     Parse a wordtok to determine if it's an HTML tag and extract its components.
+
+    `Tag.attrs` is **best-effort and limited**: only double-quoted attributes with
+    word-character names (`name="value"`) are captured. Single-quoted, unquoted, boolean,
+    and hyphenated attributes (e.g. `data-id`) are not. The tag name and open/close shape
+    are always correct; callers needing complete attributes should use a real HTML parser.
     """
     if not wordtok:
         return None

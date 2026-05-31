@@ -18,6 +18,34 @@ This review covers the full `chopdiff` package as currently checked out at commi
 This was a review pass, not a fix pass. I did not intentionally change implementation
 code.
 
+## Post-v0.3.0 Reconciliation (2026-05-29)
+
+This file remains the historical review of commit `0ad8288`; line references and probes
+below intentionally describe that pre-v0.3.0 state. Current `origin/main` has since
+resolved some findings and left others open.
+
+Resolved or materially changed:
+
+- The broken console script was removed; `chopdiff` is library-only for now.
+- `Paragraph.char_offset` / `Sentence.char_offset` were replaced by
+  `Offsets(doc_offset, block_offset)`, with sentence `doc_offset` now absolute.
+- `TextDoc.filtered()` deep-copies matched blocks.
+- The mandatory `tiktoken` dependency was removed and replaced by a token estimate.
+- The publish workflow now installs with `uv sync --all-extras --locked`.
+
+Still open after local probes on 2026-05-29:
+
+- `filtered_transform()` still ignores `diff_filter` when windowing is disabled.
+- `sub_doc()` and `sub_paras()` still alias live paragraph/sentence objects.
+- `TextDoc.from_text("  hello  ").reassemble()` still returns `"hello"`, so exact source
+  references should not be documented as exact full-document reassembly.
+- `html_find_tag()` still truncates an outer same-name tag when a nested same-name tag is
+  self-closing.
+- `TextDoc.from_text("").as_wordtoks(bof_eof=True)` still raises `IndexError`.
+- `TokenMapping`, `TokenDiff.apply_to()`, runtime `assert`s, HTML attribute/name
+  validation, strict HTML parsing diagnostics, empty attribute handling, and
+  `WindowSettings` validation still need hardening.
+
 ## Validation Performed
 
 Commands run:
@@ -595,7 +623,7 @@ Recommendation:
 - Return a structured transform report with accepted windows, skipped windows, scores,
   and rejected diffs.
 
-## P3 Findings And Cleanup
+## P3 Findings and Cleanup
 
 ### Root package API is empty
 
@@ -713,7 +741,7 @@ Recommendation:
 
 ## Subsystem Design Assessment
 
-### Package And Release Design
+### Package and Release Design
 
 Strengths:
 
@@ -799,7 +827,7 @@ Recommendations:
   convenience APIs.
 - If sentinel collisions matter, add escaping or reserve-token validation.
 
-### Diff Filtering And Token Mapping
+### Diff Filtering and Token Mapping
 
 Strengths:
 
@@ -849,7 +877,7 @@ Recommendations:
 - Add strict mode for rewrite/extraction.
 - Consider representing rewrite results as `{text, replacements, skipped, warnings}`.
 
-### Div Parsing And Chunking
+### Div Parsing and Chunking
 
 Strengths:
 
@@ -905,24 +933,24 @@ Strengths:
 
 Coverage gaps:
 
-- Installed console script.
-- Wheel install/import smoke test.
-- Empty documents.
-- Exact preservation and offset contracts.
-- Subdocument mutation aliasing.
-- `filtered_transform` without windowing.
-- Div-leading chunking.
-- Multi-sentence paragraph windows.
-- TokenMapping large replacement validation.
-- HTML nested self-closing same-name tags.
-- Strict error paths and malformed inputs.
+- Installed console script
+- Wheel install/import smoke test
+- Empty documents
+- Exact preservation and offset contracts
+- Subdocument mutation aliasing
+- `filtered_transform` without windowing
+- Div-leading chunking
+- Multi-sentence paragraph windows
+- TokenMapping large replacement validation
+- HTML nested self-closing same-name tags
+- Strict error paths and malformed inputs
 
 Recommendation:
 
 - Add focused regression tests for each P1/P2 finding before broad refactors.
 - Keep the tests small and behavior-oriented.
 
-### Modern Python And tbd Guideline Compliance
+### Modern Python and tbd Guideline Compliance
 
 What is already good:
 
@@ -985,7 +1013,7 @@ Consolidate and clarify:
 - Add OS matrix CI or document Linux-only support if dependencies constrain it.
 - Revisit dependency lower bounds and optional extras naming.
 
-## Dependency And Upgrade Notes
+## Dependency and Upgrade Notes
 
 The dependency setup is modern and comparatively strong:
 

@@ -51,13 +51,17 @@ class DiffOp:
 
     def __post_init__(self):
         if self.action == OpType.REPLACE:
-            assert self.left and self.right
+            if not (self.left and self.right):
+                raise ValueError("REPLACE op requires non-empty left and right")
         elif self.action == OpType.EQUAL:
-            assert self.left == self.right
+            if self.left != self.right:
+                raise ValueError("EQUAL op requires equal left and right")
         elif self.action == OpType.INSERT:
-            assert not self.left
+            if self.left:
+                raise ValueError("INSERT op requires empty left")
         elif self.action == OpType.DELETE:
-            assert not self.right
+            if self.right:
+                raise ValueError("DELETE op requires empty right")
 
     def left_str(self, show_toks: bool = True) -> str:
         s = f"{self.action.as_abbrev()} {len(self.left):4} toks"
@@ -127,18 +131,27 @@ class TokenDiff:
 
     def apply_to(self, original_wordtoks: list[str]) -> list[str]:
         """
-        Apply a complete diff (including equality ops) to a list of wordtoks.
+        Apply a complete diff (including equality ops) to a list of wordtoks. Validates that
+        the diff actually applies to `original_wordtoks`: each consumed `left` segment must
+        match the corresponding source tokens, so a diff cannot be silently applied to the
+        wrong (same-length) source.
         """
-        result: list[str] = []
-        original_index = 0
-
         if len(original_wordtoks) != self.left_size():
-            raise AssertionError(
-                f"Diff should be complete: original wordtoks length {len(original_wordtoks)} != diff length {self.left_size()}"
+            raise ValueError(
+                f"Diff does not apply: source length {len(original_wordtoks)} "
+                f"!= diff left size {self.left_size()}"
             )
 
+        result: list[str] = []
+        original_index = 0
         for op in self.ops:
             if op.left:
+                segment = original_wordtoks[original_index : original_index + len(op.left)]
+                if segment != op.left:
+                    raise ValueError(
+                        f"Diff does not apply: {op.action} op expected {op.left!r} at offset "
+                        f"{original_index} but source has {segment!r}"
+                    )
                 original_index += len(op.left)
             if op.right:
                 result.extend(op.right)
@@ -171,13 +184,19 @@ class TokenDiff:
                     accepted_ops.append(DiffOp(OpType.EQUAL, op.left, op.left))
                     rejected_ops.append(op)
 
-        assert len(accepted_ops) == len(self.ops)
-        assert len(accepted_ops) == len(rejected_ops)
+        if not (len(accepted_ops) == len(rejected_ops) == len(self.ops)):
+            raise AssertionError(
+                f"filter() op-count invariant broken: accepted={len(accepted_ops)}, "
+                f"rejected={len(rejected_ops)}, ops={len(self.ops)}"
+            )
 
         accepted_diff, rejected_diff = TokenDiff(accepted_ops), TokenDiff(rejected_ops)
 
-        assert accepted_diff.left_size() == self.left_size()
-        assert rejected_diff.left_size() == self.left_size()
+        if not (accepted_diff.left_size() == rejected_diff.left_size() == self.left_size()):
+            raise AssertionError(
+                f"filter() left-size invariant broken: accepted={accepted_diff.left_size()}, "
+                f"rejected={rejected_diff.left_size()}, self={self.left_size()}"
+            )
 
         return accepted_diff, rejected_diff
 
@@ -241,7 +260,10 @@ def diff_wordtoks(wordtoks1: list[str], wordtoks2: list[str]) -> TokenDiff:
     for tag, i1, i2, j1, j2 in s.get_opcodes():  # pyright: ignore
         if tag == "equal":
             slice1 = wordtoks1[i1:i2]
-            assert slice1 == wordtoks2[j1:j2]
+            if slice1 != wordtoks2[j1:j2]:
+                raise AssertionError(
+                    f"difflib equal block mismatch: {slice1!r} != {wordtoks2[j1:j2]!r}"
+                )
             diff.append(DiffOp(OpType.EQUAL, slice1, slice1))
         elif tag == "insert":
             diff.append(DiffOp(OpType.INSERT, [], wordtoks2[j1:j2]))

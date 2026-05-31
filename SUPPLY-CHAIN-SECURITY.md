@@ -14,7 +14,7 @@ This is the project-local flag file. The full cross-ecosystem policy lives in th
 
 1. **14-day cool-off.** Never resolve to a package version less than 14 days old.
    In this uv project the cutoff is enforced by `exclude-newer` in `pyproject.toml`,
-   so `uv lock`, `uv sync`, and `uv run` all honor it — dev and CI install the same
+   so `uv lock`, `uv sync`, and `uv run` all honor it: dev and CI install the same
    vetted versions and nothing silently pulls a just-published release.
 2. **Commit the lockfile; install frozen.** `uv.lock` is committed. CI installs with
    `uv sync --locked`, which fails if the lock and `pyproject.toml` have drifted.
@@ -23,7 +23,7 @@ This is the project-local flag file. The full cross-ecosystem policy lives in th
    prebuilt wheels (`uv` does by default) and treat any source build as code to review.
 4. **Audit after changes.** Run `pip-audit` (CI runs it on every push) and address
    findings before merging.
-5. **Don't upgrade for its own sake.** The safest upgrade is the one you skip — each
+5. **Don't upgrade for its own sake.** The safest upgrade is the one you skip: each
    bump is fresh attack surface. Bump for a concrete reason: a needed feature, a fix,
    or a CVE.
 
@@ -39,7 +39,7 @@ exclude-newer = "2026-05-11T00:00:00Z"
 
 uv records this cutoff inside `uv.lock`. If the cutoff in config and lock disagree (for
 example, if you set `UV_EXCLUDE_NEWER` to a different value), uv treats the lock as
-stale and silently re-resolves **without** the cool-off — so keep the cutoff in
+stale and silently re-resolves **without** the cool-off, so keep the cutoff in
 `pyproject.toml` rather than passing it only on the command line.
 
 ## Upgrading Dependencies
@@ -63,7 +63,7 @@ that no unexpected new dependency appeared.
 
 When a version inside the 14-day window is genuinely needed, take the exception
 **explicitly and on the record**. Pin it with a per-package override and document the
-reason. Agents never self-approve an exception — a human signs off.
+reason. Agents never self-approve an exception: a human signs off.
 
 uv supports per-package cutoffs:
 
@@ -75,7 +75,7 @@ some-package = "2026-05-24T00:00:00Z"
 When the over-age package no longer needs the exception (its normal-cutoff version has
 caught up), remove the override and re-lock.
 
-### Active exceptions
+### Active Exceptions
 
 - **idna 3.15** (published 2026-05-12, inside the window). Fixes CVE-2026-45409,
   reported against the in-window 3.14 by `pip-audit`. idna is a widely used,
@@ -90,9 +90,23 @@ caught up), remove the override and re-lock.
   dependencies, build hooks, network calls, or install scripts. Reviewed and approved
   by the maintainer, 2026-05-25.
 
+- **flowmark 0.7.1** (published 2026-05-29, inside the window). First-party package,
+  authored and maintained by the same maintainer. Adopted for the authoritative block
+  spans added in [jlevy/flowmark#52](https://github.com/jlevy/flowmark/pull/52):
+  `flowmark_markdown().parse(text)` now attaches `element.span = (start, end)` to every
+  block element at every nesting level, read straight from marko's own `Source.pos`, and
+  `flowmark.markdown_ast.block_span` / `walk_elements` expose it. chopdiff adopts this to
+  drop its own regex block scanner (Phase 5). The full `0.7.0 → 0.7.1` source diff was
+  reviewed: the span-recording overrides in `formats/flowmark_markdown.py`
+  (`CustomListItem`, `parse_source`, `parse`), the `block_span` helper in
+  `markdown_ast.py`, and CLI/skill-install changes (`--surfaces`). No dependency changes
+  (`Requires-Dist` identical to 0.7.0), no build hooks, no network calls, no install
+  scripts. Reviewed and approved by the maintainer, 2026-05-29. Remove this override once
+  0.7.1 clears the 14-day window.
+
 ## Untrusted Repositories
 
 Treat any freshly cloned third-party repo as untrusted. Don't run `install` / `build` /
-`test` / `run` against it on a machine with credentials until you've reviewed it —
+`test` / `run` against it on a machine with credentials until you've reviewed it:
 `build` backends, import-time code, and test files all execute code. Prefer a container
 or sandbox.

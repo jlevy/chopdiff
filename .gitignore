@@ -6,6 +6,9 @@ trash/
 attic/
 .kash/
 
+# Local coding-agent state (machine-specific hooks, not for the library repo).
+.codex/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

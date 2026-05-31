@@ -37,10 +37,15 @@ class TokenMapping:
         if len(self.tokens1) < min_wordtoks or len(self.tokens2) < min_wordtoks:
             raise ValueError(f"Documents should have at least {min_wordtoks} wordtoks")
 
-        nchanges = len(self.diff.changes())
-        if float(nchanges) / len(self.tokens1) > max_diff_frac:
+        # Measure how much of the source actually changed by changed-TOKEN count, not by
+        # number of diff operations: one REPLACE op can rewrite the whole document yet count
+        # as a single "change". `stats().removed` is the number of source tokens not preserved.
+        changed_tokens = self.diff.stats().removed
+        frac = changed_tokens / len(self.tokens1)
+        if frac > max_diff_frac:
             raise ValueError(
-                f"Documents have too many changes: {nchanges}/{len(self.tokens1)} ({float(nchanges) / len(self.tokens1):.2f} > {max_diff_frac})"
+                f"Documents have too many changes: {changed_tokens}/{len(self.tokens1)} "
+                f"source tokens changed ({frac:.2f} > {max_diff_frac})"
             )
 
     def _create_mapping(self):

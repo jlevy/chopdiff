@@ -8,7 +8,7 @@ from collections.abc import Callable, Generator
 from flowmark import fill_markdown
 
 from chopdiff.docs.sizes import TextUnit
-from chopdiff.docs.text_doc import SentIndex, TextDoc
+from chopdiff.docs.text_doc import TextDoc
 
 log = logging.getLogger(__name__)
 
@@ -52,7 +52,9 @@ def sliding_para_window(
     """
     for i in range(0, len(doc.paragraphs), nparas):
         end_index = min(i + nparas - 1, len(doc.paragraphs) - 1)
-        sub_doc = doc.sub_doc(SentIndex(i, 0), SentIndex(end_index, 0))
+        # Use whole-paragraph slicing so every sentence of the ending paragraph is kept
+        # (`sub_doc(..., SentIndex(end_index, 0))` would keep only its first sentence).
+        sub_doc = doc.sub_paras(i, end_index)
 
         # XXX It's important we re-normalize especially because LLMs can output itemized lists with just
         # one newline, but for Markdown we want separate paragraphs for each list item.
