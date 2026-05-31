@@ -439,15 +439,17 @@ built later. The Phase-1 hooks (the `layer` field, offset-containment `collect()
 - **Shipped in v0.4.0:** exact spans; the opt-in structural block tree `blocks()` (boundaries
   and spans from flowmark, no regex scanner); sections/TOC/size rollups; inline-link rollups
   and link-aware sentences; `ordered_list`/density-invariant lists; per-section blocks; and
-  **top-level** `block_type_counts()`. At v0.4.0 `blocks()` does not yet populate
-  blockquote/list-item children, so top-level counts do not see a nested table.
-- **In progress (this design):** the recursive node table (containers fully populate
-  children); the `base_blocks()` sequential partition with its cover invariant; the single
-  `collect()` primitive (superseding and removing `block_type_counts()`, the one
-  semi-breaking change; migration: `Counter(n.kind for n in doc.graph().collect(...))`);
-  composable `include` layers; the `DocGraph` Pydantic schema; and the `SpanRef` contract
-  with exact resolution (fuzzy re-anchor wired behind it). Tracked by epic `chopdiff-8q8q`;
-  sequenced in
+  **top-level** `block_type_counts()`.
+- **Implemented (post-v0.4.0):** the recursive node table (containers fully populate
+  children, including blockquote and list-item block children); `base_blocks()` sequential
+  partition with its non-overlapping cover invariant; the single `collect()` primitive
+  (superseding `block_type_counts()`; migration:
+  `Counter(n.kind for n in doc.graph().collect(...))`); composable `include` layers and
+  `detail` payload options; the `DocGraph` Pydantic schema ("DocGraph/v0.1"); and the
+  `SpanRef` contract with exact resolution (fuzzy re-anchor wired behind it).
+- **In progress:** annotation layer, synthetic layer (re-expressing `TextNode` tag chunking
+  as a layer), cross-layer structural edits, and operation/provenance/layout layers.
+  Tracked by epic `chopdiff-8q8q`; sequenced in
   [`plan-2026-05-29-unified-document-model.md`](project/specs/active/plan-2026-05-29-unified-document-model.md).
 
 ## 15. References

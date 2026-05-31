@@ -4,6 +4,38 @@ All notable changes to chopdiff are documented here. This project uses
 [semantic versioning](https://semver.org/); while pre-1.0, breaking changes bump the
 **minor** version (see `docs/publishing.md`).
 
+## Unreleased
+
+Adds the DocGraph node model and its supporting infrastructure: a recursive node table
+with layers, the `base_blocks()` sequential partition, `collect()` query primitive,
+`SpanRef` span-reference type, and the `DocGraph` Pydantic projection
+(schema "DocGraph/v0.1").
+
+### New Features
+
+- **Recursive node table with layers.** The canonical node table fully populates
+  container children (blockquotes, list items) and tags each node with its parse
+  `layer` (textual, markdown, document, synthetic). Cross-layer relationships are
+  offset-containment queries over a shared id space.
+- **`base_blocks()` sequential partition.** A flat, depth-annotated, non-overlapping
+  partition of the document into base blocks. Lists decompose so each list item is its
+  own base block with increasing `depth`; blockquotes stay atomic. Reassembling in order
+  reproduces the document.
+- **`collect()` query primitive.** One general query (`collect(kinds=, where=,
+  recursive=, inline=)`) at document, section, and block scope, superseding
+  `block_type_counts()` convenience accessors.
+- **`SpanRef` span-reference type.** Quote-canonical, offset-hinted span references for
+  durable annotation anchoring (exact fast path within a parse, fuzzy re-anchor across
+  edits).
+- **`DocGraph` Pydantic projection.** `TextDoc.graph(include=, detail=)` builds a
+  serialized, language-neutral JSON contract (schema "DocGraph/v0.1") with composable
+  `Layer` and `Detail` axes.
+
+### Dependencies
+
+- New runtime dependency: `pydantic>=2.13.4` (brings `annotated-types`, `pydantic-core`,
+  `typing-inspection` as transitive dependencies). Required for the `DocGraph` schema.
+
 ## v0.4.0
 
 Makes `TextDoc` block-aware end to end: an exact-span structural block tree, a section
