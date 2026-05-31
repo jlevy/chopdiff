@@ -25,7 +25,7 @@ from dataclasses import dataclass, field
 
 from flowmark import flowmark_markdown
 from flowmark.markdown_ast import block_span
-from marko.block import BlankLine, List, ListItem
+from marko.block import BlankLine, CodeBlock, List, ListItem
 from marko.block import Quote as MarkoQuote
 from marko.element import Element
 
@@ -71,11 +71,14 @@ def walk_blocks(blocks: list[Block], _depth: int = 0) -> Iterator[tuple[Block, i
         yield from walk_blocks(block.children, _depth + 1)
 
 
-def _trim(text: str, lo: int, hi: int) -> tuple[int, int]:
+def _trim(text: str, lo: int, hi: int, *, keep_leading: bool = False) -> tuple[int, int]:
     """Shrink a span to drop surrounding whitespace (marko spans include trailing newlines
-    and a nested element's leading indentation/marker line)."""
-    while lo < hi and text[lo].isspace():
-        lo += 1
+    and a nested element's leading indentation/marker line). When `keep_leading` is True,
+    only trailing whitespace is stripped (for indented code blocks whose leading spaces are
+    syntax)."""
+    if not keep_leading:
+        while lo < hi and text[lo].isspace():
+            lo += 1
     while hi > lo and text[hi - 1].isspace():
         hi -= 1
     return lo, hi
@@ -94,7 +97,8 @@ def _blocks_from(text: str, parent: Element) -> list[Block]:
         if isinstance(element, BlankLine):
             continue
         block_type = block_type_for(element)
-        span = _trim(text, *block_span(element))
+        # Indented code blocks: preserve leading whitespace (the 4-space indent is syntax).
+        span = _trim(text, *block_span(element), keep_leading=isinstance(element, CodeBlock))
         tight: bool | None = None
         if isinstance(element, List):
             sub = _blocks_from(text, element)

@@ -110,3 +110,16 @@ def test_no_headings_means_no_sections():
     doc = TextDoc.from_text("Just a paragraph. No headings here.")
     assert doc.sections() == []
     assert doc.toc() == []
+
+
+def test_section_links_includes_reference_links():
+    """Section.links() must see reference-style links resolved at the document level."""
+    text = "# A\n\nSee [Docs][d].\n\n[d]: https://example.com/docs\n"
+    doc = TextDoc.from_text(text)
+    doc_links = doc.links()
+    assert len(doc_links) == 1
+    assert doc_links[0].url == "https://example.com/docs"
+    section_links = doc.sections()[0].links()
+    # The section must include the reference link (resolved from the document).
+    assert len(section_links) >= 1
+    assert any(lk.url == "https://example.com/docs" for lk in section_links)

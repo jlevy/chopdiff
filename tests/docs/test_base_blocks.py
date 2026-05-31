@@ -139,17 +139,15 @@ def test_spans_non_overlapping():
         """
     ).strip()
     bbs = base_blocks(text)
-    # For non-overlapping, we check that no base block's span overlaps with the
-    # NEXT base block that is NOT a descendant (i.e., at same or lower depth).
-    # Since list items with nested lists have spans that contain their nested items,
-    # overlapping is expected between a parent item and its nested children.
-    # The invariant is that base blocks at the same depth level don't overlap,
-    # and the partition covers the document.
+    # Pairwise non-overlap: each base block's span must end before (or at) the
+    # next one's start, at every depth. The spec (section 6) promises an ordered,
+    # non-overlapping, complete-cover partition.
     for i in range(len(bbs) - 1):
-        bb_cur = bbs[i]
-        bb_next = bbs[i + 1]
-        # The next block must start at or after the current one starts.
-        assert bb_next.block.span[0] >= bb_cur.block.span[0]
+        cur_end = bbs[i].block.span[1]
+        next_start = bbs[i + 1].block.span[0]
+        assert cur_end <= next_start, (
+            f"base block {i} span ends at {cur_end} but block {i + 1} starts at {next_start}"
+        )
 
 
 def test_complete_cover_reassembly():
@@ -306,3 +304,38 @@ def test_ordered_list_decomposes():
     bbs = base_blocks(text)
     assert all(bb.block.type == BlockType.list_item for bb in bbs)
     assert len(bbs) == 3
+
+
+def test_nested_list_spans_pairwise_non_overlapping():
+    """Parent list_item span must cover only its own content, not nested items."""
+    text = dedent(
+        """
+        - item one
+          - nested a
+          - nested b
+        - item two
+        """
+    ).strip()
+    bbs = base_blocks(text)
+
+    # Pairwise non-overlap: each base block's span must not overlap the next.
+    for i in range(len(bbs) - 1):
+        cur_end = bbs[i].block.span[1]
+        next_start = bbs[i + 1].block.span[0]
+        assert cur_end <= next_start, (
+            f"base block {i} span ends at {cur_end} but block {i + 1} starts at {next_start}"
+        )
+
+    # Correct depths: parent own-content at d=0, nested items at d=1.
+    td = _types_and_depths(bbs)
+    assert td == [
+        (BlockType.list_item, 0),
+        (BlockType.list_item, 1),
+        (BlockType.list_item, 1),
+        (BlockType.list_item, 0),
+    ]
+
+    # The parent base block's text must not contain the nested item markers.
+    parent_text = text[bbs[0].block.span[0] : bbs[0].block.span[1]]
+    assert "- nested" not in parent_text
+    assert "item one" in parent_text

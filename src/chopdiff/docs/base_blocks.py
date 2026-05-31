@@ -66,11 +66,12 @@ def base_blocks(text: str, *, item_partition_depth: int = 6) -> list[BaseBlock]:
     """
     blocks = parse_blocks(text)
     result: list[BaseBlock] = []
-    _collect_base_blocks(blocks, 0, item_partition_depth, result)
+    _collect_base_blocks(text, blocks, 0, item_partition_depth, result)
     return result
 
 
 def _collect_base_blocks(
+    text: str,
     blocks: list[Block],
     depth: int,
     max_depth: int,
@@ -92,7 +93,7 @@ def _collect_base_blocks(
                 # Decompose: each list_item child becomes a base block (or further
                 # decomposes if it contains nested lists).
                 for item in block.children:
-                    _emit_list_item(item, depth, max_depth, 1, out)
+                    _emit_list_item(text, item, depth, max_depth, 1, out)
         elif block.type == BlockType.list_item:
             # A bare list_item at the top level (unusual) is treated as atomic.
             out.append(BaseBlock(block=block, depth=depth))
@@ -102,6 +103,7 @@ def _collect_base_blocks(
 
 
 def _emit_list_item(
+    text: str,
     item: Block,
     depth: int,
     max_depth: int,
@@ -110,27 +112,35 @@ def _emit_list_item(
 ) -> None:
     """
     Emit a list item as a base block. If the item contains nested lists and we
-    have not exceeded `max_depth`, emit the item itself (without its nested list
-    content, conceptually) and then recurse into the nested lists at depth+1.
-
-    Since the base-block partition must be non-overlapping, a list item that
-    contains nested lists is emitted as-is (its span covers everything including
-    nested content). The nested items follow at increased depth, and their spans
-    are subsets of the parent item's span. To maintain the non-overlapping
-    partition, we emit only the item as a whole base block when it has no nested
-    lists, or when we have reached the depth limit.
+    have not exceeded `max_depth`, emit a block whose span covers only the item's
+    OWN content (from item start to the start of its first nested list child,
+    with trailing whitespace trimmed), then recurse into each nested list at
+    depth+1. A leaf list item (no nested lists) emits its full span.
     """
     nested_lists = [c for c in item.children if c.type in _LIST_TYPES]
     at_depth_limit = max_depth != -1 and current_nesting >= max_depth
 
     if not nested_lists or at_depth_limit:
-        # No nested lists, or at the depth limit: emit the item whole.
         out.append(BaseBlock(block=item, depth=depth))
     else:
-        # The item has nested lists. Emit the item itself as a base block,
-        # then recurse into each nested list at depth+1.
-        out.append(BaseBlock(block=item, depth=depth))
+        # The item's own content runs from item start to the start of its first
+        # nested list child. Trim trailing whitespace from the source so the span
+        # covers only meaningful content.
+        first_nested_start = min(c.span[0] for c in nested_lists)
+        own_start = item.span[0]
+        own_end = first_nested_start
+        while own_end > own_start and text[own_end - 1].isspace():
+            own_end -= 1
+        own_block = Block(
+            type=item.type,
+            span=(own_start, own_end),
+            children=[],
+            tight=item.tight,
+        )
+        out.append(BaseBlock(block=own_block, depth=depth))
         for child in item.children:
             if child.type in _LIST_TYPES:
                 for nested_item in child.children:
-                    _emit_list_item(nested_item, depth + 1, max_depth, current_nesting + 1, out)
+                    _emit_list_item(
+                        text, nested_item, depth + 1, max_depth, current_nesting + 1, out
+                    )

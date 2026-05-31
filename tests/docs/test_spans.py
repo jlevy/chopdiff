@@ -87,3 +87,30 @@ def test_spans_consistent_with_offsets_and_sizes():
     para = doc.paragraphs[1]
     assert para.span[0] == para.offsets.doc_offset
     assert para.span[1] - para.span[0] == para.size(TextUnit.chars)
+
+
+def test_indented_code_block_span_includes_indentation():
+    """An indented code block's span must include the leading 4-space indentation."""
+    text = "    code\n    more\n"
+    doc = TextDoc.from_text(text)
+    blocks = doc.blocks()
+    assert len(blocks) == 1
+    block = blocks[0]
+    assert block.type == BlockType.code
+    # The span must round-trip to include the leading indentation.
+    extracted = text[block.span[0] : block.span[1]]
+    assert "    code" in extracted
+    assert "    more" in extracted
+
+
+def test_fenced_code_block_span_still_correct():
+    """Fenced code blocks must not be affected by the indented-code-block fix."""
+    text = "```\ncode\nmore\n```\n"
+    doc = TextDoc.from_text(text)
+    blocks = doc.blocks()
+    assert len(blocks) == 1
+    block = blocks[0]
+    assert block.type == BlockType.code
+    extracted = text[block.span[0] : block.span[1]]
+    assert "```" in extracted
+    assert "code" in extracted

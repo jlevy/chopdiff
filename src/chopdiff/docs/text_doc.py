@@ -157,18 +157,33 @@ def _block_links(block_text: str, doc_offset: int) -> list[Link]:
         for span in iter_atomic_spans(block_text)
         if span.is_atomic and span.name in _LINK_ATOMIC_NAMES
     ]
-    # Walk both lists in document order, pairing each identity with the next atomic
-    # span whose text contains the identity's URL. Spans for ref links / shortcut refs
-    # / autolinks not surfaced by iter_atomic_spans in multi-block text stay unpaired.
+    # For each identity, scan forward through atomic spans to find a matching one.
+    # A match requires the identity's URL to appear in the atomic span text (for
+    # inline links, autolinks, bare URLs), or the identity's text to appear in the
+    # span (for reference links where the URL is in a separate definition). Atomic
+    # spans that correspond to images or reference definitions (no identity match)
+    # are skipped.
+    used: set[int] = set()
     result: list[Link] = []
-    span_idx = 0
+    scan_start = 0
     for idn in identities:
         located = None
-        if span_idx < len(link_spans):
-            sp = link_spans[span_idx]
+        for j in range(scan_start, len(link_spans)):
+            if j in used:
+                continue
+            sp = link_spans[j]
+            # Match: URL in span text (inline/autolink/bare), or link text in span
+            # text (reference links like [Docs][d] where URL is elsewhere).
             if idn.url and idn.url in sp.text:
                 located = sp
-                span_idx += 1
+                used.add(j)
+                scan_start = j + 1
+                break
+            if idn.text and idn.text in sp.text and sp.text.startswith("["):
+                located = sp
+                used.add(j)
+                scan_start = j + 1
+                break
         if located is not None:
             result.append(
                 Link(
@@ -1032,8 +1047,18 @@ class Section:
         return TextDoc(blocks).size_summary()
 
     def links(self) -> list[Link]:
-        """All links in this section's subtree, in document order."""
-        result: list[Link] = []
-        for block in self.subtree_blocks():
-            result.extend(block.links())
-        return result
+        """
+        All links in this section's subtree, in document order. Derived from a
+        document-level parse of `source_text` (so reference links resolve across
+        blocks) and filtered to links whose span falls within the section's span.
+        Links with `span=None` (e.g. reference definitions with no recoverable
+        inline span) are omitted because they cannot be attributed to a section
+        by offset alone.
+        """
+        sec_start, sec_end = self.span
+        all_links = _block_links(self.source_text, 0)
+        return [
+            link
+            for link in all_links
+            if link.span is not None and sec_start <= link.span[0] and link.span[1] <= sec_end
+        ]
