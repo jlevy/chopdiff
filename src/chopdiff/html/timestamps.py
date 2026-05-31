@@ -55,4 +55,4 @@ class TimestampExtractor(Extractor[float]):
         except KeyError as e:
             raise ContentNotFound(
                 f"No timestamp found searching back from token {wordtok_offset}: {e}"
-            )
+            ) from e

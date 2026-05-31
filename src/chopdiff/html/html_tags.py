@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import re
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -8,6 +9,8 @@ from typing import TypeAlias
 from prettyfmt import abbrev_obj
 from strif import Replacement, replace_multiple
 from typing_extensions import override
+
+log = logging.getLogger(__name__)
 
 ValueRewriter: TypeAlias = Callable[[str], str | None]
 """
@@ -63,6 +66,9 @@ def _find_balanced_closing_tag(html: str, tag: str, start_pos: int) -> int | Non
                 # This is the balanced close for our opener
                 return match.end()
             depth -= 1
+        elif _SELF_CLOSING_DETECTOR.search(match.group(0)):
+            # A nested self-closing tag (<tag/>) of the same name is depth-neutral.
+            continue
         else:
             # It's another opening tag of the same name
             depth += 1
@@ -76,6 +82,7 @@ def html_find_tag(
     tag_name: str | None = None,
     attr_name: str | None = None,
     attr_value: str | None = None,
+    strict: bool = False,
 ) -> list[TagMatch]:
     """
     Find all HTML elements matching the specified tag name, attribute name, and attribute value.
@@ -210,8 +217,19 @@ def html_find_tag(
                 )
             )
 
-        except Exception:
-            # If selectolax can't parse it, skip this match
+        except Exception as e:
+            # Best-effort by default: skip a candidate selectolax can't parse. In strict
+            # mode, surface it with tag/offset context for callers doing complete rewrites.
+            if strict:
+                raise ValueError(
+                    f"html_find_tag failed to parse <{current_tag}> at offset {start_offset}: {e}"
+                ) from e
+            log.debug(
+                "html_find_tag skipping unparsable <%s> at offset %s: %s",
+                current_tag,
+                start_offset,
+                e,
+            )
             continue
 
     return matches
@@ -234,11 +252,12 @@ def html_extract_attribute_value(attr_name: str) -> Callable[[str], str | None]:
     def extractor(html_string: str) -> str | None:
         tree = HTMLParser(html_string)
 
-        # Find first element with the specified attribute
+        # Distinguish a present attribute from a missing one: a present attribute with an
+        # empty or valueless form (selectolax reports both as `None`) returns `""`, while a
+        # missing attribute (no matching element) returns `None`.
         for element in tree.css(f"[{attr_name}]"):
             value = element.attrs.get(attr_name)
-            if value:
-                return value
+            return value if value is not None else ""
 
         return None
 

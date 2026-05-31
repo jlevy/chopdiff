@@ -1,7 +1,8 @@
 from textwrap import dedent
 
+from chopdiff.docs.block_types import BlockType
 from chopdiff.docs.sizes import TextUnit
-from chopdiff.docs.text_doc import BlockType, TextDoc
+from chopdiff.docs.text_doc import TextDoc
 
 
 def serialize_blocks(doc: TextDoc) -> str:
@@ -162,6 +163,12 @@ def test_tight_list_is_one_block():
     assert doc.paragraphs[0].block_type == BlockType.list
 
 
+def test_ordered_list_block_type():
+    doc = TextDoc.from_text("1. one\n2. two\n3. three")
+    assert len(doc.paragraphs) == 1
+    assert doc.paragraphs[0].block_type == BlockType.ordered_list
+
+
 def test_loose_list_is_one_block_per_item():
     doc = TextDoc.from_text(
         dedent(
@@ -288,7 +295,7 @@ EXPECTED_RICH_BLOCKS = r"""
 [4] paragraph: Some prose with <span>inline html</span> in the mi...
 [5] html: <!-- a standalone comment -->
 [6] list: - tight item a\n- tight item b
-[7] list: 1. ordered one\n2. ordered two
+[7] ordered_list: 1. ordered one\n2. ordered two
 [8] list: - loose item a
 [9] list: - loose item b
 [10] blockquote: > A blockquote paragraph here.

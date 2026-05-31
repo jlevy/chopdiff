@@ -35,7 +35,8 @@ class TextNode:
 
     @property
     def end_offset(self) -> int:
-        assert self.content_end >= 0
+        if self.content_end < 0:
+            raise AssertionError(f"content_end not set on node: {self.content_end}")
         return self.content_end + len(self.end_marker) if self.end_marker else self.content_end
 
     @property
@@ -46,11 +47,15 @@ class TextNode:
         return TextDoc.from_text(self.contents, sentence_splitter=sentence_splitter)
 
     def slice_children(self, start: int, end: int) -> TextNode:
+        """
+        Return a copy holding children `[start, end]` (inclusive end), matching the
+        inclusive-range convention of `TextDoc.sub_paras` and `chunk_generator`.
+        """
         if not self.children:
             raise ValueError("Cannot slice_children on a non-container node.")
         else:
             node_copy = copy(self)
-            node_copy.children = node_copy.children[start:end]
+            node_copy.children = node_copy.children[start : end + 1]
             return node_copy
 
     def size(self, unit: TextUnit) -> int:
@@ -123,10 +128,17 @@ class TextNode:
         """
         return not self.children and self.contents.strip() == ""
 
+    @property
+    def class_names(self) -> tuple[str, ...]:
+        """The individual CSS classes on this node (`class="a b"` -> `("a", "b")`)."""
+        return tuple(self.class_name.split()) if self.class_name else ()
+
     def children_by_class_names(self, *class_names: str, recursive: bool = False) -> list[TextNode]:
+        wanted = set(class_names)
+
         def collect_children(node: TextNode) -> list[TextNode]:
             matching_children = [
-                child for child in node.children if child.class_name in class_names
+                child for child in node.children if wanted & set(child.class_names)
             ]
             if recursive:
                 for child in node.children:

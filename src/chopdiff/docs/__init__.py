@@ -1,11 +1,27 @@
 # flake8: noqa: F401
 
+from chopdiff.docs.base_blocks import BaseBlock, base_blocks
+from chopdiff.docs.block_tree import Block
+from chopdiff.docs.block_types import BlockType
+from chopdiff.docs.collect import collect
+from chopdiff.docs.doc_graph import (
+    Detail,
+    DocGraph,
+    NodeModel,
+    SourceInfo,
+    Views,
+    build_doc_graph,
+)
+from chopdiff.docs.node import LAYER_NESTING, Layer, NestingGuarantee, Node, NodeKind, NodeTable
+from chopdiff.docs.node_table import build_node_table
 from chopdiff.docs.search_tokens import search_tokens
 from chopdiff.docs.sizes import TextUnit
+from chopdiff.docs.span_ref import SpanRef
 from chopdiff.docs.text_doc import (
-    BlockType,
+    Link,
     Offsets,
     Paragraph,
+    Section,
     Sentence,
     SentIndex,
     TextDoc,
@@ -52,11 +68,20 @@ from chopdiff.docs.wordtoks import (
 )
 
 __all__ = [
+    "Detail",
+    "DocGraph",
+    "NodeModel",
+    "SourceInfo",
+    "Views",
+    "build_doc_graph",
     "search_tokens",
     "TextUnit",
+    "Block",
     "BlockType",
     "Offsets",
+    "Link",
     "Paragraph",
+    "Section",
     "Sentence",
     "SentIndex",
     "TextDoc",
@@ -96,4 +121,15 @@ __all__ = [
     "wordtok_to_str",
     "wordtokenize",
     "wordtokenize_with_offsets",
+    "BaseBlock",
+    "base_blocks",
+    "collect",
+    "LAYER_NESTING",
+    "Layer",
+    "NestingGuarantee",
+    "Node",
+    "NodeKind",
+    "NodeTable",
+    "build_node_table",
+    "SpanRef",
 ]

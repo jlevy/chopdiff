@@ -1,0 +1,209 @@
+{
+  "$defs": {
+    "NodeModel": {
+      "description": "Serialization model for a single node. Mirrors the runtime `Node` dataclass\nwith JSON-friendly field types. `source_span` is a `{start, end}` object\n(or null for unlocatable nodes like reference links).",
+      "properties": {
+        "attrs": {
+          "additionalProperties": true,
+          "title": "Attrs",
+          "type": "object"
+        },
+        "children": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Children",
+          "type": "array"
+        },
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "kind": {
+          "title": "Kind",
+          "type": "string"
+        },
+        "layer": {
+          "title": "Layer",
+          "type": "string"
+        },
+        "parent": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Parent"
+        },
+        "source_span": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SourceSpan"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "text": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Text"
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "layer"
+      ],
+      "title": "NodeModel",
+      "type": "object"
+    },
+    "SourceInfo": {
+      "description": "Source metadata for the document backing a `DocGraph`.",
+      "properties": {
+        "format": {
+          "title": "Format",
+          "type": "string"
+        },
+        "offset_unit": {
+          "const": "unicode_code_points",
+          "default": "unicode_code_points",
+          "title": "Offset Unit",
+          "type": "string"
+        },
+        "sha256": {
+          "title": "Sha256",
+          "type": "string"
+        },
+        "text": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Text"
+        }
+      },
+      "required": [
+        "format",
+        "sha256"
+      ],
+      "title": "SourceInfo",
+      "type": "object"
+    },
+    "SourceSpan": {
+      "description": "A `[start, end)` span in Unicode code points.",
+      "properties": {
+        "end": {
+          "title": "End",
+          "type": "integer"
+        },
+        "start": {
+          "title": "Start",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "start",
+        "end"
+      ],
+      "title": "SourceSpan",
+      "type": "object"
+    },
+    "Views": {
+      "description": "Derived view indexes: arrays of node ids for common projections.",
+      "properties": {
+        "blocks": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Blocks",
+          "type": "array"
+        },
+        "links": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Links",
+          "type": "array"
+        },
+        "sentences": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Sentences",
+          "type": "array"
+        },
+        "toc": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Toc",
+          "type": "array"
+        }
+      },
+      "title": "Views",
+      "type": "object"
+    }
+  },
+  "description": "The DocGraph serialized projection (textdoc-spec section 10). A single,\nsource-anchored JSON object from which any view (block tree, section tree,\ninline index) and any rollup is derivable.\n\nThe `schema` JSON key carries the version string; in Python it is accessed\nas `schema_` (with `Field(alias=\"schema\")`).",
+  "properties": {
+    "annotations": {
+      "items": {},
+      "title": "Annotations",
+      "type": "array"
+    },
+    "layout": {
+      "items": {},
+      "title": "Layout",
+      "type": "array"
+    },
+    "nodes": {
+      "items": {
+        "$ref": "#/$defs/NodeModel"
+      },
+      "title": "Nodes",
+      "type": "array"
+    },
+    "provenance": {
+      "items": {},
+      "title": "Provenance",
+      "type": "array"
+    },
+    "schema": {
+      "default": "DocGraph/v0.1",
+      "title": "Schema",
+      "type": "string"
+    },
+    "source": {
+      "$ref": "#/$defs/SourceInfo"
+    },
+    "views": {
+      "$ref": "#/$defs/Views"
+    }
+  },
+  "required": [
+    "source",
+    "nodes",
+    "views"
+  ],
+  "title": "DocGraph",
+  "type": "object"
+}

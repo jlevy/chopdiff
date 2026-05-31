@@ -48,95 +48,99 @@ def filtered_transform(
     `debug_save` is an optional function that takes a message, a filename, and an object, and saves
     the object to a file for debugging.
     """
+    if not windowing or not windowing.size:
+        # Whole-document transform still enforces the diff filter (the filter contract
+        # holds with or without windowing).
+        transformed_doc = transform_func(doc)
+        return _enforce_diff_filter(doc, transformed_doc, diff_filter, debug_save)
+
+    def transform_and_check_diff(input_doc: TextDoc) -> TextDoc:
+        # Avoid having window breaks build up after multiple transforms.
+        remove_window_br(input_doc)
+        transformed_doc = transform_func(input_doc)
+        return _enforce_diff_filter(input_doc, transformed_doc, diff_filter, debug_save)
+
+    return sliding_window_transform(doc, transform_and_check_diff, windowing)
+
+
+def _enforce_diff_filter(
+    input_doc: TextDoc,
+    transformed_doc: TextDoc,
+    diff_filter: DiffFilter | None,
+    debug_save: SaveFunc | None = None,
+) -> TextDoc:
+    """
+    Apply `diff_filter` to the change between `input_doc` and `transformed_doc`, returning a
+    document with only the accepted changes. Used by both the whole-document and windowed
+    paths so the filter contract is identical. With no filter, returns `transformed_doc`.
+    """
     has_filter = diff_filter and diff_filter != DIFF_FILTER_NONE
 
-    if not windowing or not windowing.size:
-        transformed_doc = transform_func(doc)
-    else:
+    diff = None
+    accepted_diff = None
+    rejected_diff = None
+    if has_filter:
+        diff = diff_docs(input_doc, transformed_doc)
+        accepted_diff, rejected_diff = diff.filter(diff_filter)
 
-        def transform_and_check_diff(input_doc: TextDoc) -> TextDoc:
-            # Avoid having window breaks build up after multiple transforms.
-            remove_window_br(input_doc)
+        input_size = input_doc.size(TextUnit.wordtoks)
+        if not (
+            diff.left_size() == accepted_diff.left_size() == rejected_diff.left_size() == input_size
+        ):
+            raise ValueError(
+                f"Diff left-size mismatch enforcing filter: diff={diff.left_size()}, "
+                f"accepted={accepted_diff.left_size()}, rejected={rejected_diff.left_size()}, "
+                f"input={input_size}"
+            )
 
-            transformed_doc = transform_func(input_doc)
-
-            if has_filter:
-                # Check the transform did what it should have.
-                diff = diff_docs(input_doc, transformed_doc)
-                accepted_diff, rejected_diff = diff.filter(diff_filter)
-
-                assert diff.left_size() == input_doc.size(TextUnit.wordtoks)
-                assert accepted_diff.left_size() == input_doc.size(TextUnit.wordtoks)
-                assert rejected_diff.left_size() == input_doc.size(TextUnit.wordtoks)
-
-                log.info(
-                    "Accepted transform changes:\n%s",
-                    fmt_lines(str(accepted_diff).splitlines()),
-                )
-
-                # Note any rejections.
-                rejected_changes = rejected_diff.changes()
-                if rejected_changes:
-                    log.info(
-                        "Filtering extraneous changes:\n%s",
-                        fmt_lines(rejected_diff.as_diff_str(False).splitlines()),
-                    )
-
-                # Apply only the accepted changes.
-                final_doc = TextDoc.from_wordtoks(
-                    accepted_diff.apply_to(list(input_doc.as_wordtoks()))
-                )
-                log.info(
-                    "Word token changes:\n%s",
-                    fmt_lines(
-                        [
-                            f"Accepted: {accepted_diff.stats()}",
-                            f"Rejected: {rejected_diff.stats()}",
-                        ]
-                    ),
-                )
-            else:
-                diff = None
-                accepted_diff, rejected_diff = None, None
-                final_doc = transformed_doc
-
-            if debug_save:
-                debug_save(
-                    "Input doc normalized",
-                    "filtered_transform",
-                    fill_markdown(input_doc.reassemble()),
-                )
-                debug_save("Output doc raw", "filtered_transform", transformed_doc.reassemble())
-                # log_save(
-                #     "Output doc normalized",
-                #     "filtered_transform",
-                #     normalize_markdown(transformed_doc.reassemble()),
-                # )
-                if diff:
-                    debug_save("Transform diff", "filtered_transform", diff)
-                # if accepted_diff:
-                #     log.save_object("Accepted diff", "filtered_transform", accepted_diff)
-                if rejected_diff:
-                    debug_save("Rejected diff", "filtered_transform", rejected_diff)
-
-                debug_save("Final doc", "filtered_transform", final_doc.reassemble())
-
-            return final_doc
-
-        transformed_doc = sliding_window_transform(
-            doc,
-            transform_and_check_diff,
-            windowing,
+        log.info(
+            "Accepted transform changes:\n%s",
+            fmt_lines(str(accepted_diff).splitlines()),
         )
+        if rejected_diff.changes():
+            log.info(
+                "Filtering extraneous changes:\n%s",
+                fmt_lines(rejected_diff.as_diff_str(False).splitlines()),
+            )
 
-    return transformed_doc
+        # Apply only the accepted changes.
+        final_doc = TextDoc.from_wordtoks(accepted_diff.apply_to(list(input_doc.as_wordtoks())))
+        log.info(
+            "Word token changes:\n%s",
+            fmt_lines(
+                [
+                    f"Accepted: {accepted_diff.stats()}",
+                    f"Rejected: {rejected_diff.stats()}",
+                ]
+            ),
+        )
+    else:
+        final_doc = transformed_doc
+
+    if debug_save:
+        debug_save(
+            "Input doc normalized",
+            "filtered_transform",
+            fill_markdown(input_doc.reassemble()),
+        )
+        debug_save("Output doc raw", "filtered_transform", transformed_doc.reassemble())
+        if diff:
+            debug_save("Transform diff", "filtered_transform", diff)
+        if rejected_diff:
+            debug_save("Rejected diff", "filtered_transform", rejected_diff)
+        debug_save("Final doc", "filtered_transform", final_doc.reassemble())
+
+    return final_doc
 
 
 def sliding_window_transform(
-    doc: TextDoc, transform_func: TextDocTransform, settings: WindowSettings
+    doc: TextDoc,
+    transform_func: TextDocTransform,
+    settings: WindowSettings,
+    on_alignment_failure: str = "raise",
 ) -> TextDoc:
     if settings.unit == TextUnit.wordtoks:
-        return sliding_wordtok_window_transform(doc, transform_func, settings)
+        return sliding_wordtok_window_transform(doc, transform_func, settings, on_alignment_failure)
     elif settings.unit == TextUnit.paragraphs:
         return sliding_para_window_transform(doc, transform_func, settings)
     else:
@@ -144,16 +148,25 @@ def sliding_window_transform(
 
 
 def sliding_wordtok_window_transform(
-    doc: TextDoc, transform_func: TextDocTransform, settings: WindowSettings
+    doc: TextDoc,
+    transform_func: TextDocTransform,
+    settings: WindowSettings,
+    on_alignment_failure: str = "raise",
 ) -> TextDoc:
     """
     Apply a transformation function to each TextDoc in a sliding window over the given document,
-    stepping through wordtoks, then reassemble the transformed document. Uses best effort to
-    stitch the results together seamlessly by searching for the best alignment (minimum wordtok
-    edit distance) of each transformed window.
+    stepping through wordtoks, then reassemble the transformed document. Stitches the results
+    together by searching for the best alignment (minimum wordtok edit distance) of each
+    transformed window.
+
+    `on_alignment_failure` controls what happens when a transformed window is too short to align
+    (fewer wordtoks than `min_overlap`): `"raise"` (default) raises `ValueError`; `"skip"` logs a
+    warning and drops the window.
     """
     if settings.unit != TextUnit.wordtoks:
         raise ValueError(f"This sliding window expects wordtoks, not {settings.unit}")
+    if on_alignment_failure not in ("raise", "skip"):
+        raise ValueError(f"Invalid on_alignment_failure: {on_alignment_failure!r}")
 
     windows = sliding_word_window(doc, settings.size, settings.shift, TextUnit.wordtoks)
 
@@ -190,16 +203,17 @@ def sliding_wordtok_window_transform(
         else:
             if len(output_wordtoks) < settings.min_overlap:
                 raise ValueError(
-                    "Output wordtoks too short to align with min_overlap %s: %s",
-                    settings.min_overlap,
-                    output_wordtoks,
+                    f"Output wordtoks too short to align with min_overlap "
+                    f"{settings.min_overlap}: {output_wordtoks}"
                 )
             if len(new_wordtoks) < settings.min_overlap:
-                log.error(
-                    "New wordtoks too short to align with min_overlap %s, skipping: %s",
-                    settings.min_overlap,
-                    new_wordtoks,
+                msg = (
+                    f"Transformed window {i} too short to align with min_overlap "
+                    f"{settings.min_overlap}: {new_wordtoks}"
                 )
+                if on_alignment_failure == "raise":
+                    raise ValueError(msg)
+                log.warning("%s; skipping window", msg)
                 continue
 
             offset, (score, diff) = find_best_alignment(
