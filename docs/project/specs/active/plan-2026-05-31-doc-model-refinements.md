@@ -4,7 +4,7 @@
 
 **Author:** Joshua Levy
 
-**Status:** Draft
+**Status:** Implemented
 
 ## Overview
 
@@ -175,50 +175,50 @@ To be captured as a short “Pitfalls and decisions” note in the spec:
 Documentation-only; no code behavior change.
 Lands the grounded principles and removes every drift the review found.
 
-- [ ] Add a “Principles” section (Tier 1–3, P1–P18) to `docs/textdoc-spec.md` ahead of
+- [x] Add a “Principles” section (Tier 1–3, P1–P18) to `docs/textdoc-spec.md` ahead of
   §2, and cross-reference the existing goals to the principle each derives from.
-- [ ] Add the “Pitfalls and decisions” note (list above) to the spec.
-- [ ] Correct §3 wording: state that the shared offset space is the canonical substrate
+- [x] Add the “Pitfalls and decisions” note (list above) to the spec.
+- [x] Correct §3 wording: state that the shared offset space is the canonical substrate
   and the node table is a (cached) projection that gathers layers into one id space —
   drop the claim that views currently project from it (or scope it to the target state,
   clearly labeled).
-- [ ] Correct §6: `base_blocks` is a free function returning `list[BaseBlock]` (Block +
+- [x] Correct §6: `base_blocks` is a free function returning `list[BaseBlock]` (Block +
   depth), not `TextDoc.base_blocks() -> list[Block]`; note the `base_blocks.py` /
   `block_tree.py` split.
-- [ ] Correct §6 caching language for `blocks()` to match Phase 2 (mark as the intended
+- [x] Correct §6 caching language for `blocks()` to match Phase 2 (mark as the intended
   state and link to the bead).
-- [ ] Update `CHANGELOG.md` (Unreleased) to note the principles section and the fixes.
+- [x] Update `CHANGELOG.md` (Unreleased) to note the principles section and the fixes.
 
 ### Phase 2: Obvious code fixes
 
 Unambiguous correctness and performance defects.
 
-- [ ] Fix `base_blocks()` so a list item with content after (or between) nested sublists
+- [x] Fix `base_blocks()` so a list item with content after (or between) nested sublists
   is fully covered: emit the item’s interstitial and trailing content as base blocks at
   the item’s depth, preserving order and non-overlap.
-- [ ] Add a cover-invariant test to `tests/docs/test_base_blocks.py` that fails before
+- [x] Add a cover-invariant test to `tests/docs/test_base_blocks.py` that fails before
   the fix (trailing-paragraph-after-sublist case, plus content between two sublists),
   asserting the union of base-block spans covers all non-whitespace source.
-- [ ] Memoize the structural block tree on the immutable `source_text` (cache
+- [x] Memoize the structural block tree on the immutable `source_text` (cache
   `blocks()`), and make `Section.blocks()` / `Section.links()` slice the cached
   whole-document parse instead of re-parsing per section.
-- [ ] Verify `make lint` and `make test` are clean.
+- [x] Verify `make lint` and `make test` are clean.
 
 ### Phase 3: Principle-alignment improvements
 
 Design changes that close the gap to P12/P3/P4. Each cites its principle.
 
-- [ ] **(P3/P4/P12)** Add `layer: set[Layer] | None = None` (default all layers) to
+- [x] **(P3/P4/P12)** Add `layer: set[Layer] | None = None` (default all layers) to
   `collect()` and `TextDoc.collect()`; document that the same logical unit appears per
   layer and that callers scope by layer.
   Add tests showing a paragraph query returns one node per requested layer (no
   cross-layer duplicates) and that default-all still returns every layer.
-- [ ] **(P5)** Add `TextDoc.base_blocks()` wrapping the free function so spec and code
+- [x] **(P5)** Add `TextDoc.base_blocks()` wrapping the free function so spec and code
   agree (per Resolved Decisions).
-- [ ] **(P1/P12)** Land the offset-space-canonical framing: §3 wording (Phase 1) plus
+- [x] **(P1/P12)** Land the offset-space-canonical framing: §3 wording (Phase 1) plus
   `node_table()` deriving from the memoized parse (Phase 2). No view-from-node-table
   refactor (see Resolved Decisions); nothing left open here.
-- [ ] Minor: make `collect()` sort `None`-span nodes deterministically (not at offset
+- [x] Minor: make `collect()` sort `None`-span nodes deterministically (not at offset
   0); remove or justify the dead first-pass image branch in `_build_inline_nodes`.
 
 ## Testing Strategy
