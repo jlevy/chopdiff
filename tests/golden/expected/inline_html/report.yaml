@@ -1,0 +1,175 @@
+source:
+  sha256: 535461f080b822c93de10f15dcf2b2593b62d5267ab6c87453640a5ea653c249
+  length: 181
+  size_summary: 180 bytes (11 lines, 6 paras, 6 sents, 20 words, ~48 tok)
+base_blocks:
+  cover_ok: true
+  uncovered_nonspace: 0
+  blocks:
+  - depth: 0
+    type: heading
+    span: 0:13
+    text: '# Inline HTML'
+  - depth: 0
+    type: paragraph
+    span: 15:85
+    text: A paragraph with an <span class="hl">inline span</span> in the middle.
+  - depth: 0
+    type: paragraph
+    span: 87:108
+    text: <div class="callout">
+  - depth: 0
+    type: paragraph
+    span: 110:145
+    text: A div-wrapped paragraph of content.
+  - depth: 0
+    type: paragraph
+    span: 147:153
+    text: </div>
+  - depth: 0
+    type: paragraph
+    span: 155:180
+    text: Plain trailing paragraph.
+sections:
+- level: 1
+  title: Inline HTML
+  span: 0:180
+  words: 20
+node_table:
+- id: n0001
+  layer: markdown
+  kind: heading
+  span: 0:13
+  attrs:
+    level: 1
+- id: n0002
+  layer: markdown
+  kind: paragraph
+  span: 15:85
+- id: n0003
+  layer: markdown
+  kind: paragraph
+  span: 87:108
+- id: n0004
+  layer: markdown
+  kind: paragraph
+  span: 110:145
+- id: n0005
+  layer: markdown
+  kind: paragraph
+  span: 147:153
+- id: n0006
+  layer: markdown
+  kind: paragraph
+  span: 155:180
+- id: n0007
+  layer: document
+  kind: section
+  span: 0:180
+  attrs:
+    level: 1
+    title: Inline HTML
+- id: n0008
+  layer: textual
+  kind: paragraph
+  span: 0:13
+- id: n0009
+  layer: textual
+  kind: sentence
+  span: 0:13
+  parent: n0008
+  attrs:
+    text: '# Inline HTML'
+- id: n0010
+  layer: textual
+  kind: paragraph
+  span: 15:85
+- id: n0011
+  layer: textual
+  kind: sentence
+  span: 15:85
+  parent: n0010
+  attrs:
+    text: A paragraph with an <span class="hl">inline span</span> in the middle.
+- id: n0012
+  layer: textual
+  kind: paragraph
+  span: 87:108
+- id: n0013
+  layer: textual
+  kind: sentence
+  span: 87:108
+  parent: n0012
+  attrs:
+    text: <div class="callout">
+- id: n0014
+  layer: textual
+  kind: paragraph
+  span: 110:145
+- id: n0015
+  layer: textual
+  kind: sentence
+  span: 110:145
+  parent: n0014
+  attrs:
+    text: A div-wrapped paragraph of content.
+- id: n0016
+  layer: textual
+  kind: paragraph
+  span: 147:153
+- id: n0017
+  layer: textual
+  kind: sentence
+  span: 147:153
+  parent: n0016
+  attrs:
+    text: </div>
+- id: n0018
+  layer: textual
+  kind: paragraph
+  span: 155:180
+- id: n0019
+  layer: textual
+  kind: sentence
+  span: 155:180
+  parent: n0018
+  attrs:
+    text: Plain trailing paragraph.
+- id: n0020
+  layer: markdown
+  kind: inline_html
+  span: 35:52
+  parent: n0002
+  attrs:
+    tag: <span class="hl">
+    section: n0007
+    sentence: n0011
+- id: n0021
+  layer: markdown
+  kind: inline_html
+  span: 63:70
+  parent: n0002
+  attrs:
+    tag: </span>
+    section: n0007
+    sentence: n0011
+- id: n0022
+  layer: markdown
+  kind: inline_html
+  span: 87:108
+  parent: n0003
+  attrs:
+    tag: <div class="callout">
+    section: n0007
+    sentence: n0013
+- id: n0023
+  layer: markdown
+  kind: inline_html
+  span: 147:153
+  parent: n0005
+  attrs:
+    tag: </div>
+    section: n0007
+    sentence: n0017
+links: []
+spanrefs: []

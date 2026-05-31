@@ -35,6 +35,12 @@ with layers, the `base_blocks()` sequential partition, `collect()` query primiti
   `Layer` and `Detail` axes.
 - **`TextDoc.base_blocks()` method.** A thin method over the `base_blocks` free
   function, so the sequential partition has the same ergonomic surface as `blocks()`.
+- **Reusable debug dumper (`chopdiff.docs.debug`).** `doc_report`, `doc_graph_yaml`, and
+  `dump_views` turn any document into clean, deterministic standard-format views (a
+  multi-view report, the DocGraph, the reassembled source) for REPL/script debugging and
+  golden testing.
+- **`DocGraph.to_yaml()`.** A clean, deterministic YAML serialization of the projection
+  alongside the existing JSON (block style, `|` block scalars, `None`/empty suppressed).
 
 ### Fixes
 
@@ -59,6 +65,9 @@ with layers, the `base_blocks()` sequential partition, `collect()` query primiti
 - New runtime dependency: `pydantic>=2.13.4` (brings `annotated-types`, `pydantic-core`,
   `typing-inspection` as transitive dependencies).
   Required for the `DocGraph` schema.
+- New runtime dependency: `frontmatter-format>=0.3.0` (first-party; brings
+  `ruamel-yaml`). Used for clean deterministic YAML (`DocGraph.to_yaml`, the debug
+  dumper) and the Markdown-with-frontmatter golden-test corpus.
 
 ### Compatibility
 

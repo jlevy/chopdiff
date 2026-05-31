@@ -1,0 +1,138 @@
+source:
+  sha256: 717e85b9998d881966c78c9eec997fc3b0395d19cf4d2adfb9c0bddf2f916dc5
+  length: 235
+  size_summary: 230 bytes (15 lines, 6 paras, 6 sents, 43 words, ~61 tok)
+base_blocks:
+  cover_ok: true
+  uncovered_nonspace: 0
+  blocks:
+  - depth: 0
+    type: heading
+    span: 0:11
+    text: '# Malformed'
+  - depth: 0
+    type: paragraph
+    span: 13:52
+    text: 'A paragraph then an unterminated fence:'
+  - depth: 0
+    type: code
+    span: 54:234
+    text: |-
+      ```python
+      def f():
+          return 1
+
+      ## A heading that is actually inside the open fence?
+
+      | ragged | table
+      | - |
+      | one | two | three |
+
+      - item with [an unclosed link](http://x.example
+sections:
+- level: 1
+  title: Malformed
+  span: 0:234
+  words: 43
+- level: 2
+  title: A heading that is actually inside the open fence?
+  span: 87:234
+  words: 30
+node_table:
+- id: n0001
+  layer: markdown
+  kind: heading
+  span: 0:11
+  attrs:
+    level: 1
+- id: n0002
+  layer: markdown
+  kind: paragraph
+  span: 13:52
+- id: n0003
+  layer: markdown
+  kind: code
+  span: 54:234
+- id: n0004
+  layer: document
+  kind: section
+  span: 0:234
+  attrs:
+    level: 1
+    title: Malformed
+- id: n0005
+  layer: document
+  kind: section
+  span: 87:234
+  parent: n0004
+  attrs:
+    level: 2
+    title: A heading that is actually inside the open fence?
+- id: n0006
+  layer: textual
+  kind: paragraph
+  span: 0:11
+- id: n0007
+  layer: textual
+  kind: sentence
+  span: 0:11
+  parent: n0006
+  attrs:
+    text: '# Malformed'
+- id: n0008
+  layer: textual
+  kind: paragraph
+  span: 13:52
+- id: n0009
+  layer: textual
+  kind: sentence
+  span: 13:52
+  parent: n0008
+  attrs:
+    text: 'A paragraph then an unterminated fence:'
+- id: n0010
+  layer: textual
+  kind: paragraph
+  span: 54:85
+- id: n0011
+  layer: textual
+  kind: sentence
+  span: 54:85
+  parent: n0010
+  attrs:
+    text: '```python def f(): return 1'
+- id: n0012
+  layer: textual
+  kind: paragraph
+  span: 87:139
+- id: n0013
+  layer: textual
+  kind: sentence
+  span: 87:139
+  parent: n0012
+  attrs:
+    text: '## A heading that is actually inside the open fence?'
+- id: n0014
+  layer: textual
+  kind: paragraph
+  span: 141:185
+- id: n0015
+  layer: textual
+  kind: sentence
+  span: 141:185
+  parent: n0014
+  attrs:
+    text: '| ragged | table | - | | one | two | three |'
+- id: n0016
+  layer: textual
+  kind: paragraph
+  span: 187:234
+- id: n0017
+  layer: textual
+  kind: sentence
+  span: 187:234
+  parent: n0016
+  attrs:
+    text: '- item with [an unclosed link](http://x.example'
+links: []
+spanrefs: []

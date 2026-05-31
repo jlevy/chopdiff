@@ -1,0 +1,189 @@
+source:
+  sha256: 498ed9cd78568b06f4f871c8c9293ccdce03eab2e4b02fa8831ec43add094459
+  length: 211
+  size_summary: 192 bytes (11 lines, 4 paras, 4 sents, 36 words, ~51 tok)
+base_blocks:
+  cover_ok: true
+  uncovered_nonspace: 0
+  blocks:
+  - depth: 0
+    type: heading
+    span: 0:13
+    text: '# Nested List'
+  - depth: 0
+    type: list_item
+    span: 15:31
+    text: '- level one item'
+  - depth: 1
+    type: list_item
+    span: 34:142
+    text: |-
+      - level two item
+          - level three item
+            - level four item
+
+          text between deep sublists at level two
+  - depth: 0
+    type: list_item
+    span: 146:186
+    text: more level-one content after the sublist
+  - depth: 0
+    type: list_item
+    span: 187:210
+    text: '- second top-level item'
+sections:
+- level: 1
+  title: Nested List
+  span: 0:210
+  words: 36
+node_table:
+- id: n0001
+  layer: markdown
+  kind: heading
+  span: 0:13
+  attrs:
+    level: 1
+- id: n0002
+  layer: markdown
+  kind: list
+  span: 15:210
+  attrs:
+    tight: false
+    ordered: false
+- id: n0003
+  layer: markdown
+  kind: list_item
+  span: 15:186
+  parent: n0002
+- id: n0004
+  layer: markdown
+  kind: paragraph
+  span: 15:31
+  parent: n0003
+- id: n0005
+  layer: markdown
+  kind: list
+  span: 34:142
+  parent: n0003
+  attrs:
+    tight: false
+    ordered: false
+- id: n0006
+  layer: markdown
+  kind: list_item
+  span: 34:142
+  parent: n0005
+- id: n0007
+  layer: markdown
+  kind: paragraph
+  span: 34:50
+  parent: n0006
+- id: n0008
+  layer: markdown
+  kind: list
+  span: 55:97
+  parent: n0006
+  attrs:
+    tight: true
+    ordered: false
+- id: n0009
+  layer: markdown
+  kind: list_item
+  span: 55:97
+  parent: n0008
+- id: n0010
+  layer: markdown
+  kind: paragraph
+  span: 55:73
+  parent: n0009
+- id: n0011
+  layer: markdown
+  kind: list
+  span: 80:97
+  parent: n0009
+  attrs:
+    tight: true
+    ordered: false
+- id: n0012
+  layer: markdown
+  kind: list_item
+  span: 80:97
+  parent: n0011
+- id: n0013
+  layer: markdown
+  kind: paragraph
+  span: 80:97
+  parent: n0012
+- id: n0014
+  layer: markdown
+  kind: paragraph
+  span: 103:142
+  parent: n0006
+- id: n0015
+  layer: markdown
+  kind: paragraph
+  span: 146:186
+  parent: n0003
+- id: n0016
+  layer: markdown
+  kind: list_item
+  span: 187:210
+  parent: n0002
+- id: n0017
+  layer: markdown
+  kind: paragraph
+  span: 187:210
+  parent: n0016
+- id: n0018
+  layer: document
+  kind: section
+  span: 0:210
+  attrs:
+    level: 1
+    title: Nested List
+- id: n0019
+  layer: textual
+  kind: paragraph
+  span: 0:13
+- id: n0020
+  layer: textual
+  kind: sentence
+  span: 0:13
+  parent: n0019
+  attrs:
+    text: '# Nested List'
+- id: n0021
+  layer: textual
+  kind: paragraph
+  span: 15:97
+- id: n0022
+  layer: textual
+  kind: sentence
+  span: 15:97
+  parent: n0021
+  attrs:
+    text: '- level one item - level two item - level three item - level four item'
+- id: n0023
+  layer: textual
+  kind: paragraph
+  span: 103:142
+- id: n0024
+  layer: textual
+  kind: sentence
+  span: 103:142
+  parent: n0023
+  attrs:
+    text: text between deep sublists at level two
+- id: n0025
+  layer: textual
+  kind: paragraph
+  span: 146:210
+- id: n0026
+  layer: textual
+  kind: sentence
+  span: 146:210
+  parent: n0025
+  attrs:
+    text: more level-one content after the sublist - second top-level item
+links: []
+spanrefs: []

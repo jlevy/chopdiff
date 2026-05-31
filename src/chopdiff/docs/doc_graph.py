@@ -14,6 +14,7 @@ import hashlib
 from enum import StrEnum
 from typing import Literal
 
+from frontmatter_format import to_yaml_string
 from pydantic import BaseModel, ConfigDict, Field
 
 from chopdiff.docs.collect import INLINE_KINDS
@@ -104,6 +105,15 @@ class DocGraph(BaseModel):
     annotations: list[object] = Field(default_factory=list)
     layout: list[object] = Field(default_factory=list)
     provenance: list[object] = Field(default_factory=list)
+
+    def to_yaml(self) -> str:
+        """
+        Serialize to clean, deterministic YAML: the same model as `model_dump_json`
+        but in block style with `|` block scalars for multi-line text, field order
+        preserved, and `None`/empty values suppressed. JSON stays the canonical wire
+        form; YAML is the human/golden form (see `chopdiff.docs.debug`).
+        """
+        return to_yaml_string(self.model_dump(by_alias=True))
 
 
 # Default layers included when none are specified.

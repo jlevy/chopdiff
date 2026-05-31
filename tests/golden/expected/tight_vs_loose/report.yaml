@@ -1,0 +1,218 @@
+source:
+  sha256: 12543093d867364bae9479159f1c005534e1e6a68c74918ea1dab4a0527455f5
+  length: 67
+  size_summary: 66 bytes (13 lines, 6 paras, 6 sents, 16 words, ~18 tok)
+base_blocks:
+  cover_ok: true
+  uncovered_nonspace: 0
+  blocks:
+  - depth: 0
+    type: heading
+    span: 0:7
+    text: '# Tight'
+  - depth: 0
+    type: list_item
+    span: 9:16
+    text: '- alpha'
+  - depth: 0
+    type: list_item
+    span: 17:23
+    text: '- beta'
+  - depth: 0
+    type: list_item
+    span: 24:31
+    text: '- gamma'
+  - depth: 0
+    type: heading
+    span: 33:40
+    text: '# Loose'
+  - depth: 0
+    type: list_item
+    span: 42:49
+    text: '- alpha'
+  - depth: 0
+    type: list_item
+    span: 51:57
+    text: '- beta'
+  - depth: 0
+    type: list_item
+    span: 59:66
+    text: '- gamma'
+sections:
+- level: 1
+  title: Tight
+  span: 0:31
+  words: 8
+- level: 1
+  title: Loose
+  span: 33:66
+  words: 8
+node_table:
+- id: n0001
+  layer: markdown
+  kind: heading
+  span: 0:7
+  attrs:
+    level: 1
+- id: n0002
+  layer: markdown
+  kind: list
+  span: 9:31
+  attrs:
+    tight: true
+    ordered: false
+- id: n0003
+  layer: markdown
+  kind: list_item
+  span: 9:16
+  parent: n0002
+- id: n0004
+  layer: markdown
+  kind: paragraph
+  span: 9:16
+  parent: n0003
+- id: n0005
+  layer: markdown
+  kind: list_item
+  span: 17:23
+  parent: n0002
+- id: n0006
+  layer: markdown
+  kind: paragraph
+  span: 17:23
+  parent: n0005
+- id: n0007
+  layer: markdown
+  kind: list_item
+  span: 24:31
+  parent: n0002
+- id: n0008
+  layer: markdown
+  kind: paragraph
+  span: 24:31
+  parent: n0007
+- id: n0009
+  layer: markdown
+  kind: heading
+  span: 33:40
+  attrs:
+    level: 1
+- id: n0010
+  layer: markdown
+  kind: list
+  span: 42:66
+  attrs:
+    tight: false
+    ordered: false
+- id: n0011
+  layer: markdown
+  kind: list_item
+  span: 42:49
+  parent: n0010
+- id: n0012
+  layer: markdown
+  kind: paragraph
+  span: 42:49
+  parent: n0011
+- id: n0013
+  layer: markdown
+  kind: list_item
+  span: 51:57
+  parent: n0010
+- id: n0014
+  layer: markdown
+  kind: paragraph
+  span: 51:57
+  parent: n0013
+- id: n0015
+  layer: markdown
+  kind: list_item
+  span: 59:66
+  parent: n0010
+- id: n0016
+  layer: markdown
+  kind: paragraph
+  span: 59:66
+  parent: n0015
+- id: n0017
+  layer: document
+  kind: section
+  span: 0:31
+  attrs:
+    level: 1
+    title: Tight
+- id: n0018
+  layer: document
+  kind: section
+  span: 33:66
+  attrs:
+    level: 1
+    title: Loose
+- id: n0019
+  layer: textual
+  kind: paragraph
+  span: 0:7
+- id: n0020
+  layer: textual
+  kind: sentence
+  span: 0:7
+  parent: n0019
+  attrs:
+    text: '# Tight'
+- id: n0021
+  layer: textual
+  kind: paragraph
+  span: 9:31
+- id: n0022
+  layer: textual
+  kind: sentence
+  span: 9:31
+  parent: n0021
+  attrs:
+    text: '- alpha - beta - gamma'
+- id: n0023
+  layer: textual
+  kind: paragraph
+  span: 33:40
+- id: n0024
+  layer: textual
+  kind: sentence
+  span: 33:40
+  parent: n0023
+  attrs:
+    text: '# Loose'
+- id: n0025
+  layer: textual
+  kind: paragraph
+  span: 42:49
+- id: n0026
+  layer: textual
+  kind: sentence
+  span: 42:49
+  parent: n0025
+  attrs:
+    text: '- alpha'
+- id: n0027
+  layer: textual
+  kind: paragraph
+  span: 51:57
+- id: n0028
+  layer: textual
+  kind: sentence
+  span: 51:57
+  parent: n0027
+  attrs:
+    text: '- beta'
+- id: n0029
+  layer: textual
+  kind: paragraph
+  span: 59:66
+- id: n0030
+  layer: textual
+  kind: sentence
+  span: 59:66
+  parent: n0029
+  attrs:
+    text: '- gamma'
+links: []
+spanrefs: []

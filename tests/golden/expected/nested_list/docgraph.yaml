@@ -1,0 +1,205 @@
+schema: DocGraph/v0.1
+source:
+  format: markdown
+  offset_unit: unicode_code_points
+  sha256: 498ed9cd78568b06f4f871c8c9293ccdce03eab2e4b02fa8831ec43add094459
+nodes:
+- id: n0001
+  kind: heading
+  layer: markdown
+  children: []
+  source_span:
+    start: 0
+    end: 13
+  attrs:
+    level: 1
+- id: n0002
+  kind: list
+  layer: markdown
+  children:
+  - n0003
+  - n0016
+  source_span:
+    start: 15
+    end: 210
+  attrs:
+    tight: false
+    ordered: false
+- id: n0003
+  kind: list_item
+  layer: markdown
+  parent: n0002
+  children:
+  - n0004
+  - n0005
+  - n0015
+  source_span:
+    start: 15
+    end: 186
+- id: n0004
+  kind: paragraph
+  layer: markdown
+  parent: n0003
+  children: []
+  source_span:
+    start: 15
+    end: 31
+- id: n0005
+  kind: list
+  layer: markdown
+  parent: n0003
+  children:
+  - n0006
+  source_span:
+    start: 34
+    end: 142
+  attrs:
+    tight: false
+    ordered: false
+- id: n0006
+  kind: list_item
+  layer: markdown
+  parent: n0005
+  children:
+  - n0007
+  - n0008
+  - n0014
+  source_span:
+    start: 34
+    end: 142
+- id: n0007
+  kind: paragraph
+  layer: markdown
+  parent: n0006
+  children: []
+  source_span:
+    start: 34
+    end: 50
+- id: n0008
+  kind: list
+  layer: markdown
+  parent: n0006
+  children:
+  - n0009
+  source_span:
+    start: 55
+    end: 97
+  attrs:
+    tight: true
+    ordered: false
+- id: n0009
+  kind: list_item
+  layer: markdown
+  parent: n0008
+  children:
+  - n0010
+  - n0011
+  source_span:
+    start: 55
+    end: 97
+- id: n0010
+  kind: paragraph
+  layer: markdown
+  parent: n0009
+  children: []
+  source_span:
+    start: 55
+    end: 73
+- id: n0011
+  kind: list
+  layer: markdown
+  parent: n0009
+  children:
+  - n0012
+  source_span:
+    start: 80
+    end: 97
+  attrs:
+    tight: true
+    ordered: false
+- id: n0012
+  kind: list_item
+  layer: markdown
+  parent: n0011
+  children:
+  - n0013
+  source_span:
+    start: 80
+    end: 97
+- id: n0013
+  kind: paragraph
+  layer: markdown
+  parent: n0012
+  children: []
+  source_span:
+    start: 80
+    end: 97
+- id: n0014
+  kind: paragraph
+  layer: markdown
+  parent: n0006
+  children: []
+  source_span:
+    start: 103
+    end: 142
+- id: n0015
+  kind: paragraph
+  layer: markdown
+  parent: n0003
+  children: []
+  source_span:
+    start: 146
+    end: 186
+- id: n0016
+  kind: list_item
+  layer: markdown
+  parent: n0002
+  children:
+  - n0017
+  source_span:
+    start: 187
+    end: 210
+- id: n0017
+  kind: paragraph
+  layer: markdown
+  parent: n0016
+  children: []
+  source_span:
+    start: 187
+    end: 210
+- id: n0018
+  kind: section
+  layer: document
+  children: []
+  source_span:
+    start: 0
+    end: 210
+  attrs:
+    level: 1
+    title: Nested List
+views:
+  toc:
+  - n0018
+  blocks:
+  - n0001
+  - n0002
+  - n0003
+  - n0004
+  - n0005
+  - n0006
+  - n0007
+  - n0008
+  - n0009
+  - n0010
+  - n0011
+  - n0012
+  - n0013
+  - n0014
+  - n0015
+  - n0016
+  - n0017
+  links: []
+  sentences: []
+annotations: []
+layout: []
+provenance: []
