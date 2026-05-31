@@ -1,4 +1,3 @@
-# pyright: reportImportCycles=false
 """
 Pydantic v2 schema for the DocGraph serialized projection and the builder
 that derives it from a `TextDoc`.
@@ -13,15 +12,12 @@ from __future__ import annotations
 
 import hashlib
 from enum import StrEnum
-from typing import TYPE_CHECKING, Literal
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from chopdiff.docs.collect import INLINE_KINDS
-from chopdiff.docs.node import Layer, Node, NodeKind
-
-if TYPE_CHECKING:
-    from chopdiff.docs.text_doc import TextDoc
+from chopdiff.docs.node import Layer, Node, NodeKind, NodeTable
 
 
 class Detail(StrEnum):
@@ -115,13 +111,13 @@ _DEFAULT_INCLUDE: frozenset[Layer] = frozenset({Layer.markdown, Layer.document})
 
 
 def build_doc_graph(
-    doc: TextDoc,
+    table: NodeTable,
     *,
     include: frozenset[Layer] = _DEFAULT_INCLUDE,
     detail: frozenset[Detail] = frozenset(),  # pyright: ignore[reportCallInDefaultInitializer]
 ) -> DocGraph:
     """
-    Build a `DocGraph` from a `TextDoc`.
+    Build a `DocGraph` from a `NodeTable`.
 
     `include` selects which layers' nodes and views are serialized. Enabling
     `Layer.document` auto-enables `Layer.markdown` (its dependency). The
@@ -138,7 +134,6 @@ def build_doc_graph(
         layers.add(Layer.markdown)
     enabled_layers = frozenset(layers)
 
-    table = doc.node_table()
     source_text = table.source_text
 
     include_inline = Detail.inline in detail

@@ -1,4 +1,3 @@
-# pyright: reportImportCycles=false
 """
 Node table: a flat, id-addressed table of all parsed elements in a document,
 covering three layers (markdown, document, textual) over the same source text.
@@ -11,6 +10,10 @@ The node table is the canonical normalized form from which derived views
 (block tree, section tree, inline index, etc.) are cheap projections.
 """
 
+# pyright: reportImportCycles=false
+# The TYPE_CHECKING import of TextDoc creates a type-only cycle with text_doc.py
+# (which runtime-imports build_node_table). No runtime cycle exists.
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
@@ -21,7 +24,7 @@ from chopdiff.docs.block_tree import Block, parse_blocks
 from chopdiff.docs.node import Layer, Node, NodeKind, NodeTable
 
 if TYPE_CHECKING:
-    from chopdiff.docs.text_doc import Section, TextDoc  # pyright: ignore[reportImportCycles]
+    from chopdiff.docs.text_doc import Section, TextDoc
 
 
 # Atomic-span pattern names that map to inline NodeKinds.

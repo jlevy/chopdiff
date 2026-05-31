@@ -5,7 +5,7 @@ from collections.abc import Callable, Generator, Iterable, Iterator
 from copy import deepcopy
 from dataclasses import dataclass, field
 from functools import cached_property
-from typing import TYPE_CHECKING, TypeAlias
+from typing import TypeAlias
 
 import regex
 from flowmark import flowmark_markdown, split_sentences_regex
@@ -15,7 +15,12 @@ from funlog import tally_calls
 from marko.block import BlankLine, Heading, SetextHeading
 from typing_extensions import override
 
+from chopdiff.docs.block_tree import Block, parse_blocks
 from chopdiff.docs.block_types import BlockType, block_type_for
+from chopdiff.docs.collect import collect as _collect
+from chopdiff.docs.doc_graph import _DEFAULT_INCLUDE, Detail, DocGraph, build_doc_graph
+from chopdiff.docs.node import Layer, Node, NodeKind, NodeTable
+from chopdiff.docs.node_table import build_node_table
 from chopdiff.docs.sizes import TextUnit, size, size_in_bytes
 from chopdiff.docs.wordtoks import (
     BOF_TOK,
@@ -32,11 +37,6 @@ from chopdiff.docs.wordtoks import (
     wordtokenize,
 )
 from chopdiff.util.token_estimate import estimate_tokens
-
-if TYPE_CHECKING:
-    from chopdiff.docs.block_tree import Block
-    from chopdiff.docs.doc_graph import Detail, DocGraph
-    from chopdiff.docs.node import Layer, Node, NodeKind, NodeTable
 
 SYMBOL_PARA = "¶"
 
@@ -476,8 +476,6 @@ class TextDoc:
         function of the immutable `source_text`, so it is computed once and reused.
         """
         if self._cached_node_table is None:
-            from chopdiff.docs.node_table import build_node_table
-
             self._cached_node_table = build_node_table(self)
         assert self._cached_node_table is not None
         return self._cached_node_table
@@ -617,8 +615,6 @@ class TextDoc:
         sublists. Parsed from `source_text` (or the reassembled text if absent). See
         `chopdiff.docs.block_tree`.
         """
-        from chopdiff.docs.block_tree import parse_blocks
-
         return parse_blocks(self.source_text or self.reassemble())
 
     def block_type_counts(self) -> Counter[BlockType]:
@@ -925,8 +921,6 @@ class TextDoc:
         Convenience that calls `collect()` over `self.node_table()`. See
         `chopdiff.docs.collect.collect` for parameter details.
         """
-        from chopdiff.docs.collect import collect as _collect
-
         return _collect(
             self.node_table(),
             scope,
@@ -949,10 +943,8 @@ class TextDoc:
         payload richness (see `Detail`). See `chopdiff.docs.doc_graph` for the
         full contract.
         """
-        from chopdiff.docs.doc_graph import _DEFAULT_INCLUDE, build_doc_graph
-
         effective_include = include if include is not None else _DEFAULT_INCLUDE
-        return build_doc_graph(self, include=effective_include, detail=detail)
+        return build_doc_graph(self.node_table(), include=effective_include, detail=detail)
 
     @override
     def __str__(self):
@@ -998,8 +990,6 @@ class Section:
         are document-absolute, and the slice is density-invariant like the whole-document
         tree, so per-section block-type tallies are spacing-independent.
         """
-        from chopdiff.docs.block_tree import parse_blocks
-
         own = self.own_blocks()
         start, end = own[0].span[0], own[-1].span[1]
         return [
