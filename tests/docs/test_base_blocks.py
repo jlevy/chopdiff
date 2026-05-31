@@ -339,3 +339,58 @@ def test_nested_list_spans_pairwise_non_overlapping():
     parent_text = text[bbs[0].block.span[0] : bbs[0].block.span[1]]
     assert "- nested" not in parent_text
     assert "item one" in parent_text
+
+
+def _covered_nonspace(text: str, bbs: list[BaseBlock]) -> set[int]:
+    """Indexes of non-whitespace source chars covered by some base-block span."""
+    covered: set[int] = set()
+    for bb in bbs:
+        s, e = bb.block.span
+        covered.update(range(s, e))
+    return {i for i in range(len(text)) if not text[i].isspace()} - covered
+
+
+def test_cover_invariant_trailing_content_after_sublist():
+    """A list item with content after a nested sublist must stay in the cover."""
+    text = dedent(
+        """
+        - item one text
+
+          - sub a
+          - sub b
+
+          trailing paragraph inside item one
+
+        - item two
+        """
+    ).strip()
+    bbs = base_blocks(text)
+    missing = _covered_nonspace(text, bbs)
+    assert not missing, (
+        f"uncovered non-whitespace at {sorted(missing)}: {''.join(text[i] for i in sorted(missing))!r}"
+    )
+
+
+def test_cover_invariant_content_between_two_sublists():
+    """Content between two sublists in one item must stay in the cover."""
+    text = dedent(
+        """
+        - item one
+
+          - sub a
+
+          middle text between sublists
+
+          - sub b
+
+        - item two
+        """
+    ).strip()
+    bbs = base_blocks(text)
+    missing = _covered_nonspace(text, bbs)
+    assert not missing, (
+        f"uncovered non-whitespace at {sorted(missing)}: {''.join(text[i] for i in sorted(missing))!r}"
+    )
+    # And spans remain ordered and non-overlapping.
+    for i in range(len(bbs) - 1):
+        assert bbs[i].block.span[1] <= bbs[i + 1].block.span[0]

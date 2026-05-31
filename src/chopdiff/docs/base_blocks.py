@@ -111,36 +111,49 @@ def _emit_list_item(
     out: list[BaseBlock],
 ) -> None:
     """
-    Emit a list item as a base block. If the item contains nested lists and we
-    have not exceeded `max_depth`, emit a block whose span covers only the item's
-    OWN content (from item start to the start of its first nested list child,
-    with trailing whitespace trimmed), then recurse into each nested list at
-    depth+1. A leaf list item (no nested lists) emits its full span.
+    Emit a list item as base blocks. A leaf item (no nested lists, or at the depth
+    limit) emits its full span as one block. Otherwise the item is walked in source
+    order as alternating own-content segments and nested lists: each maximal run of
+    non-list content (before, between, or after sublists) becomes an own-content base
+    block at `depth`, and each nested list's items recurse at `depth + 1`. This keeps
+    the partition a complete, non-overlapping cover — content that follows or sits
+    between sublists is not dropped.
     """
-    nested_lists = [c for c in item.children if c.type in _LIST_TYPES]
+    nested_lists = sorted(
+        (c for c in item.children if c.type in _LIST_TYPES), key=lambda c: c.span[0]
+    )
     at_depth_limit = max_depth != -1 and current_nesting >= max_depth
 
     if not nested_lists or at_depth_limit:
         out.append(BaseBlock(block=item, depth=depth))
-    else:
-        # The item's own content runs from item start to the start of its first
-        # nested list child. Trim trailing whitespace from the source so the span
-        # covers only meaningful content.
-        first_nested_start = min(c.span[0] for c in nested_lists)
-        own_start = item.span[0]
-        own_end = first_nested_start
-        while own_end > own_start and text[own_end - 1].isspace():
-            own_end -= 1
-        own_block = Block(
-            type=item.type,
-            span=(own_start, own_end),
-            children=[],
-            tight=item.tight,
-        )
+        return
+
+    cursor = item.span[0]
+    for nested in nested_lists:
+        _emit_own_segment(text, item, cursor, nested.span[0], depth, out)
+        for nested_item in nested.children:
+            _emit_list_item(text, nested_item, depth + 1, max_depth, current_nesting + 1, out)
+        cursor = nested.span[1]
+    _emit_own_segment(text, item, cursor, item.span[1], depth, out)
+
+
+def _emit_own_segment(
+    text: str,
+    item: Block,
+    start: int,
+    end: int,
+    depth: int,
+    out: list[BaseBlock],
+) -> None:
+    """
+    Emit one own-content segment of a list item (the span between two nested lists,
+    or before the first / after the last), trimmed of surrounding whitespace and
+    skipped if empty. The segment keeps the item's type and `tight` flag.
+    """
+    while start < end and text[start].isspace():
+        start += 1
+    while end > start and text[end - 1].isspace():
+        end -= 1
+    if start < end:
+        own_block = Block(type=item.type, span=(start, end), children=[], tight=item.tight)
         out.append(BaseBlock(block=own_block, depth=depth))
-        for child in item.children:
-            if child.type in _LIST_TYPES:
-                for nested_item in child.children:
-                    _emit_list_item(
-                        text, nested_item, depth + 1, max_depth, current_nesting + 1, out
-                    )

@@ -296,3 +296,18 @@ def test_density_invariant_walk_blocks_tallies():
     dense_tally = tally(dense)
     loose_tally = tally(loose)
     assert dense_tally == loose_tally
+
+
+def test_blocks_is_cached_on_source():
+    """blocks() memoizes its parse so derived views share one parse."""
+    td = TextDoc.from_text(_DOC)
+    assert td.blocks() is td.blocks()
+
+
+def test_sections_reuse_doc_block_cache():
+    """A section's structural slice comes from the doc's cached parse, not a re-parse."""
+    td = TextDoc.from_text(_DOC)
+    doc_blocks = td.blocks()
+    for section in td.sections():
+        for block in section.blocks():
+            assert any(b.span == block.span for b in doc_blocks)

@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
-from chopdiff.docs.node import Node, NodeKind, NodeTable
+from chopdiff.docs.node import Layer, Node, NodeKind, NodeTable
 
 # Inline NodeKinds: elements that live inside a block.
 INLINE_KINDS: frozenset[NodeKind] = frozenset(
@@ -31,6 +31,7 @@ def collect(
     recursive: bool = False,
     inline: bool = False,
     contains: tuple[int, int] | None = None,
+    layer: set[Layer] | None = None,
 ) -> list[Node]:
     """
     Gather nodes from `table` matching the given filters, in document order.
@@ -42,7 +43,10 @@ def collect(
     scope (or roots). `inline`: when True, include inline-kind nodes; when
     False, exclude them. `contains`: an optional `(start, end)` span;
     restrict results to nodes whose `source_span` is within that span
-    (offset-containment, the cross-layer query mechanism).
+    (offset-containment, the cross-layer query mechanism). `layer`: restrict to
+    these parse layers (None = all layers); since the same span can appear as
+    nodes in several layers (e.g. a `markdown` block and a `textual` paragraph),
+    scope by `layer` to avoid cross-layer duplicates.
     """
     if scope is not None:
         candidates = _subtree_nodes(table, scope, recursive)
@@ -57,6 +61,8 @@ def collect(
     for node in candidates:
         if not inline and node.kind in INLINE_KINDS:
             continue
+        if layer is not None and node.layer not in layer:
+            continue
         if kinds is not None and node.kind not in kinds:
             continue
         if contains is not None:
@@ -70,14 +76,17 @@ def collect(
             continue
         result.append(node)
 
-    # Sort by source_span start (then by span width descending for stability)
-    # to guarantee deterministic document order.
-    result.sort(
-        key=lambda n: (
-            n.source_span[0] if n.source_span else 0,
-            -(n.source_span[1] - n.source_span[0]) if n.source_span else 0,
-        )
-    )
+    # Sort by source_span start (then by span width descending) for deterministic
+    # document order. Nodes without a span (e.g. reference links) have no position, so
+    # they sort last by id rather than colliding at offset 0 with real document-start
+    # nodes.
+    def _sort_key(n: Node) -> tuple[int, int, int, str]:
+        if n.source_span is None:
+            return (1, 0, 0, n.id)
+        start, end = n.source_span
+        return (0, start, -(end - start), n.id)
+
+    result.sort(key=_sort_key)
     return result
 
 

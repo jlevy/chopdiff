@@ -15,6 +15,7 @@ from funlog import tally_calls
 from marko.block import BlankLine, Heading, SetextHeading
 from typing_extensions import override
 
+from chopdiff.docs.base_blocks import BaseBlock, base_blocks
 from chopdiff.docs.block_tree import Block, parse_blocks
 from chopdiff.docs.block_types import BlockType, block_type_for
 from chopdiff.docs.collect import collect as _collect
@@ -484,6 +485,8 @@ class TextDoc:
     _cached_node_table: NodeTable | None = field(
         default=None, init=False, compare=False, repr=False
     )
+    _cached_blocks: list[Block] | None = field(default=None, init=False, compare=False, repr=False)
+    _cached_links: list[Link] | None = field(default=None, init=False, compare=False, repr=False)
 
     def node_table(self) -> NodeTable:
         """
@@ -602,7 +605,12 @@ class TextDoc:
                     stack[-1].content.append(para)
                 continue
             section = Section(
-                heading=para, level=level, content=[], children=[], source_text=source_text
+                heading=para,
+                level=level,
+                content=[],
+                children=[],
+                source_text=source_text,
+                _doc=self,
             )
             while stack and stack[-1].level >= level:
                 stack.pop()
@@ -617,10 +625,12 @@ class TextDoc:
         """
         All links in the document, in document order. Parsed from `source_text` once so
         that reference-style links (`[text][ref]` with `[ref]: url` in a separate block)
-        resolve correctly. See `Link`.
+        resolve correctly. Lazily cached so per-section link rollups share one parse. See
+        `Link`.
         """
-        text = self.source_text or self.reassemble()
-        return _block_links(text, 0)
+        if self._cached_links is None:
+            self._cached_links = _block_links(self.source_text or self.reassemble(), 0)
+        return self._cached_links
 
     def blocks(self) -> list[Block]:
         """
@@ -629,8 +639,27 @@ class TextDoc:
         internal blank lines) and decomposes a tight list into `list_item`s with nested
         sublists. Parsed from `source_text` (or the reassembled text if absent). See
         `chopdiff.docs.block_tree`.
+
+        Lazily cached on the immutable `source_text` (sentence edits touch the editing
+        view, not `source_text`), so derived views (`sections()`, the node table) can
+        share one parse rather than re-parsing.
         """
-        return parse_blocks(self.source_text or self.reassemble())
+        if self._cached_blocks is None:
+            self._cached_blocks = parse_blocks(self.source_text or self.reassemble())
+        return self._cached_blocks
+
+    def base_blocks(self, *, item_partition_depth: int = 6) -> list[BaseBlock]:
+        """
+        The flat, depth-annotated sequential base-block partition of the document: a
+        complete, ordered, non-overlapping cover whose reassembly reproduces the source
+        (except normalized paragraph-break whitespace). A thin method over the
+        `chopdiff.docs.base_blocks.base_blocks` free function; see it for the
+        `item_partition_depth` semantics. Distinct from `blocks()`, which is the
+        recursive structural tree (a query view, not a partition).
+        """
+        return base_blocks(
+            self.source_text or self.reassemble(), item_partition_depth=item_partition_depth
+        )
 
     def block_type_counts(self) -> Counter[BlockType]:
         """
@@ -931,6 +960,7 @@ class TextDoc:
         recursive: bool = False,
         inline: bool = False,
         contains: tuple[int, int] | None = None,
+        layer: set[Layer] | None = None,
     ) -> list[Node]:
         """
         Convenience that calls `collect()` over `self.node_table()`. See
@@ -944,6 +974,7 @@ class TextDoc:
             recursive=recursive,
             inline=inline,
             contains=contains,
+            layer=layer,
         )
 
     def graph(
@@ -989,6 +1020,21 @@ class Section:
     content: list[Paragraph]
     children: list[Section]
     source_text: str = ""
+    _doc: TextDoc | None = field(default=None, compare=False, repr=False)
+
+    def _all_blocks(self) -> list[Block]:
+        """The whole-document structural parse, shared via the owning doc's cache when
+        available (standalone sections fall back to a direct parse)."""
+        if self._doc is not None:
+            return self._doc.blocks()
+        return parse_blocks(self.source_text)
+
+    def _all_links(self) -> list[Link]:
+        """The whole-document link list, shared via the owning doc's cache when
+        available (standalone sections fall back to a direct parse)."""
+        if self._doc is not None:
+            return self._doc.links()
+        return _block_links(self.source_text, 0)
 
     @property
     def title(self) -> str:
@@ -1008,9 +1054,7 @@ class Section:
         own = self.own_blocks()
         start, end = own[0].span[0], own[-1].span[1]
         return [
-            block
-            for block in parse_blocks(self.source_text)
-            if start <= block.span[0] and block.span[1] <= end
+            block for block in self._all_blocks() if start <= block.span[0] and block.span[1] <= end
         ]
 
     def block_type_counts(self) -> Counter[BlockType]:
@@ -1056,9 +1100,8 @@ class Section:
         by offset alone.
         """
         sec_start, sec_end = self.span
-        all_links = _block_links(self.source_text, 0)
         return [
             link
-            for link in all_links
+            for link in self._all_links()
             if link.span is not None and sec_start <= link.span[0] and link.span[1] <= sec_end
         ]
