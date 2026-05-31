@@ -36,6 +36,20 @@ with layers, the `base_blocks()` sequential partition, `collect()` query primiti
 - New runtime dependency: `pydantic>=2.13.4` (brings `annotated-types`, `pydantic-core`,
   `typing-inspection` as transitive dependencies). Required for the `DocGraph` schema.
 
+### Compatibility
+
+- **Additive at the API surface.** The DocGraph work adds public names
+  (`base_blocks`, `collect`, `SpanRef`, `DocGraph`, `NodeModel`, `Node`, `NodeTable`,
+  `NodeKind`, `Layer`, `Detail`, `Views`, `build_doc_graph`, …) without removing or
+  renaming any existing export. `Section.block_type_counts()` /
+  `TextDoc.block_type_counts()` are retained; `collect()` is the preferred general
+  query, not a replacement.
+- **Net release vs. v0.3.0.** Taken together with v0.4.0 (below), the upcoming release
+  removes no public symbol present in v0.3.0; every new capability is reached through new
+  methods, types, and exports. The only behavior changes an existing caller can observe
+  are the two noted under v0.4.0: `BlockType.list` is now bullet-only, and default
+  sentence splitting is now span-aware (boundaries may differ; see below).
+
 ## v0.4.0
 
 Makes `TextDoc` block-aware end to end: an exact-span structural block tree, a section
@@ -51,6 +65,12 @@ block-detection regex of its own.
   Ordered-ness is carried from marko's `List.ordered`. Callers that matched
   `BlockType.list` to cover *both* list kinds now miss ordered lists; match
   `{BlockType.list, BlockType.ordered_list}` for either.
+- **Default sentence splitting is now span-aware.** `TextDoc.from_text()` with the
+  default splitter now routes through `flowmark.atomic_spans.split_sentences_with_spans`
+  instead of calling `split_sentences_regex` directly, so sentences never bisect a link,
+  code span, or autolink. Sentence boundaries can therefore differ from v0.3.0 for text
+  containing those constructs. `default_sentence_splitter` is unchanged and passing an
+  explicit splitter preserves the previous behavior.
 
 ### New Features
 
