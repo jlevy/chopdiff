@@ -3,9 +3,9 @@ type: is
 id: is-01kszqjpn7ghxyz7q1axtn174t
 title: Golden-document testing + reusable doc-model debug dumper (umbrella)
 kind: epic
-status: open
+status: closed
 priority: 2
-version: 7
+version: 8
 spec_path: docs/project/specs/active/plan-2026-05-31-golden-doc-testing.md
 labels: []
 dependencies:
@@ -22,5 +22,7 @@ dependencies:
   - type: blocks
     target: is-01kszqjqvhx7k9getf6pm3xjq7
 created_at: 2026-05-31T19:18:40.034Z
-updated_at: 2026-05-31T19:18:42.595Z
+updated_at: 2026-05-31T19:41:30.835Z
+closed_at: 2026-05-31T19:41:30.834Z
+close_reason: Golden-document testing epic complete (Phases 1+2)
 ---
