@@ -1,0 +1,63 @@
+schema: DocGraph/v0.1
+source:
+  format: markdown
+  offset_unit: unicode_code_points
+  sha256: 535461f080b822c93de10f15dcf2b2593b62d5267ab6c87453640a5ea653c249
+nodes:
+- id: n0001
+  kind: heading
+  layer: markdown
+  source_span:
+    start: 0
+    end: 13
+  attrs:
+    level: 1
+- id: n0002
+  kind: paragraph
+  layer: markdown
+  source_span:
+    start: 15
+    end: 85
+- id: n0003
+  kind: paragraph
+  layer: markdown
+  source_span:
+    start: 87
+    end: 108
+- id: n0004
+  kind: paragraph
+  layer: markdown
+  source_span:
+    start: 110
+    end: 145
+- id: n0005
+  kind: paragraph
+  layer: markdown
+  source_span:
+    start: 147
+    end: 153
+- id: n0006
+  kind: paragraph
+  layer: markdown
+  source_span:
+    start: 155
+    end: 180
+- id: n0007
+  kind: section
+  layer: document
+  source_span:
+    start: 0
+    end: 180
+  attrs:
+    level: 1
+    title: Inline HTML
+views:
+  toc:
+  - n0007
+  blocks:
+  - n0001
+  - n0002
+  - n0003
+  - n0004
+  - n0005
+  - n0006

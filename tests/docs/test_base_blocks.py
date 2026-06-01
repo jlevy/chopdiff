@@ -339,3 +339,131 @@ def test_nested_list_spans_pairwise_non_overlapping():
     parent_text = text[bbs[0].block.span[0] : bbs[0].block.span[1]]
     assert "- nested" not in parent_text
     assert "item one" in parent_text
+
+
+def _covered_nonspace(text: str, bbs: list[BaseBlock]) -> set[int]:
+    """Indexes of non-whitespace source chars covered by some base-block span."""
+    covered: set[int] = set()
+    for bb in bbs:
+        s, e = bb.block.span
+        covered.update(range(s, e))
+    return {i for i in range(len(text)) if not text[i].isspace()} - covered
+
+
+def test_cover_invariant_trailing_content_after_sublist():
+    """A list item with content after a nested sublist must stay in the cover."""
+    text = dedent(
+        """
+        - item one text
+
+          - sub a
+          - sub b
+
+          trailing paragraph inside item one
+
+        - item two
+        """
+    ).strip()
+    bbs = base_blocks(text)
+    missing = _covered_nonspace(text, bbs)
+    assert not missing, (
+        f"uncovered non-whitespace at {sorted(missing)}: {''.join(text[i] for i in sorted(missing))!r}"
+    )
+
+
+def test_cover_invariant_content_between_two_sublists():
+    """Content between two sublists in one item must stay in the cover."""
+    text = dedent(
+        """
+        - item one
+
+          - sub a
+
+          middle text between sublists
+
+          - sub b
+
+        - item two
+        """
+    ).strip()
+    bbs = base_blocks(text)
+    missing = _covered_nonspace(text, bbs)
+    assert not missing, (
+        f"uncovered non-whitespace at {sorted(missing)}: {''.join(text[i] for i in sorted(missing))!r}"
+    )
+    # And spans remain ordered and non-overlapping.
+    for i in range(len(bbs) - 1):
+        assert bbs[i].block.span[1] <= bbs[i + 1].block.span[0]
+
+
+def _assert_partition(text: str, bbs: list[BaseBlock]) -> None:
+    """Ordered, pairwise non-overlapping, every non-whitespace char covered exactly once."""
+    spans = [bb.block.span for bb in bbs]
+    assert spans == sorted(spans), "base blocks not in source order"
+    for i in range(len(spans) - 1):
+        assert spans[i][1] <= spans[i + 1][0], f"spans overlap at {i}: {spans[i]} / {spans[i + 1]}"
+    counts: dict[int, int] = {}
+    for s, e in spans:
+        for i in range(s, e):
+            counts[i] = counts.get(i, 0) + 1
+    for i, ch in enumerate(text):
+        if ch.isspace():
+            continue
+        assert counts.get(i, 0) == 1, f"char {i} ({ch!r}) covered {counts.get(i, 0)} times"
+
+
+def test_continuation_content_keeps_real_type_not_list_item():
+    """A list-item continuation paragraph after a sublist is typed `paragraph`, so it is
+    distinguishable from an independent top-level list item."""
+    text = dedent(
+        """
+        - item one text
+
+          - sub a
+          - sub b
+
+          trailing paragraph inside item one
+
+        - item two
+        """
+    ).strip()
+    bbs = base_blocks(text)
+    _assert_partition(text, bbs)
+
+    td = _types_and_depths(bbs)
+    # head(list_item,0), sub a(list_item,1), sub b(list_item,1),
+    # continuation(paragraph,0), item two(list_item,0)
+    assert td == [
+        (BlockType.list_item, 0),
+        (BlockType.list_item, 1),
+        (BlockType.list_item, 1),
+        (BlockType.paragraph, 0),
+        (BlockType.list_item, 0),
+    ]
+    continuation = next(bb for bb in bbs if bb.block.type == BlockType.paragraph)
+    assert (
+        "trailing paragraph inside item one"
+        in text[continuation.block.span[0] : continuation.block.span[1]]
+    )
+
+
+def test_partition_holds_for_content_between_two_sublists():
+    text = dedent(
+        """
+        - item one
+
+          - sub a
+
+          middle text between sublists
+
+          - sub b
+
+        - item two
+        """
+    ).strip()
+    bbs = base_blocks(text)
+    _assert_partition(text, bbs)
+    # The between-sublists content is a paragraph, not a list_item.
+    paras = [bb for bb in bbs if bb.block.type == BlockType.paragraph]
+    assert len(paras) == 1
+    assert "middle text between sublists" in text[paras[0].block.span[0] : paras[0].block.span[1]]

@@ -12,12 +12,30 @@ from __future__ import annotations
 
 import hashlib
 from enum import StrEnum
+from io import StringIO
 from typing import Literal
 
+from frontmatter_format import new_yaml
 from pydantic import BaseModel, ConfigDict, Field
 
 from chopdiff.docs.collect import INLINE_KINDS
 from chopdiff.docs.node import Layer, Node, NodeKind, NodeTable
+
+
+def _is_empty(value: object) -> bool:
+    return value is None or value == {} or value == []
+
+
+def clean_yaml(value: object) -> str:
+    """
+    Dump a plain value to clean, deterministic block-style YAML: `|` block scalars for
+    multi-line strings, field order preserved, and `None`/empty mappings/lists
+    suppressed. Shared by `DocGraph.to_yaml` and the `chopdiff.docs.debug` report so both
+    have identical formatting.
+    """
+    stream = StringIO()
+    new_yaml(suppress_vals=_is_empty, typ="rt").dump(value, stream)
+    return stream.getvalue()
 
 
 class Detail(StrEnum):
@@ -104,6 +122,16 @@ class DocGraph(BaseModel):
     annotations: list[object] = Field(default_factory=list)
     layout: list[object] = Field(default_factory=list)
     provenance: list[object] = Field(default_factory=list)
+
+    def to_yaml(self) -> str:
+        """
+        Serialize to clean, deterministic YAML: the same model as `model_dump_json`
+        but in block style with `|` block scalars for multi-line text, field order
+        preserved, and `None`/empty mappings and lists suppressed (so leaf nodes carry
+        no `children: []` and reserved layers do not appear when empty). JSON stays the
+        canonical wire form; YAML is the human/golden form (see `chopdiff.docs.debug`).
+        """
+        return clean_yaml(self.model_dump(by_alias=True))
 
 
 # Default layers included when none are specified.

@@ -4,6 +4,12 @@ from chopdiff.docs.base_blocks import BaseBlock, base_blocks
 from chopdiff.docs.block_tree import Block
 from chopdiff.docs.block_types import BlockType
 from chopdiff.docs.collect import collect
+from chopdiff.docs.debug import (
+    doc_graph_yaml,
+    doc_report,
+    doc_report_data,
+    dump_views,
+)
 from chopdiff.docs.doc_graph import (
     Detail,
     DocGraph,
@@ -124,6 +130,10 @@ __all__ = [
     "BaseBlock",
     "base_blocks",
     "collect",
+    "doc_report",
+    "doc_report_data",
+    "doc_graph_yaml",
+    "dump_views",
     "LAYER_NESTING",
     "Layer",
     "NestingGuarantee",

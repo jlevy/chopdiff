@@ -1,0 +1,196 @@
+source:
+  sha256: 1e66d85137792726196ad5ad436ad4e6119246562c670ad921359ccb48eabe10
+  length: 266
+  size_summary: 265 bytes (10 lines, 5 paras, 5 sents, 32 words, ~70 tok)
+base_blocks:
+  cover_ok: true
+  uncovered_nonspace: 0
+  blocks:
+  - depth: 0
+    type: heading
+    span: 0:12
+    text: '# References'
+  - depth: 0
+    type: paragraph
+    span: 14:69
+    text: See the [docs][d] and the [spec][s] for details.[^note]
+  - depth: 0
+    type: paragraph
+    span: 71:148
+    text: 'A bare autolink: <https://auto.example> and a plain https://bare.example
+      URL.'
+  - depth: 0
+    type: paragraph
+    span: 150:175
+    text: '[d]: https://docs.example'
+  - depth: 0
+    type: paragraph
+    span: 176:214
+    text: '[s]: https://spec.example "Spec Title"'
+  - depth: 0
+    type: footnote
+    span: 216:265
+    text: '[^note]: A footnote definition with its own text.'
+sections:
+- level: 1
+  title: References
+  span: 0:265
+  words: 32
+node_table:
+- id: n0001
+  layer: markdown
+  kind: heading
+  span: 0:12
+  attrs:
+    level: 1
+- id: n0002
+  layer: markdown
+  kind: paragraph
+  span: 14:69
+- id: n0003
+  layer: markdown
+  kind: paragraph
+  span: 71:148
+- id: n0004
+  layer: markdown
+  kind: paragraph
+  span: 150:175
+- id: n0005
+  layer: markdown
+  kind: paragraph
+  span: 176:214
+- id: n0006
+  layer: markdown
+  kind: footnote
+  span: 216:265
+- id: n0007
+  layer: document
+  kind: section
+  span: 0:265
+  attrs:
+    level: 1
+    title: References
+- id: n0008
+  layer: textual
+  kind: paragraph
+  span: 0:12
+- id: n0009
+  layer: textual
+  kind: sentence
+  span: 0:12
+  parent: n0008
+  attrs:
+    text: '# References'
+- id: n0010
+  layer: textual
+  kind: paragraph
+  span: 14:69
+- id: n0011
+  layer: textual
+  kind: sentence
+  span: 14:69
+  parent: n0010
+  attrs:
+    text: See the [docs][d] and the [spec][s] for details.[^note]
+- id: n0012
+  layer: textual
+  kind: paragraph
+  span: 71:148
+- id: n0013
+  layer: textual
+  kind: sentence
+  span: 71:148
+  parent: n0012
+  attrs:
+    text: 'A bare autolink: <https://auto.example> and a plain https://bare.example
+      URL.'
+- id: n0014
+  layer: textual
+  kind: paragraph
+  span: 150:214
+- id: n0015
+  layer: textual
+  kind: sentence
+  span: 150:214
+  parent: n0014
+  attrs:
+    text: '[d]: https://docs.example [s]: https://spec.example "Spec Title"'
+- id: n0016
+  layer: textual
+  kind: paragraph
+  span: 216:265
+- id: n0017
+  layer: textual
+  kind: sentence
+  span: 216:265
+  parent: n0016
+  attrs:
+    text: '[^note]: A footnote definition with its own text.'
+- id: n0018
+  layer: markdown
+  kind: link
+  span: 22:31
+  parent: n0002
+  attrs:
+    url: https://docs.example
+    text: docs
+    section: n0007
+    sentence: n0011
+- id: n0019
+  layer: markdown
+  kind: link
+  span: 40:49
+  parent: n0002
+  attrs:
+    url: https://spec.example
+    text: spec
+    title: Spec Title
+    section: n0007
+    sentence: n0011
+- id: n0020
+  layer: markdown
+  kind: link
+  attrs:
+    url: https://auto.example
+    text: https://auto.example
+- id: n0021
+  layer: markdown
+  kind: link
+  attrs:
+    url: https://bare.example
+    text: https://bare.example
+- id: n0022
+  layer: markdown
+  kind: inline_html
+  span: 88:110
+  parent: n0003
+  attrs:
+    tag: <https://auto.example>
+    section: n0007
+    sentence: n0013
+links:
+- kind: link
+  text: docs
+  url: https://docs.example
+  span: 22:31
+  section: References
+- kind: link
+  text: spec
+  url: https://spec.example
+  span: 40:49
+  section: References
+- kind: link
+  text: https://auto.example
+  url: https://auto.example
+- kind: link
+  text: https://bare.example
+  url: https://bare.example
+spanrefs:
+- id: n0018
+  exact: '[docs][d]'
+  resolved: 22:31
+  ok: true
+- id: n0019
+  exact: '[spec][s]'
+  resolved: 40:49
+  ok: true

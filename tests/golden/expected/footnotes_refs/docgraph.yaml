@@ -1,0 +1,63 @@
+schema: DocGraph/v0.1
+source:
+  format: markdown
+  offset_unit: unicode_code_points
+  sha256: 1e66d85137792726196ad5ad436ad4e6119246562c670ad921359ccb48eabe10
+nodes:
+- id: n0001
+  kind: heading
+  layer: markdown
+  source_span:
+    start: 0
+    end: 12
+  attrs:
+    level: 1
+- id: n0002
+  kind: paragraph
+  layer: markdown
+  source_span:
+    start: 14
+    end: 69
+- id: n0003
+  kind: paragraph
+  layer: markdown
+  source_span:
+    start: 71
+    end: 148
+- id: n0004
+  kind: paragraph
+  layer: markdown
+  source_span:
+    start: 150
+    end: 175
+- id: n0005
+  kind: paragraph
+  layer: markdown
+  source_span:
+    start: 176
+    end: 214
+- id: n0006
+  kind: footnote
+  layer: markdown
+  source_span:
+    start: 216
+    end: 265
+- id: n0007
+  kind: section
+  layer: document
+  source_span:
+    start: 0
+    end: 265
+  attrs:
+    level: 1
+    title: References
+views:
+  toc:
+  - n0007
+  blocks:
+  - n0001
+  - n0002
+  - n0003
+  - n0004
+  - n0005
+  - n0006

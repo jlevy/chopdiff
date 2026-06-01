@@ -248,3 +248,40 @@ def test_code_spans_inline():
     assert len(spans_no) == 0
     spans_yes = doc.collect(kinds={NodeKind.code_span}, recursive=True, inline=True)
     assert len(spans_yes) >= 1
+
+
+def test_collect_layer_filters_cross_layer_duplicates():
+    """A bare paragraph kind appears in both markdown and textual layers; `layer=`
+    selects one, eliminating cross-layer duplicate spans."""
+    td = TextDoc.from_text("A short paragraph.\n\nAnother paragraph.\n")
+
+    both = td.collect(kinds={NodeKind.paragraph}, recursive=True)
+    md_only = td.collect(kinds={NodeKind.paragraph}, recursive=True, layer={Layer.markdown})
+    txt_only = td.collect(kinds={NodeKind.paragraph}, recursive=True, layer={Layer.textual})
+
+    # Default (no layer) returns both layers; each single-layer query is a strict subset.
+    assert len(md_only) == 2
+    assert len(txt_only) == 2
+    assert len(both) == len(md_only) + len(txt_only)
+    assert {n.layer for n in md_only} == {Layer.markdown}
+    # Single-layer results have no duplicate spans.
+    md_spans = [n.source_span for n in md_only]
+    assert len(md_spans) == len(set(md_spans))
+
+
+def test_collect_layer_does_not_silently_drop_sections():
+    """The default (no `layer`) must still surface document-layer sections; restricting
+    to markdown is what hides them (the deliberate, explicit choice)."""
+    td = TextDoc.from_text("# Title\n\nBody paragraph.\n")
+    assert td.collect(kinds={NodeKind.section}, recursive=True)  # default: found
+    assert td.collect(kinds={NodeKind.section}, recursive=True, layer={Layer.markdown}) == []
+
+
+def test_textdoc_base_blocks_matches_free_function():
+    from chopdiff.docs.base_blocks import base_blocks as base_blocks_fn
+
+    text = "- one\n  - a\n  - b\n- two\n"
+    td = TextDoc.from_text(text)
+    method = td.base_blocks()
+    fn = base_blocks_fn(text)
+    assert [(b.block.span, b.depth) for b in method] == [(b.block.span, b.depth) for b in fn]

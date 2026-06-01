@@ -1,0 +1,369 @@
+source:
+  sha256: 613b556081ab78fa2add904a0368d2d19cf6ca55170aaf0e40a466f6bee63d7f
+  length: 347
+  size_summary: 340 bytes (24 lines, 9 paras, 9 sents, 66 words, ~90 tok)
+base_blocks:
+  cover_ok: true
+  uncovered_nonspace: 0
+  blocks:
+  - depth: 0
+    type: heading
+    span: 0:14
+    text: '# Kitchen Sink'
+  - depth: 0
+    type: paragraph
+    span: 16:91
+    text: Intro paragraph with an [inline link](https://a.example) and a `code 
+      span`.
+  - depth: 0
+    type: heading
+    span: 93:101
+    text: '## Lists'
+  - depth: 0
+    type: list_item
+    span: 103:123
+    text: '- top item with text'
+  - depth: 1
+    type: list_item
+    span: 126:138
+    text: '- nested one'
+  - depth: 1
+    type: list_item
+    span: 141:153
+    text: '- nested two'
+  - depth: 0
+    type: paragraph
+    span: 157:188
+    text: trailing text after the sublist
+  - depth: 0
+    type: list_item
+    span: 190:206
+    text: 1. ordered first
+  - depth: 0
+    type: list_item
+    span: 207:224
+    text: 2. ordered second
+  - depth: 0
+    type: heading
+    span: 226:234
+    text: '## Quote'
+  - depth: 0
+    type: blockquote
+    span: 236:306
+    text: |-
+      > A blockquote wrapping a table:
+      >
+      > | a | b |
+      > | - | - |
+      > | 1 | 2 |
+  - depth: 0
+    type: paragraph
+    span: 308:346
+    text: '![an image](https://img.example/x.png)'
+sections:
+- level: 1
+  title: Kitchen Sink
+  span: 0:346
+  words: 66
+- level: 2
+  title: Lists
+  span: 93:224
+  words: 24
+- level: 2
+  title: Quote
+  span: 226:346
+  words: 29
+node_table:
+- id: n0001
+  layer: markdown
+  kind: heading
+  span: 0:14
+  attrs:
+    level: 1
+- id: n0002
+  layer: markdown
+  kind: paragraph
+  span: 16:91
+- id: n0003
+  layer: markdown
+  kind: heading
+  span: 93:101
+  attrs:
+    level: 2
+- id: n0004
+  layer: markdown
+  kind: list
+  span: 103:188
+  attrs:
+    tight: false
+    ordered: false
+- id: n0005
+  layer: markdown
+  kind: list_item
+  span: 103:188
+  parent: n0004
+- id: n0006
+  layer: markdown
+  kind: paragraph
+  span: 103:123
+  parent: n0005
+- id: n0007
+  layer: markdown
+  kind: list
+  span: 126:153
+  parent: n0005
+  attrs:
+    tight: true
+    ordered: false
+- id: n0008
+  layer: markdown
+  kind: list_item
+  span: 126:138
+  parent: n0007
+- id: n0009
+  layer: markdown
+  kind: paragraph
+  span: 126:138
+  parent: n0008
+- id: n0010
+  layer: markdown
+  kind: list_item
+  span: 141:153
+  parent: n0007
+- id: n0011
+  layer: markdown
+  kind: paragraph
+  span: 141:153
+  parent: n0010
+- id: n0012
+  layer: markdown
+  kind: paragraph
+  span: 157:188
+  parent: n0005
+- id: n0013
+  layer: markdown
+  kind: ordered_list
+  span: 190:224
+  attrs:
+    tight: true
+    ordered: true
+- id: n0014
+  layer: markdown
+  kind: list_item
+  span: 190:206
+  parent: n0013
+- id: n0015
+  layer: markdown
+  kind: paragraph
+  span: 190:206
+  parent: n0014
+- id: n0016
+  layer: markdown
+  kind: list_item
+  span: 207:224
+  parent: n0013
+- id: n0017
+  layer: markdown
+  kind: paragraph
+  span: 207:224
+  parent: n0016
+- id: n0018
+  layer: markdown
+  kind: heading
+  span: 226:234
+  attrs:
+    level: 2
+- id: n0019
+  layer: markdown
+  kind: blockquote
+  span: 236:306
+- id: n0020
+  layer: markdown
+  kind: paragraph
+  span: 236:268
+  parent: n0019
+- id: n0021
+  layer: markdown
+  kind: table
+  span: 271:306
+  parent: n0019
+- id: n0022
+  layer: markdown
+  kind: paragraph
+  span: 308:346
+- id: n0023
+  layer: document
+  kind: section
+  span: 0:346
+  attrs:
+    level: 1
+    title: Kitchen Sink
+- id: n0024
+  layer: document
+  kind: section
+  span: 93:224
+  parent: n0023
+  attrs:
+    level: 2
+    title: Lists
+- id: n0025
+  layer: document
+  kind: section
+  span: 226:346
+  parent: n0023
+  attrs:
+    level: 2
+    title: Quote
+- id: n0026
+  layer: textual
+  kind: paragraph
+  span: 0:14
+- id: n0027
+  layer: textual
+  kind: sentence
+  span: 0:14
+  parent: n0026
+  attrs:
+    text: '# Kitchen Sink'
+- id: n0028
+  layer: textual
+  kind: paragraph
+  span: 16:91
+- id: n0029
+  layer: textual
+  kind: sentence
+  span: 16:91
+  parent: n0028
+  attrs:
+    text: Intro paragraph with an [inline link](https://a.example) and a `code 
+      span`.
+- id: n0030
+  layer: textual
+  kind: paragraph
+  span: 93:101
+- id: n0031
+  layer: textual
+  kind: sentence
+  span: 93:101
+  parent: n0030
+  attrs:
+    text: '## Lists'
+- id: n0032
+  layer: textual
+  kind: paragraph
+  span: 103:153
+- id: n0033
+  layer: textual
+  kind: sentence
+  span: 103:153
+  parent: n0032
+  attrs:
+    text: '- top item with text - nested one - nested two'
+- id: n0034
+  layer: textual
+  kind: paragraph
+  span: 157:188
+- id: n0035
+  layer: textual
+  kind: sentence
+  span: 157:188
+  parent: n0034
+  attrs:
+    text: trailing text after the sublist
+- id: n0036
+  layer: textual
+  kind: paragraph
+  span: 190:224
+- id: n0037
+  layer: textual
+  kind: sentence
+  span: 190:224
+  parent: n0036
+  attrs:
+    text: 1. ordered first 2. ordered second
+- id: n0038
+  layer: textual
+  kind: paragraph
+  span: 226:234
+- id: n0039
+  layer: textual
+  kind: sentence
+  span: 226:234
+  parent: n0038
+  attrs:
+    text: '## Quote'
+- id: n0040
+  layer: textual
+  kind: paragraph
+  span: 236:306
+- id: n0041
+  layer: textual
+  kind: sentence
+  span: 236:306
+  parent: n0040
+  attrs:
+    text: '> A blockquote wrapping a table: > > | a | b | > | - | - | > | 1 | 2 |'
+- id: n0042
+  layer: textual
+  kind: paragraph
+  span: 308:346
+- id: n0043
+  layer: textual
+  kind: sentence
+  span: 308:346
+  parent: n0042
+  attrs:
+    text: '![an image](https://img.example/x.png)'
+- id: n0044
+  layer: markdown
+  kind: link
+  span: 40:72
+  parent: n0002
+  attrs:
+    url: https://a.example
+    text: inline link
+    section: n0023
+    sentence: n0029
+- id: n0045
+  layer: markdown
+  kind: code_span
+  span: 79:90
+  parent: n0002
+  attrs:
+    content: code span
+    section: n0023
+    sentence: n0029
+- id: n0046
+  layer: markdown
+  kind: image
+  span: 308:346
+  parent: n0022
+  attrs:
+    url: https://img.example/x.png
+    text: an image
+    section: n0025
+    sentence: n0043
+links:
+- kind: link
+  text: inline link
+  url: https://a.example
+  span: 40:72
+  section: Kitchen Sink
+- kind: image
+  text: an image
+  url: https://img.example/x.png
+  span: 308:346
+  section: Quote
+spanrefs:
+- id: n0044
+  exact: '[inline link](https://a.example)'
+  resolved: 40:72
+  ok: true
+- id: n0045
+  exact: '`code span`'
+  resolved: 79:90
+  ok: true
+- id: n0046
+  exact: '![an image](https://img.example/x.png)'
+  resolved: 308:346
+  ok: true

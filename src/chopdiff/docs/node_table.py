@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING
 
 from flowmark.atomic_spans import iter_atomic_spans
 
-from chopdiff.docs.block_tree import Block, parse_blocks
+from chopdiff.docs.block_tree import Block
 from chopdiff.docs.node import Layer, Node, NodeKind, NodeTable
 
 if TYPE_CHECKING:
@@ -189,21 +189,14 @@ def _build_inline_nodes(
             if sent_nid:
                 attrs["sentence"] = sent_nid
 
-            # Distinguish images from links: `!` immediately precedes the `[`.
-            kind = NodeKind.link
-            start = link.span[0]
-            if start > 0 and source_text[start - 1] == "!":
-                kind = NodeKind.image
-                adjusted_span: tuple[int, int] = (start - 1, link.span[1])
-            else:
-                adjusted_span = link.span
-
+            # `doc.links()` (extract_links) yields links only, never images, so every
+            # span here is a link. Images come from the atomic-span pass below.
             node = Node(
                 id=nid,
-                kind=kind,
+                kind=NodeKind.link,
                 layer=Layer.markdown,
                 parent=parent,
-                source_span=adjusted_span,
+                source_span=link.span,
                 attrs=attrs,
             )
             all_nodes[nid] = node
@@ -343,8 +336,9 @@ def build_node_table(doc: TextDoc) -> NodeTable:
     roots: list[str] = []
     counter: list[int] = [1]
 
-    # Markdown layer: structural blocks.
-    blocks = parse_blocks(source_text)
+    # Markdown layer: structural blocks. Reuse the doc's cached structural parse so the
+    # node table and the `blocks()` view share one parse over the shared offset space.
+    blocks = doc.blocks()
     root_ids = _build_markdown_nodes(blocks, source_text, None, counter, nodes)
     roots.extend(root_ids)
 

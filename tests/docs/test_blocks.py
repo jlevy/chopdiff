@@ -296,3 +296,24 @@ def test_density_invariant_walk_blocks_tallies():
     dense_tally = tally(dense)
     loose_tally = tally(loose)
     assert dense_tally == loose_tally
+
+
+def test_blocks_is_cached_but_returns_fresh_list():
+    """blocks() memoizes its parse (same Block objects) yet returns a fresh list each
+    call, so reordering/filtering the result cannot poison the shared cache."""
+    td = TextDoc.from_text(_DOC)
+    first, second = td.blocks(), td.blocks()
+    assert first is not second
+    assert all(a is b for a, b in zip(first, second, strict=True))
+    # Mutating the returned list does not affect the next call.
+    first.clear()
+    assert len(td.blocks()) > 0
+
+
+def test_sections_reuse_doc_block_cache():
+    """A section's structural slice comes from the doc's cached parse, not a re-parse."""
+    td = TextDoc.from_text(_DOC)
+    doc_blocks = td.blocks()
+    for section in td.sections():
+        for block in section.blocks():
+            assert any(b.span == block.span for b in doc_blocks)
