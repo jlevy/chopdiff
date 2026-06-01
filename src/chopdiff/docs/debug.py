@@ -24,10 +24,10 @@ import hashlib
 from pathlib import Path
 from typing import Any
 
-from frontmatter_format import to_yaml_string
 from strif import atomic_output_file
 
 from chopdiff.docs.base_blocks import base_blocks
+from chopdiff.docs.doc_graph import clean_yaml
 from chopdiff.docs.node import NodeKind
 from chopdiff.docs.sizes import TextUnit
 from chopdiff.docs.span_ref import SpanRef, resolve
@@ -150,7 +150,7 @@ def doc_report_data(doc: TextDoc, *, item_partition_depth: int = 6) -> dict[str,
 
 def doc_report(doc: TextDoc, *, item_partition_depth: int = 6) -> str:
     """The multi-view report as clean, deterministic YAML."""
-    return to_yaml_string(doc_report_data(doc, item_partition_depth=item_partition_depth))
+    return clean_yaml(doc_report_data(doc, item_partition_depth=item_partition_depth))
 
 
 def doc_graph_yaml(doc: TextDoc) -> str:

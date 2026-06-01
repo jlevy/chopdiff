@@ -7,7 +7,6 @@ nodes:
 - id: n0001
   kind: heading
   layer: markdown
-  children: []
   source_span:
     start: 0
     end: 12
@@ -16,42 +15,36 @@ nodes:
 - id: n0002
   kind: paragraph
   layer: markdown
-  children: []
   source_span:
     start: 14
     end: 69
 - id: n0003
   kind: paragraph
   layer: markdown
-  children: []
   source_span:
     start: 71
     end: 148
 - id: n0004
   kind: paragraph
   layer: markdown
-  children: []
   source_span:
     start: 150
     end: 175
 - id: n0005
   kind: paragraph
   layer: markdown
-  children: []
   source_span:
     start: 176
     end: 214
 - id: n0006
   kind: footnote
   layer: markdown
-  children: []
   source_span:
     start: 216
     end: 265
 - id: n0007
   kind: section
   layer: document
-  children: []
   source_span:
     start: 0
     end: 265
@@ -68,8 +61,3 @@ views:
   - n0004
   - n0005
   - n0006
-  links: []
-  sentences: []
-annotations: []
-layout: []
-provenance: []

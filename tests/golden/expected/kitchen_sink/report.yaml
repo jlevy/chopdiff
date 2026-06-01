@@ -32,7 +32,7 @@ base_blocks:
     span: 141:153
     text: '- nested two'
   - depth: 0
-    type: list_item
+    type: paragraph
     span: 157:188
     text: trailing text after the sublist
   - depth: 0

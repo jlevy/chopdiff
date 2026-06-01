@@ -2,14 +2,22 @@
 Sequential base-block partition of a Markdown document.
 
 A base block is a unit of the flat, depth-annotated partition described in
-textdoc-spec section 6. The partition is ordered by source position, spans are
-non-overlapping, and it is a complete cover of the document. Reassembling the
-base blocks in order reproduces the document exactly except for normalized
-paragraph-break whitespace (runs of blank lines between blocks).
+textdoc-spec section 6. The partition is ordered by source position, its spans are
+non-overlapping, and together they cover every non-whitespace character of the
+document exactly once (the gaps are inter-block and structural whitespace). It is the
+view for block-by-block processing and resequencing.
+
+Each base block retains its exact `source_span`, so exact source reconstruction is
+available by slicing the source at those spans (or via the structural `blocks()` tree).
+Reassembling the rendered base-block *text* is lossy for list-item continuation content:
+list markers and continuation indentation are whitespace outside the trimmed spans, so a
+naive text concatenation normalizes them. Reconstruct from offsets when exactness matters.
 
 Leaf/atomic blocks (heading, paragraph, table, code, thematic_break, html, and
-a whole blockquote) are each one base block. Lists decompose so each list item
-at every nesting level is its own base block with increasing depth.
+a whole blockquote) are each one base block. Lists decompose: each list item at every
+nesting level is its own base block with increasing depth, and a list item's continuation
+content (paragraphs after or between nested sublists) is emitted with its own real block
+type at the item's depth — never relabeled `list_item`.
 """
 
 from __future__ import annotations
@@ -60,9 +68,10 @@ def base_blocks(text: str, *, item_partition_depth: int = 6) -> list[BaseBlock]:
 
     Blockquotes are always one base block regardless of depth.
 
-    Invariants: the result is ordered by source position, spans are non-overlapping,
-    and the partition is a complete cover (reassembling reproduces the document
-    except for normalized paragraph-break whitespace between blocks).
+    Invariants: the result is ordered by source position, spans are non-overlapping, and
+    together they cover every non-whitespace character exactly once. Exact source
+    reconstruction is via each block's `source_span` (not by concatenating block text;
+    see the module docstring for the continuation-content caveat).
     """
     blocks = parse_blocks(text)
     result: list[BaseBlock] = []
@@ -112,48 +121,43 @@ def _emit_list_item(
 ) -> None:
     """
     Emit a list item as base blocks. A leaf item (no nested lists, or at the depth
-    limit) emits its full span as one block. Otherwise the item is walked in source
-    order as alternating own-content segments and nested lists: each maximal run of
-    non-list content (before, between, or after sublists) becomes an own-content base
-    block at `depth`, and each nested list's items recurse at `depth + 1`. This keeps
-    the partition a complete, non-overlapping cover — content that follows or sits
-    between sublists is not dropped.
+    limit) emits its full span as one block. Otherwise the item decomposes, in source
+    order, into:
+
+    - one `list_item` head block spanning from the item start (the list marker) through
+      its lead content up to the first nested sublist, at `depth`;
+    - each nested sublist's items, recursed at `depth + 1`;
+    - each *continuation* block (content after or between sublists) emitted with its own
+      real block type (e.g. `paragraph`), at `depth`.
+
+    Continuation content keeps its real type rather than being mislabeled `list_item`, so
+    a consumer can tell a continuation paragraph apart from an independent list item.
+    Spans are non-overlapping and cover every non-whitespace character. Exact source
+    reconstruction is via each block's `source_span` (or the structural `blocks()` tree),
+    not by concatenating base-block text: list-marker and continuation indentation are
+    whitespace outside the trimmed spans.
     """
-    nested_lists = sorted(
-        (c for c in item.children if c.type in _LIST_TYPES), key=lambda c: c.span[0]
-    )
+    nested_lists = [c for c in item.children if c.type in _LIST_TYPES]
     at_depth_limit = max_depth != -1 and current_nesting >= max_depth
 
     if not nested_lists or at_depth_limit:
         out.append(BaseBlock(block=item, depth=depth))
         return
 
-    cursor = item.span[0]
-    for nested in nested_lists:
-        _emit_own_segment(text, item, cursor, nested.span[0], depth, out)
-        for nested_item in nested.children:
-            _emit_list_item(text, nested_item, depth + 1, max_depth, current_nesting + 1, out)
-        cursor = nested.span[1]
-    _emit_own_segment(text, item, cursor, item.span[1], depth, out)
+    # Head: the marker plus lead content up to the first nested sublist, typed list_item.
+    first_nested_start = min(c.span[0] for c in nested_lists)
+    head_end = first_nested_start
+    while head_end > item.span[0] and text[head_end - 1].isspace():
+        head_end -= 1
+    if head_end > item.span[0]:
+        head = Block(type=item.type, span=(item.span[0], head_end), children=[], tight=item.tight)
+        out.append(BaseBlock(block=head, depth=depth))
 
-
-def _emit_own_segment(
-    text: str,
-    item: Block,
-    start: int,
-    end: int,
-    depth: int,
-    out: list[BaseBlock],
-) -> None:
-    """
-    Emit one own-content segment of a list item (the span between two nested lists,
-    or before the first / after the last), trimmed of surrounding whitespace and
-    skipped if empty. The segment keeps the item's type and `tight` flag.
-    """
-    while start < end and text[start].isspace():
-        start += 1
-    while end > start and text[end - 1].isspace():
-        end -= 1
-    if start < end:
-        own_block = Block(type=item.type, span=(start, end), children=[], tight=item.tight)
-        out.append(BaseBlock(block=own_block, depth=depth))
+    # Then, in source order: recurse into each sublist; emit each continuation block
+    # (any non-list child past the head) with its own real type.
+    for child in item.children:
+        if child.type in _LIST_TYPES:
+            for nested_item in child.children:
+                _emit_list_item(text, nested_item, depth + 1, max_depth, current_nesting + 1, out)
+        elif child.span[1] > head_end:
+            out.append(BaseBlock(block=child, depth=depth))

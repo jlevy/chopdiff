@@ -24,6 +24,7 @@ from pathlib import Path
 
 from frontmatter_format import fmf_read
 
+from chopdiff.docs.base_blocks import base_blocks
 from chopdiff.docs.debug import doc_graph_yaml, doc_report, doc_report_data
 from chopdiff.docs.text_doc import TextDoc
 
@@ -106,11 +107,22 @@ def test_model_invariants():
         data = doc_report_data(td, item_partition_depth=depth)
         where = path.stem
 
-        # Base-block partition is a complete cover of all non-whitespace source (P13).
-        assert data["base_blocks"]["cover_ok"], (
-            f"{where}: base_blocks left {data['base_blocks']['uncovered_nonspace']} "
-            "non-whitespace chars uncovered"
-        )
+        # Base-block partition: ordered, pairwise non-overlapping, and covering every
+        # non-whitespace character exactly once (P13) — the documented contract, not just
+        # "some block touches each char".
+        spans = [b.block.span for b in base_blocks(source, item_partition_depth=depth)]
+        assert spans == sorted(spans), f"{where}: base blocks not in source order"
+        for i in range(len(spans) - 1):
+            assert spans[i][1] <= spans[i + 1][0], f"{where}: base-block spans overlap at {i}"
+        cover: dict[int, int] = {}
+        for s, e in spans:
+            for i in range(s, e):
+                cover[i] = cover.get(i, 0) + 1
+        for i, ch in enumerate(source):
+            if not ch.isspace():
+                assert cover.get(i, 0) == 1, (
+                    f"{where}: char {i} ({ch!r}) covered {cover.get(i, 0)}x"
+                )
 
         # Every located inline node round-trips through SpanRef (P6/SpanRef).
         for row in data["spanrefs"]:

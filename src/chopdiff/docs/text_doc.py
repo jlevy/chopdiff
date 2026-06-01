@@ -625,12 +625,13 @@ class TextDoc:
         """
         All links in the document, in document order. Parsed from `source_text` once so
         that reference-style links (`[text][ref]` with `[ref]: url` in a separate block)
-        resolve correctly. Lazily cached so per-section link rollups share one parse. See
-        `Link`.
+        resolve correctly. Lazily cached so per-section link rollups share one parse;
+        returns a fresh shallow copy each call so mutating the result cannot poison the
+        cache (`Link` is frozen, so the shared elements are safe). See `Link`.
         """
         if self._cached_links is None:
             self._cached_links = _block_links(self.source_text or self.reassemble(), 0)
-        return self._cached_links
+        return list(self._cached_links)
 
     def blocks(self) -> list[Block]:
         """
@@ -642,11 +643,14 @@ class TextDoc:
 
         Lazily cached on the immutable `source_text` (sentence edits touch the editing
         view, not `source_text`), so derived views (`sections()`, the node table) can
-        share one parse rather than re-parsing.
+        share one parse rather than re-parsing. Returns a fresh shallow copy of the
+        cached list each call, so reordering/filtering the result cannot poison the
+        shared cache; the `Block` objects themselves are shared and must be treated as
+        read-only.
         """
         if self._cached_blocks is None:
             self._cached_blocks = parse_blocks(self.source_text or self.reassemble())
-        return self._cached_blocks
+        return list(self._cached_blocks)
 
     def base_blocks(self, *, item_partition_depth: int = 6) -> list[BaseBlock]:
         """

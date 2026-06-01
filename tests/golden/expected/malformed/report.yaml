@@ -134,5 +134,3 @@ node_table:
   parent: n0016
   attrs:
     text: '- item with [an unclosed link](http://x.example'
-links: []
-spanrefs: []

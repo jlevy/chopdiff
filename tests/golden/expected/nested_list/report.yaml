@@ -24,7 +24,7 @@ base_blocks:
 
           text between deep sublists at level two
   - depth: 0
-    type: list_item
+    type: paragraph
     span: 146:186
     text: more level-one content after the sublist
   - depth: 0
@@ -185,5 +185,3 @@ node_table:
   parent: n0025
   attrs:
     text: more level-one content after the sublist - second top-level item
-links: []
-spanrefs: []

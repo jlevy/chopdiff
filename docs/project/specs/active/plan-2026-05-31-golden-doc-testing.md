@@ -78,7 +78,8 @@ guarantees (cover, exact spans, round-trip, cross-serialization consistency).
      sections / TOC with rolled-up sizes, the full node table (id, layer, kind, span,
      parent, key attrs), links grouped by section, and SpanRef round-trips for located
      inline nodes.
-   - `doc_graph_yaml(graph: DocGraph) -> str` — the DocGraph as clean YAML.
+   - `doc_graph_yaml(doc: TextDoc) -> str` — the document’s default DocGraph as clean
+     YAML (a convenience over `doc.graph().to_yaml()`).
    - `dump_views(doc: TextDoc, dest: Path) -> None` — write the standard artifact set
      (`report.yaml`, `docgraph.yaml`, `reassembled.md`) for a document.
      The dumper builds plain dicts and serializes with

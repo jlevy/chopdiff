@@ -18,10 +18,12 @@ with layers, the `base_blocks()` sequential partition, `collect()` query primiti
   (textual, markdown, document, synthetic).
   Cross-layer relationships are offset-containment queries over a shared id space.
 - **`base_blocks()` sequential partition.** A flat, depth-annotated, non-overlapping
-  partition of the document into base blocks.
-  Lists decompose so each list item is its own base block with increasing `depth`;
-  blockquotes stay atomic.
-  Reassembling in order reproduces the document.
+  partition whose spans cover every non-whitespace character exactly once.
+  Lists decompose so each list item is its own base block with increasing `depth`
+  (list-item continuation content keeps its own real type, e.g. `paragraph`, not
+  `list_item`); blockquotes stay atomic.
+  Exact source reconstruction is via each block’s `source_span` (not by concatenating
+  block text).
 - **`collect()` query primitive.** One general query
   (`collect(kinds=, where=, recursive=, inline=, layer=)`) at document, section, and
   block scope, superseding `block_type_counts()` convenience accessors.

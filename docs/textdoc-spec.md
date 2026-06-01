@@ -336,8 +336,11 @@ Document manipulation and processing happen base block by base block.
 HTML, and a whole **blockquote**) are each one base block.
 **Lists decompose:** each **list item, at every nesting level, is its own base block**
 with increasing `depth` (flat-with-depth).
-An item holding a nested list contributes its own content at depth *d* and its nested
-items follow at *d+1*, which keeps the partition non-overlapping.
+An item holding a nested list contributes a `list_item` **head** block (the marker and
+lead content) at depth *d*, then its nested items at *d+1*; any **continuation** content
+(paragraphs after or between sublists) follows as base blocks carrying their **own real
+block type** (e.g. `paragraph`) at depth *d* — never relabeled `list_item`, so a
+consumer can tell a continuation paragraph apart from an independent list item.
 
 How deep lists decompose is one numeric parameter,
 `base_blocks(item_partition_depth=6)`:
@@ -352,13 +355,17 @@ How deep lists decompose is one numeric parameter,
 Blockquotes are always one base block regardless of `item_partition_depth`.
 
 **Invariants** (validated and documented): the base-block list is **ordered** by
-position, **non-overlapping** by span, and a **complete cover**. Reassembling the base
-blocks in order reproduces the document **exactly except for normalized paragraph-break
-whitespace** (runs of blank lines between blocks); every base block also retains its
-exact `source_span`, so a byte-for-byte reconstruction is available from offsets when
-needed. A pipeline may process, edit, or **resequence** base blocks and reassemble;
-`depth` is mutable metadata, so promoting a depth-2 item to depth-1 on a move just
-changes its rendered nesting, not a violation.
+position, **non-overlapping** by span, and together the spans **cover every
+non-whitespace character exactly once** (the gaps are inter-block and structural
+whitespace). Every base block retains its exact `source_span`, so **exact source
+reconstruction is by slicing the source at those spans** (or via the structural
+`blocks()` tree). Reassembling the rendered base-block *text* is **lossy for list-item
+continuation content** — list markers and continuation indentation are whitespace
+outside the trimmed spans, so naive text concatenation normalizes them; reconstruct from
+offsets when exactness matters.
+A pipeline may process, edit, or **resequence** base blocks; `depth` is mutable
+metadata, so promoting a depth-2 item to depth-1 on a move just changes its rendered
+nesting, not a violation.
 
 ## 7. Sections and TOC
 

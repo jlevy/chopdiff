@@ -298,10 +298,16 @@ def test_density_invariant_walk_blocks_tallies():
     assert dense_tally == loose_tally
 
 
-def test_blocks_is_cached_on_source():
-    """blocks() memoizes its parse so derived views share one parse."""
+def test_blocks_is_cached_but_returns_fresh_list():
+    """blocks() memoizes its parse (same Block objects) yet returns a fresh list each
+    call, so reordering/filtering the result cannot poison the shared cache."""
     td = TextDoc.from_text(_DOC)
-    assert td.blocks() is td.blocks()
+    first, second = td.blocks(), td.blocks()
+    assert first is not second
+    assert all(a is b for a, b in zip(first, second, strict=True))
+    # Mutating the returned list does not affect the next call.
+    first.clear()
+    assert len(td.blocks()) > 0
 
 
 def test_sections_reuse_doc_block_cache():

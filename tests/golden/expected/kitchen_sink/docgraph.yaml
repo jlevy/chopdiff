@@ -7,7 +7,6 @@ nodes:
 - id: n0001
   kind: heading
   layer: markdown
-  children: []
   source_span:
     start: 0
     end: 14
@@ -16,14 +15,12 @@ nodes:
 - id: n0002
   kind: paragraph
   layer: markdown
-  children: []
   source_span:
     start: 16
     end: 91
 - id: n0003
   kind: heading
   layer: markdown
-  children: []
   source_span:
     start: 93
     end: 101
@@ -55,7 +52,6 @@ nodes:
   kind: paragraph
   layer: markdown
   parent: n0005
-  children: []
   source_span:
     start: 103
     end: 123
@@ -85,7 +81,6 @@ nodes:
   kind: paragraph
   layer: markdown
   parent: n0008
-  children: []
   source_span:
     start: 126
     end: 138
@@ -102,7 +97,6 @@ nodes:
   kind: paragraph
   layer: markdown
   parent: n0010
-  children: []
   source_span:
     start: 141
     end: 153
@@ -110,7 +104,6 @@ nodes:
   kind: paragraph
   layer: markdown
   parent: n0005
-  children: []
   source_span:
     start: 157
     end: 188
@@ -139,7 +132,6 @@ nodes:
   kind: paragraph
   layer: markdown
   parent: n0014
-  children: []
   source_span:
     start: 190
     end: 206
@@ -156,14 +148,12 @@ nodes:
   kind: paragraph
   layer: markdown
   parent: n0016
-  children: []
   source_span:
     start: 207
     end: 224
 - id: n0018
   kind: heading
   layer: markdown
-  children: []
   source_span:
     start: 226
     end: 234
@@ -182,7 +172,6 @@ nodes:
   kind: paragraph
   layer: markdown
   parent: n0019
-  children: []
   source_span:
     start: 236
     end: 268
@@ -190,14 +179,12 @@ nodes:
   kind: table
   layer: markdown
   parent: n0019
-  children: []
   source_span:
     start: 271
     end: 306
 - id: n0022
   kind: paragraph
   layer: markdown
-  children: []
   source_span:
     start: 308
     end: 346
@@ -217,7 +204,6 @@ nodes:
   kind: section
   layer: document
   parent: n0023
-  children: []
   source_span:
     start: 93
     end: 224
@@ -228,7 +214,6 @@ nodes:
   kind: section
   layer: document
   parent: n0023
-  children: []
   source_span:
     start: 226
     end: 346
@@ -263,8 +248,3 @@ views:
   - n0020
   - n0021
   - n0022
-  links: []
-  sentences: []
-annotations: []
-layout: []
-provenance: []

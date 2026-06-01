@@ -7,7 +7,6 @@ nodes:
 - id: n0001
   kind: heading
   layer: markdown
-  children: []
   source_span:
     start: 0
     end: 13
@@ -40,7 +39,6 @@ nodes:
   kind: paragraph
   layer: markdown
   parent: n0003
-  children: []
   source_span:
     start: 15
     end: 31
@@ -71,7 +69,6 @@ nodes:
   kind: paragraph
   layer: markdown
   parent: n0006
-  children: []
   source_span:
     start: 34
     end: 50
@@ -101,7 +98,6 @@ nodes:
   kind: paragraph
   layer: markdown
   parent: n0009
-  children: []
   source_span:
     start: 55
     end: 73
@@ -130,7 +126,6 @@ nodes:
   kind: paragraph
   layer: markdown
   parent: n0012
-  children: []
   source_span:
     start: 80
     end: 97
@@ -138,7 +133,6 @@ nodes:
   kind: paragraph
   layer: markdown
   parent: n0006
-  children: []
   source_span:
     start: 103
     end: 142
@@ -146,7 +140,6 @@ nodes:
   kind: paragraph
   layer: markdown
   parent: n0003
-  children: []
   source_span:
     start: 146
     end: 186
@@ -163,14 +156,12 @@ nodes:
   kind: paragraph
   layer: markdown
   parent: n0016
-  children: []
   source_span:
     start: 187
     end: 210
 - id: n0018
   kind: section
   layer: document
-  children: []
   source_span:
     start: 0
     end: 210
@@ -198,8 +189,3 @@ views:
   - n0015
   - n0016
   - n0017
-  links: []
-  sentences: []
-annotations: []
-layout: []
-provenance: []
