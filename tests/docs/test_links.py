@@ -126,3 +126,28 @@ def test_inline_reference_inline_link_spans():
     assert text[first.span[0] : first.span[1]] == "[first](https://first.example)"
     assert last.span is not None
     assert text[last.span[0] : last.span[1]] == "[last](https://last.example)"
+
+
+def test_autolink_and_bare_url_get_spans():
+    """Autolinks (<url>) and bare URLs must recover spans, not span=None (iw09)."""
+    text = "An <https://auto.example> autolink and a bare https://bare.example URL.\n"
+    doc = TextDoc.from_text(text)
+    by_url = {link.url: link for link in doc.links()}
+    auto = by_url["https://auto.example"]
+    bare = by_url["https://bare.example"]
+    assert auto.span is not None and text[auto.span[0] : auto.span[1]] == "<https://auto.example>"
+    assert bare.span is not None and text[bare.span[0] : bare.span[1]] == "https://bare.example"
+
+
+def test_autolink_is_single_link_node_not_inline_html():
+    """An autolink resolves to one `link` node (deduped from the html_open_tag atomic)."""
+    from chopdiff.docs.node import NodeKind
+
+    doc = TextDoc.from_text("Visit <https://auto.example> now.\n")
+    spans = [(n.kind, n.source_span) for n in doc.node_table().nodes.values() if n.source_span]
+    auto = [
+        (k, s) for k, s in spans if s and "https://auto.example" in doc.source_text[s[0] : s[1]]
+    ]
+    link_nodes = [k for k, _ in auto if k == NodeKind.link]
+    html_nodes = [k for k, _ in auto if k == NodeKind.inline_html]
+    assert link_nodes and not html_nodes

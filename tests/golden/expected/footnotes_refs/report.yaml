@@ -150,22 +150,21 @@ node_table:
 - id: n0020
   layer: markdown
   kind: link
-  attrs:
-    url: https://auto.example
-    text: https://auto.example
-- id: n0021
-  layer: markdown
-  kind: link
-  attrs:
-    url: https://bare.example
-    text: https://bare.example
-- id: n0022
-  layer: markdown
-  kind: inline_html
   span: 88:110
   parent: n0003
   attrs:
-    tag: <https://auto.example>
+    url: https://auto.example
+    text: https://auto.example
+    section: n0007
+    sentence: n0013
+- id: n0021
+  layer: markdown
+  kind: link
+  span: 123:143
+  parent: n0003
+  attrs:
+    url: https://bare.example
+    text: https://bare.example
     section: n0007
     sentence: n0013
 links:
@@ -182,9 +181,13 @@ links:
 - kind: link
   text: https://auto.example
   url: https://auto.example
+  span: 88:110
+  section: References
 - kind: link
   text: https://bare.example
   url: https://bare.example
+  span: 123:143
+  section: References
 spanrefs:
 - id: n0018
   exact: '[docs][d]'
@@ -193,4 +196,12 @@ spanrefs:
 - id: n0019
   exact: '[spec][s]'
   resolved: 40:49
+  ok: true
+- id: n0020
+  exact: <https://auto.example>
+  resolved: 88:110
+  ok: true
+- id: n0021
+  exact: https://bare.example
+  resolved: 123:143
   ok: true
