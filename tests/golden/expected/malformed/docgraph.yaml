@@ -27,28 +27,15 @@ nodes:
 - id: n0004
   kind: section
   layer: document
-  children:
-  - n0005
   source_span:
     start: 0
     end: 234
   attrs:
     level: 1
     title: Malformed
-- id: n0005
-  kind: section
-  layer: document
-  parent: n0004
-  source_span:
-    start: 87
-    end: 234
-  attrs:
-    level: 2
-    title: A heading that is actually inside the open fence?
 views:
   toc:
   - n0004
-  - n0005
   blocks:
   - n0001
   - n0002

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from bisect import bisect_left
 from collections import Counter, defaultdict
 from collections.abc import Callable, Generator, Iterable, Iterator
 from copy import deepcopy
@@ -605,13 +606,28 @@ class TextDoc:
         The heading hierarchy as a tree of top-level `Section`s. A section owns the
         blocks from its heading up to the next heading of equal-or-higher level; deeper
         headings become nested `children`. Content before the first heading (preamble)
-        belongs to no section. Derived from heading levels; no whole-document re-parse.
+        belongs to no section.
+
+        Headings come from the structural parse — top-level `heading` blocks of
+        `blocks()` — not the blank-line paragraph view, so a `#`-prefixed line that the
+        paragraph splitter isolates from inside a fenced code block is not mistaken for a
+        section heading, and headings nested in blockquotes or list items (which are not
+        top-level blocks) do not start document sections.
         """
         source_text = self.source_text or self.reassemble()
+        # Start offsets of top-level structural heading blocks, sorted for bisect lookup.
+        heading_starts = sorted(
+            block.span[0] for block in self.blocks() if block.type == BlockType.heading
+        )
         roots: list[Section] = []
         stack: list[Section] = []
         for para in self.paragraphs:
-            level = para.heading_level()
+            # A paragraph is a heading iff its span contains a top-level structural
+            # heading start (a real ATX/setext heading is one paragraph and one block).
+            para_start, para_end = para.span
+            idx = bisect_left(heading_starts, para_start)
+            is_heading = idx < len(heading_starts) and heading_starts[idx] < para_end
+            level = para.heading_level() if is_heading else None
             if level is None:
                 if stack:
                     stack[-1].content.append(para)
@@ -976,11 +992,14 @@ class TextDoc:
         self,
         scope: str | None = None,
         *,
+        subtree_of: str | None = None,
+        within: str | tuple[int, int] | None = None,
+        overlaps: str | tuple[int, int] | None = None,
+        contains: tuple[int, int] | None = None,
         kinds: set[NodeKind] | None = None,
         where: Callable[[Node], bool] | None = None,
         recursive: bool = False,
         inline: bool = False,
-        contains: tuple[int, int] | None = None,
         layer: set[Layer] | None = None,
     ) -> list[Node]:
         """
@@ -990,11 +1009,14 @@ class TextDoc:
         return _collect(
             self.node_table(),
             scope,
+            subtree_of=subtree_of,
+            within=within,
+            overlaps=overlaps,
+            contains=contains,
             kinds=kinds,
             where=where,
             recursive=recursive,
             inline=inline,
-            contains=contains,
             layer=layer,
         )
 

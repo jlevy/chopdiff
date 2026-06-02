@@ -307,6 +307,51 @@ def test_doc_collect_links_in_section_matches_spec_example():
     assert "https://one.example.com" not in two_urls
 
 
+def test_within_node_id_scopes_cross_layer_without_recursive():
+    """`within=section_id` gathers cross-layer matches inside the section's span and
+    needs no `recursive=True`."""
+    doc = TextDoc.from_text(_RICH_DOC)
+    table = doc.node_table()
+    sec_two = next(
+        n
+        for n in table.nodes.values()
+        if n.kind == NodeKind.section and n.attrs.get("title") == "Section Two"
+    )
+    links = doc.collect(within=sec_two.id, kinds={NodeKind.link})
+    assert {n.attrs.get("url") for n in links} == {"https://two.example.com"}
+
+
+def test_contains_is_deprecated_alias_for_within():
+    doc = TextDoc.from_text(_RICH_DOC)
+    section_one = doc.sections()[0]
+    via_within = doc.collect(within=section_one.span, kinds={NodeKind.link}, recursive=True)
+    via_contains = doc.collect(contains=section_one.span, kinds={NodeKind.link}, recursive=True)
+    assert [n.id for n in via_within] == [n.id for n in via_contains]
+
+
+def test_subtree_of_is_alias_for_scope():
+    doc = TextDoc.from_text(_RICH_DOC)
+    bq = next(n for n in doc.node_table().nodes.values() if n.kind == NodeKind.blockquote)
+    via_scope = doc.collect(scope=bq.id, recursive=True)
+    via_subtree = doc.collect(subtree_of=bq.id, recursive=True)
+    assert [n.id for n in via_scope] == [n.id for n in via_subtree]
+
+
+def test_overlaps_matches_only_intersecting_spans():
+    """`overlaps` keeps nodes whose span intersects the region (not just containment)."""
+    doc = TextDoc.from_text("# Title\n\nBody paragraph here.")
+    # "# Title" is 0:7; the body paragraph starts at 9. A region straddling the gap
+    # intersects both blocks.
+    straddle = doc.collect(overlaps=(5, 12), layer={Layer.markdown}, recursive=True)
+    kinds = {n.kind for n in straddle}
+    assert NodeKind.heading in kinds
+    assert NodeKind.paragraph in kinds
+
+    # A region wholly inside the heading does not reach the paragraph.
+    heading_only = doc.collect(overlaps=(0, 3), layer={Layer.markdown}, recursive=True)
+    assert all(n.kind != NodeKind.paragraph for n in heading_only)
+
+
 def test_textdoc_base_blocks_matches_free_function():
     from chopdiff.docs.base_blocks import base_blocks as base_blocks_fn
 

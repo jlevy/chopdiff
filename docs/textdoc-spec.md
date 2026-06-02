@@ -400,26 +400,30 @@ All calculated over the node table; nothing stores counts.
 The surface is **one general query primitive, no blessed per-kind rollups** (DR-4):
 
 ```python
-collect(scope=None, *, kinds=None, where=None, recursive=False, inline=False,
-        contains=None, layer=None) -> list[Node]
+collect(*, subtree_of=None, within=None, overlaps=None,
+        kinds=None, where=None, recursive=False, inline=False, layer=None) -> list[Node]
 ```
 
 Available as `doc.collect(...)` (and as the free `collect(table, ...)` over a node
-table). `scope=` restricts to a node id's subtree (within-layer parent/children);
-`contains=(start, end)` restricts to nodes whose span falls inside that offset range —
-the cross-layer mechanism, e.g. pass a section's `span` to gather what is inside it.
+table). Two distinct relations select candidates. The **tree** relation `subtree_of=`
+takes a node id and restricts to that node's within-layer parent/child subtree
+(`recursive` descends it). The **interval** relations are cross-layer and offset-based,
+each accepting a node id or `(start, end)` span: `within=` keeps nodes whose span is
+contained in the region (e.g. `within=section_id` for everything inside a section);
+`overlaps=` keeps nodes whose span merely intersects the region. Supplying an interval
+relation scans the whole document, so `within=section_id` needs no `recursive=True`.
 `kinds=` selects by node kind (the typed common case); `where=` is a `Node -> bool`
-predicate escape hatch; `recursive` descends into children; `inline` includes inline
-nodes (an explicit inline `kinds` such as `{NodeKind.link}` implies this); `layer=`
-restricts to parse layers. It returns **nodes** (each with `span`, `attrs`, edges).
-**Counts, values, and groupings are standard Python** over the result, documented with
-worked examples, not separate methods:
+predicate escape hatch; `inline` includes inline nodes (an explicit inline `kinds` such
+as `{NodeKind.link}` implies this); `layer=` restricts to parse layers. It returns
+**nodes** (each with `span`, `attrs`, edges). (`scope=` and `contains=` remain as
+deprecated aliases for `subtree_of=` and `within=`.) **Counts, values, and groupings are
+standard Python** over the result, documented with worked examples, not separate methods:
 
 ```python
 doc.collect(kinds={NodeKind.table}, recursive=True)        # the tables (values + spans)
 len(doc.collect(kinds={NodeKind.table}, recursive=True))   # how many
 Counter(n.kind for n in doc.collect(recursive=True))       # tally by kind
-doc.collect(contains=section.span, kinds={NodeKind.link}, recursive=True)  # links in a section
+doc.collect(within=section_id, kinds={NodeKind.link})      # links in a section
 ```
 
 Slice-by-block-type, per-section rollups, and element rollups are all expressions of

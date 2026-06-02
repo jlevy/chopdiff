@@ -27,37 +27,56 @@ def collect(
     table: NodeTable,
     scope: str | None = None,
     *,
+    subtree_of: str | None = None,
+    within: str | tuple[int, int] | None = None,
+    overlaps: str | tuple[int, int] | None = None,
+    contains: tuple[int, int] | None = None,
     kinds: set[NodeKind] | None = None,
     where: Callable[[Node], bool] | None = None,
     recursive: bool = False,
     inline: bool = False,
-    contains: tuple[int, int] | None = None,
     layer: set[Layer] | None = None,
 ) -> list[Node]:
     """
     Gather nodes from `table` matching the given filters, in document order.
 
-    `scope`: a node id restricting results to that node's subtree (None for
-    the whole document). `kinds`: restrict to these `NodeKind`s (None = any).
-    `where`: additional predicate on each node. `recursive`: when True,
-    descend into children recursively; when False, only direct children of the
-    scope (or roots). `inline`: when True, include inline-kind nodes; when
-    False, exclude them — but an explicit `kinds` selecting inline kinds (e.g.
-    `kinds={NodeKind.link}`) implies inline inclusion, so the common case works
-    without also passing `inline=True`. `contains`: an optional `(start, end)` span;
-    restrict results to nodes whose `source_span` is within that span
-    (offset-containment, the cross-layer query mechanism). `layer`: restrict to
-    these parse layers (None = all layers); since the same span can appear as
-    nodes in several layers (e.g. a `markdown` block and a `textual` paragraph),
-    scope by `layer` to avoid cross-layer duplicates.
+    Two distinct relations select candidates. The tree relation `subtree_of` is a
+    node id restricting results to that node's within-layer parent/child subtree
+    (`recursive` descends the whole subtree, else only direct children). The
+    interval relations are cross-layer and offset-based, each accepting a node id
+    or an explicit `(start, end)` span: `within` keeps nodes whose span is
+    contained in the region (region's span for a node id); `overlaps` keeps nodes
+    whose span intersects the region. With no relation, candidates are the root
+    nodes (or all nodes when `recursive`); supplying an interval relation scans all
+    nodes, so `within=section_id` needs no `recursive=True`.
+
+    `scope` is a deprecated alias for `subtree_of`; `contains` is a deprecated
+    alias for `within`. `kinds`: restrict to these `NodeKind`s (None = any).
+    `where`: additional `Node -> bool` predicate. `inline`: include inline-kind
+    nodes; an explicit `kinds` naming inline kinds (e.g. `{NodeKind.link}`) implies
+    this, so the common case works without `inline=True`. `layer`: restrict to
+    these parse layers (None = all); since the same span can appear in several
+    layers (e.g. a `markdown` block and a `textual` paragraph), scope by `layer` to
+    avoid cross-layer duplicates.
     """
-    if scope is not None:
-        candidates = _subtree_nodes(table, scope, recursive)
-    elif recursive:
-        # Recursive from roots: all nodes in insertion order.
+    subtree_of = subtree_of if subtree_of is not None else scope
+    within_ref = within if within is not None else contains
+
+    want_within = within_ref is not None
+    want_overlaps = overlaps is not None
+    within_region = _resolve_region(table, within_ref)
+    overlaps_region = _resolve_region(table, overlaps)
+    # A relation whose node id has no span matches nothing.
+    if (want_within and within_region is None) or (want_overlaps and overlaps_region is None):
+        return []
+
+    if subtree_of is not None:
+        candidates = _subtree_nodes(table, subtree_of, recursive)
+    elif recursive or want_within or want_overlaps:
+        # Recursive, or any interval relation: consider all nodes in insertion order.
         candidates = list(table.nodes.values())
     else:
-        # Non-recursive, no scope: just the root nodes.
+        # No relation, non-recursive: just the root nodes.
         candidates = [table.nodes[rid] for rid in table.roots if rid in table.nodes]
 
     # An explicit kind selection that names inline kinds implies inline inclusion,
@@ -72,13 +91,10 @@ def collect(
             continue
         if kinds is not None and node.kind not in kinds:
             continue
-        if contains is not None:
-            if node.source_span is None:
-                continue
-            ns, ne = node.source_span
-            cs, ce = contains
-            if not (cs <= ns and ne <= ce):
-                continue
+        if within_region is not None and not _span_within(node.source_span, within_region):
+            continue
+        if overlaps_region is not None and not _span_overlaps(node.source_span, overlaps_region):
+            continue
         if where is not None and not where(node):
             continue
         result.append(node)
@@ -95,6 +111,30 @@ def collect(
 
     result.sort(key=_sort_key)
     return result
+
+
+def _resolve_region(table: NodeTable, ref: str | tuple[int, int] | None) -> tuple[int, int] | None:
+    """Resolve an interval-relation argument to a span: a node id maps to its
+    `source_span` (None if it has none), a tuple is returned as-is."""
+    if ref is None:
+        return None
+    if isinstance(ref, str):
+        return table.nodes[ref].source_span
+    return ref
+
+
+def _span_within(span: tuple[int, int] | None, region: tuple[int, int]) -> bool:
+    """True when `span` is fully contained in `region` (subset-or-equal)."""
+    if span is None:
+        return False
+    return region[0] <= span[0] and span[1] <= region[1]
+
+
+def _span_overlaps(span: tuple[int, int] | None, region: tuple[int, int]) -> bool:
+    """True when `span` intersects `region` (half-open intervals)."""
+    if span is None:
+        return False
+    return span[0] < region[1] and region[0] < span[1]
 
 
 def _subtree_nodes(table: NodeTable, scope_id: str, recursive: bool) -> list[Node]:
