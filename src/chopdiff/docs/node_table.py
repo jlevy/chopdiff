@@ -23,6 +23,7 @@ from typing import TYPE_CHECKING
 from flowmark.atomic_spans import iter_atomic_spans
 
 from chopdiff.docs.block_tree import Block
+from chopdiff.docs.interval_index import IntervalIndex
 from chopdiff.docs.node import Layer, Node, NodeKind, NodeTable
 
 if TYPE_CHECKING:
@@ -109,45 +110,6 @@ def _build_markdown_nodes(
     return child_ids
 
 
-def _find_innermost_block(offset: int, md_blocks: list[tuple[tuple[int, int], str]]) -> str | None:
-    """Find the innermost (narrowest) markdown block node containing `offset`."""
-    best: str | None = None
-    best_width = float("inf")
-    for span, nid in md_blocks:
-        if span[0] <= offset < span[1]:
-            width = span[1] - span[0]
-            if width < best_width:
-                best_width = width
-                best = nid
-    return best
-
-
-def _find_deepest_section(offset: int, nodes: dict[str, Node]) -> str | None:
-    """Find the deepest (narrowest) section node containing `offset`."""
-    best: str | None = None
-    best_width = float("inf")
-    for nid, n in nodes.items():
-        if n.layer == Layer.document and n.kind == NodeKind.section and n.source_span:
-            s, e = n.source_span
-            if s <= offset < e and (e - s) < best_width:
-                best_width = e - s
-                best = nid
-    return best
-
-
-def _find_sentence_node(offset: int, nodes: dict[str, Node]) -> str | None:
-    """Find the narrowest textual-layer sentence node containing `offset`."""
-    best: str | None = None
-    best_width = float("inf")
-    for nid, n in nodes.items():
-        if n.layer == Layer.textual and n.kind == NodeKind.sentence and n.source_span:
-            s, e = n.source_span
-            if s <= offset < e and (e - s) < best_width:
-                best_width = e - s
-                best = nid
-    return best
-
-
 def _build_inline_nodes(
     source_text: str,
     doc: TextDoc,
@@ -162,13 +124,10 @@ def _build_inline_nodes(
     node's parent is its containing block node; section and sentence associations
     are stored in `attrs`.
     """
-    # Sorted list of markdown block nodes for parent lookup.
-    md_blocks: list[tuple[tuple[int, int], str]] = [
-        (n.source_span, nid)
-        for nid, n in all_nodes.items()
-        if n.layer == Layer.markdown and n.source_span is not None
-    ]
-    md_blocks.sort(key=lambda x: (x[0][0], -x[0][1]))
+    # Index the structural/section/sentence nodes built so far (inline nodes are
+    # not yet added) for offset-containment lookups, avoiding a full-table scan per
+    # inline element.
+    index = IntervalIndex.from_nodes(all_nodes)
 
     seen_spans: set[tuple[int, int]] = set()
 
@@ -179,15 +138,15 @@ def _build_inline_nodes(
                 continue
             seen_spans.add(link.span)
             nid = _next_id(counter)
-            parent = _find_innermost_block(link.span[0], md_blocks)
+            parent = index.innermost(link.span[0], Layer.markdown)
             attrs: dict[str, object] = {"url": link.url, "text": link.text}
             if link.title:
                 attrs["title"] = link.title
 
-            section_id = _find_deepest_section(link.span[0], all_nodes)
+            section_id = index.innermost(link.span[0], Layer.document, kind=NodeKind.section)
             if section_id:
                 attrs["section"] = section_id
-            sent_nid = _find_sentence_node(link.span[0], all_nodes)
+            sent_nid = index.innermost(link.span[0], Layer.textual, kind=NodeKind.sentence)
             if sent_nid:
                 attrs["sentence"] = sent_nid
 
@@ -249,7 +208,7 @@ def _build_inline_nodes(
         seen_spans.add(span)
 
         nid = _next_id(counter)
-        parent = _find_innermost_block(span[0], md_blocks)
+        parent = index.innermost(span[0], Layer.markdown)
         inline_attrs: dict[str, object] = {}
         if kind == NodeKind.code_span:
             content = atomic.text
@@ -271,10 +230,10 @@ def _build_inline_nodes(
             if bracket_start >= 0 and bracket_end > bracket_start:
                 inline_attrs["text"] = text[bracket_start + 1 : bracket_end]
 
-        section_id = _find_deepest_section(span[0], all_nodes)
+        section_id = index.innermost(span[0], Layer.document, kind=NodeKind.section)
         if section_id:
             inline_attrs["section"] = section_id
-        sent_nid = _find_sentence_node(span[0], all_nodes)
+        sent_nid = index.innermost(span[0], Layer.textual, kind=NodeKind.sentence)
         if sent_nid:
             inline_attrs["sentence"] = sent_nid
 
