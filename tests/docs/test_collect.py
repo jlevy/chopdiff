@@ -292,16 +292,16 @@ def test_collect_layer_does_not_silently_drop_sections():
 
 
 def test_doc_collect_links_in_section_matches_spec_example():
-    """The spec §9 recipe: doc.collect(contains=section.span, kinds={link}, recursive=True)."""
+    """The spec §9 recipe: doc.collect(within=section.span, kinds={link})."""
     doc = TextDoc.from_text(_RICH_DOC)
     section_one = doc.sections()[0]
     section_two = section_one.children[0]
 
-    one_links = doc.collect(contains=section_one.span, kinds={NodeKind.link}, recursive=True)
+    one_links = doc.collect(within=section_one.span, kinds={NodeKind.link})
     assert "https://one.example.com" in [n.attrs.get("url") for n in one_links]
 
     # A leaf subsection's span scopes to its own content only.
-    two_links = doc.collect(contains=section_two.span, kinds={NodeKind.link}, recursive=True)
+    two_links = doc.collect(within=section_two.span, kinds={NodeKind.link})
     two_urls = [n.attrs.get("url") for n in two_links]
     assert "https://two.example.com" in two_urls
     assert "https://one.example.com" not in two_urls
@@ -350,6 +350,25 @@ def test_overlaps_matches_only_intersecting_spans():
     # A region wholly inside the heading does not reach the paragraph.
     heading_only = doc.collect(overlaps=(0, 3), layer={Layer.markdown}, recursive=True)
     assert all(n.kind != NodeKind.paragraph for n in heading_only)
+
+
+def test_conflicting_alias_pairs_raise():
+    """Passing a deprecated alias together with its modern name is a ValueError, not
+    silent precedence."""
+    doc = TextDoc.from_text(_RICH_DOC)
+    rid = doc.node_table().roots[0]
+    try:
+        doc.collect(scope=rid, subtree_of=rid)
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("expected ValueError for scope + subtree_of")
+    try:
+        doc.collect(contains=(0, 5), within=(0, 5))
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("expected ValueError for contains + within")
 
 
 def test_textdoc_base_blocks_matches_free_function():

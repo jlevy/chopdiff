@@ -396,7 +396,10 @@ block↔inline relationships are node edges, and “links in section 3” is a s
 
 ## 9. Derived Views and Rollups
 
-All calculated over the node table; nothing stores counts.
+All derived from the canonical source/offset substrate (the node table is the
+id-addressed projection used for queries); nothing stores counts. These structural/query
+views describe the parsed `source_text`; after editing, re-parse with
+`from_text(doc.reassemble())` before structural analysis.
 The surface is **one general query primitive, no blessed per-kind rollups** (DR-4):
 
 ```python
@@ -498,13 +501,17 @@ SpanRef = {
 
 - **Quote canonical, offset a hint.** Every mature annotation system (W3C `oa:Choice`,
   Hypothesis) treats the text quote as the durable anchor and offsets as accelerators,
-  because the quote survives edits and re-anchors fuzzily while offsets shift.
+  because the quote survives edits and re-anchors while offsets shift.
   Within one parse the offset is exact (the fast path); across edits the quote recovers
   the target.
-- **Resolution.** model→source is total (a node fills both span and quote); source→model
-  is exact fast-path then quote fuzzy re-anchor, updating offsets.
-- **Persistence** is quote-canonical and source-grounded; an in-memory `node_id` handle
-  is never persisted.
+- **Resolution.** model→source is total (a node fills both span and quote). source→model
+  is an exact offset fast path, then an exact quote search disambiguated by
+  prefix/suffix; `resolve()` is pure (it does not mutate the ref), and
+  `resolve_and_update()` is the explicit variant that writes the recomputed offsets back.
+  Fuzzy/edit-distance re-anchoring is deferred (not yet implemented).
+- **Persistence** is quote-canonical and source-grounded; offsets are an optional
+  position hint (`to_persisted(include_position_hint=...)`, dropped by default) and an
+  in-memory `node_id` handle is never persisted.
 - **Chrome URL Text Fragment convertible:** the quote maps to
   `#:~:text=[prefix-,]exact[,-suffix]` (a lossy projection: prose, word-boundary,
   case-insensitive), generated on demand, never stored.

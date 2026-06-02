@@ -7,6 +7,8 @@ under concurrent access).
 
 from __future__ import annotations
 
+import copy
+import pickle
 import threading
 from concurrent.futures import ThreadPoolExecutor
 
@@ -89,3 +91,32 @@ def test_concurrent_reads_parse_once_and_return_one_table():
 
     assert len(set(table_ids)) == 1
     assert full_doc_parses == 1
+
+
+def test_textdoc_deepcopy_and_pickle_cold_and_warm():
+    """The per-instance lock must not break value semantics: TextDoc stays deep-copyable
+    and picklable, both before and after its caches are warmed (caches/lock are dropped
+    and re-derived on the copy)."""
+    doc = TextDoc.from_text(_TEXT)
+
+    # Cold: no caches warmed yet.
+    assert copy.deepcopy(doc) == doc
+    assert pickle.loads(pickle.dumps(doc)) == doc
+
+    # Warm the caches, then copy/pickle.
+    doc.node_table()
+    doc.blocks()
+    doc.links()
+
+    warm_copy = copy.deepcopy(doc)
+    assert warm_copy == doc
+    assert warm_copy.reassemble() == doc.reassemble()
+    # The copy re-derives its own caches rather than sharing the original's objects.
+    assert warm_copy.node_table() is not doc.node_table()
+    assert [(b.type, b.span) for b in warm_copy.blocks()] == [
+        (b.type, b.span) for b in doc.blocks()
+    ]
+
+    restored = pickle.loads(pickle.dumps(doc))
+    assert restored == doc
+    assert restored.links() == doc.links()

@@ -58,6 +58,50 @@ def test_innermost_kind_filter_selects_section_and_sentence():
     assert table.node(sent_id).kind == NodeKind.sentence
 
 
+def test_innermost_matches_bruteforce_minwidth_scan():
+    """Over a richly nested document, `innermost` returns a narrowest-containing node for
+    every offset and layer/kind, matching a brute-force min-width scan (pins the
+    same-layer-nesting assumption the index relies on)."""
+    rich = (
+        "# Top\n\n"
+        "Intro with a [link](https://example.com) here.\n\n"
+        "> Quote with `code` inside.\n>\n> | a | b |\n> | - | - |\n> | 1 | 2 |\n\n"
+        "## Sub\n\n"
+        "- item one\n- item two with [two](https://example.com/2)\n  - nested\n\n"
+        "Final sentence."
+    )
+    table = build_node_table(TextDoc.from_text(rich))
+    index = IntervalIndex.from_nodes(table.nodes)
+
+    def min_containing_width(offset: int, layer: Layer, kind: NodeKind | None) -> int | None:
+        widths = [
+            n.source_span[1] - n.source_span[0]
+            for n in table.nodes.values()
+            if n.layer == layer
+            and n.source_span is not None
+            and (kind is None or n.kind == kind)
+            and n.source_span[0] <= offset < n.source_span[1]
+        ]
+        return min(widths) if widths else None
+
+    cases = [
+        (Layer.markdown, None),
+        (Layer.document, NodeKind.section),
+        (Layer.textual, NodeKind.sentence),
+    ]
+    for offset in range(len(rich) + 1):
+        for layer, kind in cases:
+            got = index.innermost(offset, layer, kind)
+            expected_width = min_containing_width(offset, layer, kind)
+            if expected_width is None:
+                assert got is None, (offset, layer, kind)
+            else:
+                assert got is not None, (offset, layer, kind)
+                span = table.node(got).source_span
+                assert span is not None
+                assert span[1] - span[0] == expected_width, (offset, layer, kind)
+
+
 def test_innermost_returns_none_outside_any_span():
     table = build_node_table(TextDoc.from_text(_DOC))
     index = IntervalIndex.from_nodes(table.nodes)

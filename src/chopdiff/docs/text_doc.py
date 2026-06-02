@@ -7,7 +7,7 @@ from collections.abc import Callable, Generator, Iterable, Iterator
 from copy import deepcopy
 from dataclasses import dataclass, field
 from functools import cached_property, wraps
-from typing import NamedTuple, TypeAlias, TypeVar
+from typing import NamedTuple, TypeAlias, TypeVar, cast
 
 import regex
 from flowmark import flowmark_markdown, split_sentences_regex
@@ -572,6 +572,23 @@ class TextDoc:
     _cached_blocks: list[Block] | None = field(default=None, init=False, compare=False, repr=False)
     _cached_links: list[Link] | None = field(default=None, init=False, compare=False, repr=False)
 
+    @override
+    def __getstate__(self) -> dict[str, object]:
+        # Pickle/deepcopy only the source data. The reentrant lock is not pickleable and
+        # the derived caches (incl. the marko parse) re-derive on demand, so both are
+        # dropped here and recreated in `__setstate__`. This keeps `TextDoc` copyable and
+        # picklable despite holding a lock.
+        return {"paragraphs": self.paragraphs, "source_text": self.source_text}
+
+    def __setstate__(self, state: dict[str, object]) -> None:
+        self.paragraphs = cast("list[Paragraph]", state["paragraphs"])
+        self.source_text = cast(str, state["source_text"])
+        self._cache_lock = threading.RLock()
+        self._cached_parsed = None
+        self._cached_node_table = None
+        self._cached_blocks = None
+        self._cached_links = None
+
     @_memoized_derivation("_cached_parsed")
     def _parsed(self) -> Document:
         """
@@ -779,8 +796,9 @@ class TextDoc:
     def block_type_counts(self) -> Counter[BlockType]:
         """
         Tally of top-level structural block types in the document. A derived view over
-        `blocks()` (no stored counts), density-invariant by construction — `Counter` over
-        the live block tree, so it always reflects current content.
+        `blocks()` (no stored counts), density-invariant by construction. Like all
+        structural views it describes the parsed `source_text` (see the class contract),
+        not in-place sentence edits; re-parse to tally edited content.
         """
         return Counter(block.type for block in self.blocks())
 

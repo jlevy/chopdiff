@@ -50,8 +50,10 @@ def collect(
     nodes (or all nodes when `recursive`); supplying an interval relation scans all
     nodes, so `within=section_id` needs no `recursive=True`.
 
-    `scope` is a deprecated alias for `subtree_of`; `contains` is a deprecated
-    alias for `within`. `kinds`: restrict to these `NodeKind`s (None = any).
+    `scope` is a deprecated alias for `subtree_of`; `contains` is a deprecated,
+    span-only alias for `within` (use `within` for the node-id form). Passing an
+    alias together with its modern name raises `ValueError`. `kinds`: restrict to
+    these `NodeKind`s (None = any).
     `where`: additional `Node -> bool` predicate. `inline`: include inline-kind
     nodes; an explicit `kinds` naming inline kinds (e.g. `{NodeKind.link}`) implies
     this, so the common case works without `inline=True`. `layer`: restrict to
@@ -59,6 +61,10 @@ def collect(
     layers (e.g. a `markdown` block and a `textual` paragraph), scope by `layer` to
     avoid cross-layer duplicates.
     """
+    if scope is not None and subtree_of is not None:
+        raise ValueError("pass either `subtree_of` or its deprecated alias `scope`, not both")
+    if contains is not None and within is not None:
+        raise ValueError("pass either `within` or its deprecated alias `contains`, not both")
     subtree_of = subtree_of if subtree_of is not None else scope
     within_ref = within if within is not None else contains
 
