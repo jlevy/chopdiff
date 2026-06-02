@@ -7,7 +7,7 @@ from collections.abc import Callable, Generator, Iterable, Iterator
 from copy import deepcopy
 from dataclasses import dataclass, field
 from functools import cached_property, wraps
-from typing import TypeAlias, TypeVar
+from typing import NamedTuple, TypeAlias, TypeVar
 
 import regex
 from flowmark import flowmark_markdown, split_sentences_regex
@@ -71,12 +71,13 @@ def is_markdown_header(markdown: str) -> bool:
     return regex.match(r"^#+ ", markdown) is not None
 
 
-def _heading_element(text: str) -> Heading | SetextHeading | None:
-    parsed = flowmark_markdown().parse(text)
-    for element in parsed.children:
-        if isinstance(element, (Heading, SetextHeading)):
-            return element
-    return None
+class _BlockInfo(NamedTuple):
+    """A paragraph's classification from one parse: its `BlockType` and, for headings,
+    the level and title. Caches the small derived values, not the marko `Document`."""
+
+    block_type: BlockType
+    heading_level: int | None
+    heading_title: str | None
 
 
 def _inline_text(element: object) -> str:
@@ -419,38 +420,38 @@ class Paragraph:
         return FOOTNOTE_DEF_REGEX.match(initial_text) is not None
 
     @cached_property
-    def block_type(self) -> BlockType:
+    def _block_info(self) -> _BlockInfo:
         """
-        Classify this block by its Markdown kind. See `BlockType` for caveats about
-        blank-line splitting (e.g. a list is one block, not one block per item).
-
-        Cached: derived from `original_text`, which does not change after parsing.
+        Classify this paragraph and extract heading level/title from a single parse of
+        `original_text` (which does not change after parsing). Cached; the marko document
+        is not retained. See `BlockType` for blank-line-splitting caveats.
         """
         text = self.original_text.strip()
         if not text:
-            return BlockType.paragraph
+            return _BlockInfo(BlockType.paragraph, None, None)
         parsed = flowmark_markdown().parse(text)
         element = next((el for el in parsed.children if not isinstance(el, BlankLine)), None)
         block_type = block_type_for(element) if element is not None else BlockType.paragraph
         # marko treats a single-line HTML tag as an inline-HTML paragraph rather than
         # an HTML block, so fall back to chopdiff's own markup check for those.
         if block_type == BlockType.paragraph and self.is_markup():
-            return BlockType.html
-        return block_type
+            block_type = BlockType.html
+        if isinstance(element, (Heading, SetextHeading)):
+            return _BlockInfo(block_type, element.level, _inline_text(element).strip())
+        return _BlockInfo(block_type, None, None)
+
+    @property
+    def block_type(self) -> BlockType:
+        """This paragraph's Markdown block kind (see `_block_info`)."""
+        return self._block_info.block_type
 
     def heading_level(self) -> int | None:
         """The Markdown heading level (1-6) if this block is a heading, else None."""
-        if self.block_type != BlockType.heading:
-            return None
-        element = _heading_element(self.original_text.strip())
-        return element.level if element is not None else None
+        return self._block_info.heading_level
 
     def heading_title(self) -> str | None:
         """The heading text without `#` markers if this block is a heading, else None."""
-        if self.block_type != BlockType.heading:
-            return None
-        element = _heading_element(self.original_text.strip())
-        return _inline_text(element).strip() if element is not None else None
+        return self._block_info.heading_title
 
     def links(self) -> list[Link]:
         """Links in this block, in order (identity always; absolute span when recoverable)."""
