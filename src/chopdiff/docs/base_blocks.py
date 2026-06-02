@@ -24,6 +24,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from marko.element import Element
+
 from chopdiff.docs.block_tree import Block, parse_blocks
 from chopdiff.docs.block_types import BlockType
 
@@ -57,7 +59,9 @@ class BaseBlock:
     depth: int
 
 
-def base_blocks(text: str, *, item_partition_depth: int = 6) -> list[BaseBlock]:
+def base_blocks(
+    text: str, *, item_partition_depth: int = 6, parsed: Element | None = None
+) -> list[BaseBlock]:
     """
     Produce the flat, depth-annotated sequential block partition.
 
@@ -68,12 +72,15 @@ def base_blocks(text: str, *, item_partition_depth: int = 6) -> list[BaseBlock]:
 
     Blockquotes are always one base block regardless of depth.
 
+    `parsed` is the marko parse of `text`; pass it to reuse a shared parse, else `text`
+    is parsed here.
+
     Invariants: the result is ordered by source position, spans are non-overlapping, and
     together they cover every non-whitespace character exactly once. Exact source
     reconstruction is via each block's `source_span` (not by concatenating block text;
     see the module docstring for the continuation-content caveat).
     """
-    blocks = parse_blocks(text)
+    blocks = parse_blocks(text, parsed)
     result: list[BaseBlock] = []
     _collect_base_blocks(text, blocks, 0, item_partition_depth, result)
     return result

@@ -66,6 +66,13 @@ with layers, the `base_blocks()` sequential partition, `collect()` query primiti
   and sentence) now goes through a per-layer `IntervalIndex` instead of scanning the
   whole table per inline element, so `build_node_table` is linear rather than
   `O(inline × nodes)` on link-heavy or large documents.
+- **Single shared parse with thread-safe caching.** `blocks()`, `links()`, and
+  `base_blocks()` now derive from one cached marko parse of `source_text` instead of each
+  re-parsing the whole document, roughly halving `node_table()` build time (one full
+  parse instead of two). Document-level derivations are memoized under a per-instance
+  reentrant lock, so concurrent reads compute each cache at most once and observe the
+  same value; reads are otherwise side-effect-free and deterministic. See the `TextDoc`
+  read-time-caching contract.
 
 ### Documentation
 

@@ -1,19 +1,20 @@
 from __future__ import annotations
 
+import threading
 from bisect import bisect_left
 from collections import Counter, defaultdict
 from collections.abc import Callable, Generator, Iterable, Iterator
 from copy import deepcopy
 from dataclasses import dataclass, field
-from functools import cached_property
-from typing import TypeAlias
+from functools import cached_property, wraps
+from typing import TypeAlias, TypeVar
 
 import regex
 from flowmark import flowmark_markdown, split_sentences_regex
 from flowmark.atomic_spans import iter_atomic_spans, split_sentences_with_spans
 from flowmark.markdown_ast import extract_links
 from funlog import tally_calls
-from marko.block import BlankLine, Heading, SetextHeading
+from marko.block import BlankLine, Document, Heading, SetextHeading
 from typing_extensions import override
 
 from chopdiff.docs.base_blocks import BaseBlock, base_blocks
@@ -142,7 +143,7 @@ class Link:
     span: tuple[int, int] | None
 
 
-def _block_links(block_text: str, doc_offset: int) -> list[Link]:
+def _block_links(block_text: str, doc_offset: int, *, parsed: Document | None = None) -> list[Link]:
     """
     Links in a text region. Identity comes from `extract_links` (always correct,
     including reference links resolved against definitions anywhere in the region);
@@ -154,8 +155,14 @@ def _block_links(block_text: str, doc_offset: int) -> list[Link]:
     A forward character cursor (`char_cursor`) advances past each located span so that
     bracketed matches, autolinks, bare URLs, and repeated URLs resolve in document order
     without one no-span identity desyncing the next.
+
+    `parsed` is the marko parse of `block_text`; pass it to reuse a shared parse (the
+    caller guarantees it is the parse of exactly this `block_text`), else it is parsed
+    here.
     """
-    identities = extract_links(flowmark_markdown().parse(block_text))
+    identities = extract_links(
+        parsed if parsed is not None else flowmark_markdown().parse(block_text)
+    )
     # Only `markdown_link` atomics are bracketed `[...]` link constructs; autolinks come
     # through as `html_open_tag` and bare URLs are not atomic, so both are handled by the
     # literal fallback below.
@@ -450,6 +457,43 @@ class Paragraph:
         return _block_links(self.original_text, self.offsets.doc_offset)
 
 
+_DerivedT = TypeVar("_DerivedT")
+
+
+def _memoized_derivation(
+    attr_name: str,
+) -> Callable[[Callable[[TextDoc], _DerivedT]], Callable[[TextDoc], _DerivedT]]:
+    """
+    Memoize a zero-arg `TextDoc` derivation into `attr_name`, computed at most once.
+
+    Filling the cache is the only state change that happens during a read, and it is
+    idempotent and thread-safe: a lock-free fast path returns an already-cached value,
+    otherwise the instance's reentrant lock serializes the first computation so
+    concurrent readers compute it once and all observe the same object. This is sound
+    only because every memoized derivation is a pure, deterministic function of the
+    immutable-after-parse `source_text` (see the `TextDoc` contract); the lock is
+    reentrant so a derivation may call other memoized derivations (e.g. `node_table()`
+    uses `blocks()` and `links()`).
+    """
+
+    def decorator(func: Callable[[TextDoc], _DerivedT]) -> Callable[[TextDoc], _DerivedT]:
+        @wraps(func)
+        def wrapper(self: TextDoc) -> _DerivedT:
+            cached = getattr(self, attr_name)
+            if cached is not None:
+                return cached
+            with self._cache_lock:
+                cached = getattr(self, attr_name)
+                if cached is None:
+                    cached = func(self)
+                    setattr(self, attr_name, cached)
+                return cached
+
+        return wrapper
+
+    return decorator
+
+
 @dataclass
 class TextDoc:
     """
@@ -491,25 +535,58 @@ class TextDoc:
       (their offsets still point into it). Docs built from synthetic content
       (`from_wordtoks`) set it to the reassembled text. `block_at_offset` /
       `sentence_at_offset` map an absolute offset back to the unit that contains it.
+
+    - Read-time thread-safety. The derived views — `blocks()`, `links()`, `sections()`,
+      `base_blocks()`, `node_table()`, `graph()`, `collect()`, and the size/TOC helpers —
+      are read-only with respect to your data: they are pure, deterministic functions of
+      `source_text` and never mutate paragraphs or sentences. The *only* state change
+      during such a read is idempotent population of internal caches. The document-level
+      caches (the shared marko parse, the block tree, the link list, the node table) are
+      filled under a per-instance reentrant lock, so concurrent readers compute each at
+      most once and all observe the same value. A few per-element values (e.g.
+      `Paragraph.block_type`) are memoized with `cached_property`, which is not lock-
+      guarded but is equally idempotent and deterministic — a pure function of that
+      element's immutable `original_text` — so a concurrent recompute is harmless (it
+      yields the same value). Because every derivation is deterministic, the result is
+      identical whether or not a cache was warm and regardless of read order. The
+      *editing* methods (`set_sent`, `replace_str`, `append_sent`, `sub_doc`, `filtered`,
+      etc.) do mutate and are not thread-safe; do not edit a document while another thread
+      reads it. Editing also does not invalidate the source-backed caches (they remain
+      keyed to the parsed `source_text`); re-parse with `from_text(doc.reassemble())` to
+      analyze edited content.
     """
 
     paragraphs: list[Paragraph]
     source_text: str = ""
+    # Reentrant lock guarding idempotent cache population (see the class contract and
+    # `_memoized_derivation`). Per-instance so reads of different documents never contend;
+    # reentrant so a derivation may use other memoized derivations.
+    _cache_lock: threading.RLock = field(
+        default_factory=threading.RLock, init=False, compare=False, repr=False
+    )
+    _cached_parsed: Document | None = field(default=None, init=False, compare=False, repr=False)
     _cached_node_table: NodeTable | None = field(
         default=None, init=False, compare=False, repr=False
     )
     _cached_blocks: list[Block] | None = field(default=None, init=False, compare=False, repr=False)
     _cached_links: list[Link] | None = field(default=None, init=False, compare=False, repr=False)
 
+    @_memoized_derivation("_cached_parsed")
+    def _parsed(self) -> Document:
+        """
+        The single shared marko parse of `source_text`, computed once. `blocks()` and
+        `links()` (and `base_blocks()`) derive from this one parse rather than each
+        re-parsing the whole document. See the class contract on read-time caching.
+        """
+        return flowmark_markdown().parse(self.source_text or self.reassemble())
+
+    @_memoized_derivation("_cached_node_table")
     def node_table(self) -> NodeTable:
         """
-        Lazily build and cache the node table for this document. The table is a pure
-        function of the immutable `source_text`, so it is computed once and reused.
+        The node table for this document, computed once and cached. A pure function of
+        the immutable `source_text` (see the class contract on read-time caching).
         """
-        if self._cached_node_table is None:
-            self._cached_node_table = build_node_table(self)
-        assert self._cached_node_table is not None
-        return self._cached_node_table
+        return build_node_table(self)
 
     @classmethod
     @tally_calls(level="warning", min_total_runtime=5)
@@ -649,36 +726,38 @@ class TextDoc:
             stack.append(section)
         return roots
 
+    @_memoized_derivation("_cached_links")
+    def _link_list(self) -> list[Link]:
+        return _block_links(self.source_text or self.reassemble(), 0, parsed=self._parsed())
+
     def links(self) -> list[Link]:
         """
-        All links in the document, in document order. Parsed from `source_text` once so
-        that reference-style links (`[text][ref]` with `[ref]: url` in a separate block)
-        resolve correctly. Lazily cached so per-section link rollups share one parse;
-        returns a fresh shallow copy each call so mutating the result cannot poison the
+        All links in the document, in document order. Derived from the document's single
+        shared parse (see the class contract on read-time caching), so reference-style
+        links (`[text][ref]` with `[ref]: url` in a separate block) resolve correctly.
+        Returns a fresh shallow copy each call so mutating the result cannot poison the
         cache (`Link` is frozen, so the shared elements are safe). See `Link`.
         """
-        if self._cached_links is None:
-            self._cached_links = _block_links(self.source_text or self.reassemble(), 0)
-        return list(self._cached_links)
+        return list(self._link_list())
+
+    @_memoized_derivation("_cached_blocks")
+    def _block_list(self) -> list[Block]:
+        return parse_blocks(self.source_text or self.reassemble(), self._parsed())
 
     def blocks(self) -> list[Block]:
         """
         The document's structural block tree (opt-in), with exact source spans. Unlike
         the blank-line `paragraphs`, this keeps a fenced code block whole (even with
         internal blank lines) and decomposes a tight list into `list_item`s with nested
-        sublists. Parsed from `source_text` (or the reassembled text if absent). See
-        `chopdiff.docs.block_tree`.
+        sublists. Derived from the document's single shared parse (see the class contract
+        on read-time caching), so `sections()`, `links()`, and the node table all reuse
+        one parse. See `chopdiff.docs.block_tree`.
 
-        Lazily cached on the immutable `source_text` (sentence edits touch the editing
-        view, not `source_text`), so derived views (`sections()`, the node table) can
-        share one parse rather than re-parsing. Returns a fresh shallow copy of the
-        cached list each call, so reordering/filtering the result cannot poison the
-        shared cache; the `Block` objects themselves are shared and must be treated as
-        read-only.
+        Returns a fresh shallow copy of the cached list each call, so reordering/filtering
+        the result cannot poison the shared cache; the `Block` objects themselves are
+        shared and must be treated as read-only.
         """
-        if self._cached_blocks is None:
-            self._cached_blocks = parse_blocks(self.source_text or self.reassemble())
-        return list(self._cached_blocks)
+        return list(self._block_list())
 
     def base_blocks(self, *, item_partition_depth: int = 6) -> list[BaseBlock]:
         """
@@ -687,10 +766,13 @@ class TextDoc:
         (except normalized paragraph-break whitespace). A thin method over the
         `chopdiff.docs.base_blocks.base_blocks` free function; see it for the
         `item_partition_depth` semantics. Distinct from `blocks()`, which is the
-        recursive structural tree (a query view, not a partition).
+        recursive structural tree (a query view, not a partition). Reuses the document's
+        single shared parse.
         """
         return base_blocks(
-            self.source_text or self.reassemble(), item_partition_depth=item_partition_depth
+            self.source_text or self.reassemble(),
+            item_partition_depth=item_partition_depth,
+            parsed=self._parsed(),
         )
 
     def block_type_counts(self) -> Counter[BlockType]:
