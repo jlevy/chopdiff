@@ -317,3 +317,10 @@ def test_sections_reuse_doc_block_cache():
     for section in td.sections():
         for block in section.blocks():
             assert any(b.span == block.span for b in doc_blocks)
+
+
+def test_indented_code_block_preserves_leading_indentation():
+    """An indented code block's span keeps its syntax-bearing leading indentation (2l5j)."""
+    text = "Para.\n\n    indented code\n    second line\n"
+    code = next(b for b in TextDoc.from_text(text).blocks() if b.type == BlockType.code)
+    assert text[code.span[0] : code.span[1]] == "    indented code\n    second line"

@@ -130,8 +130,9 @@ class Link:
     A link found in a document. `text`, `url`, and `title` are the parsed identity
     (reference links resolved, autolinks and bare URLs included), via flowmark's
     `markdown_ast.extract_links`. `span` is the link's absolute `[start, end)` offsets in
-    the source when they could be recovered (the common inline/autolink case), else
-    `None` — e.g. reference links, whose rendered text has no contiguous source span.
+    the source when they could be recovered: inline links, autolinks (`<url>`), bare URLs,
+    and reference links whose bracketed use is locatable all get a span. `span` is `None`
+    only when the construct cannot be located in the source.
     """
 
     text: str
@@ -140,58 +141,69 @@ class Link:
     span: tuple[int, int] | None
 
 
-# Atomic-span pattern names (from flowmark.atomic_spans) that correspond to links.
-_LINK_ATOMIC_NAMES = frozenset({"markdown_link", "autolink", "bare_url"})
-
-
 def _block_links(block_text: str, doc_offset: int) -> list[Link]:
     """
     Links in a text region. Identity comes from `extract_links` (always correct,
     including reference links resolved against definitions anywhere in the region);
-    spans are recovered by aligning, in document order, with the link-like atomic spans
-    from `iter_atomic_spans`. Reference links and other identities `iter_atomic_spans`
-    cannot locate keep their identity but get `span=None`.
+    spans are recovered by aligning, in document order, with the bracketed link atomic
+    spans from `iter_atomic_spans` (`markdown_link`), then a forward literal search for
+    autolinks and bare URLs (which flowmark does not emit as link atomics). Identities
+    that still cannot be located keep their identity but get `span=None`.
+
+    A forward character cursor (`char_cursor`) advances past each located span so that
+    bracketed matches, autolinks, bare URLs, and repeated URLs resolve in document order
+    without one no-span identity desyncing the next.
     """
     identities = extract_links(flowmark_markdown().parse(block_text))
+    # Only `markdown_link` atomics are bracketed `[...]` link constructs; autolinks come
+    # through as `html_open_tag` and bare URLs are not atomic, so both are handled by the
+    # literal fallback below.
     link_spans = [
         span
         for span in iter_atomic_spans(block_text)
-        if span.is_atomic and span.name in _LINK_ATOMIC_NAMES
+        if span.is_atomic and span.name == "markdown_link"
     ]
-    # For each identity, scan forward through atomic spans to find a matching one.
-    # A match requires the identity's URL to appear in the atomic span text (for
-    # inline links, autolinks, bare URLs), or the identity's text to appear in the
-    # span (for reference links where the URL is in a separate definition). Atomic
-    # spans that correspond to images or reference definitions (no identity match)
-    # are skipped.
     used: set[int] = set()
     result: list[Link] = []
     scan_start = 0
+    char_cursor = 0
     for idn in identities:
-        located = None
+        located: tuple[int, int] | None = None
+
+        # Bracketed links: match the next unused `markdown_link` atomic by URL (inline)
+        # or by link text (reference links, where the URL is in a separate definition).
         for j in range(scan_start, len(link_spans)):
             if j in used:
                 continue
             sp = link_spans[j]
-            # Match: URL in span text (inline/autolink/bare), or link text in span
-            # text (reference links like [Docs][d] where URL is elsewhere).
-            if idn.url and idn.url in sp.text:
-                located = sp
+            if (idn.url and idn.url in sp.text) or (
+                idn.text and idn.text in sp.text and sp.text.startswith("[")
+            ):
+                located = (sp.start, sp.end)
                 used.add(j)
                 scan_start = j + 1
                 break
-            if idn.text and idn.text in sp.text and sp.text.startswith("["):
-                located = sp
-                used.add(j)
-                scan_start = j + 1
-                break
+
+        # Autolinks / bare URLs: locate the verbatim URL forward from the cursor; include
+        # the surrounding angle brackets when present (an autolink `<url>`).
+        if located is None and idn.url:
+            idx = block_text.find(idn.url, char_cursor)
+            if idx >= 0:
+                start, end = idx, idx + len(idn.url)
+                if (
+                    start > 0
+                    and block_text[start - 1] == "<"
+                    and end < len(block_text)
+                    and block_text[end] == ">"
+                ):
+                    start, end = start - 1, end + 1
+                located = (start, end)
+
         if located is not None:
+            char_cursor = max(char_cursor, located[1])
             result.append(
                 Link(
-                    idn.text,
-                    idn.url,
-                    idn.title,
-                    (doc_offset + located.start, doc_offset + located.end),
+                    idn.text, idn.url, idn.title, (doc_offset + located[0], doc_offset + located[1])
                 )
             )
         else:
