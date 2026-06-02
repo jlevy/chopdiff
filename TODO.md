@@ -1,7 +1,8 @@
 # chopdiff: Open Work
 
 A concise index of planned work, the specs that describe it, and the beads that track
-it. Status as of 2026-05-29 (v0.4.0 in review on PR #12).
+it. Status as of 2026-06-02 (v0.4.0 — block-aware model + DocGraph Phase 1 — code-complete
+on branch, pending release; latest published release is v0.3.0).
 
 Beads are tracked with `tbd` (git-native, on the `tbd-sync` branch). View them with:
 
@@ -19,27 +20,30 @@ tbd show <id>      # details + working notes (e.g. tbd show chopdiff-1x4u)
 
 ### Flexible Unified Document Model (DocGraph): `docs/project/specs/active/`
 
-Design settled, ready to build. A source-grounded, JSON-serializable `DocGraph` projected
-from `TextDoc`: a stable node table (each node tagged with its parse **layer**) and derived
-views, and one general `collect()` query (values/counts/groupings via standard Python) at any
-scope (doc/section/block), recursive, over blocks and inline items, with the source-canonical
+**Phase 1 code-complete (pending release with v0.4.0); later phases remain.** A
+source-grounded, JSON-serializable `DocGraph` projected from `TextDoc`: a stable node
+table (each node tagged with its parse **layer**) and derived views, and one general
+`collect()` query (values/counts/groupings via standard Python) at any scope
+(doc/section/block), recursive, over blocks and inline items, with the source-canonical
 `SpanRef` reference model and composable `include`/`detail` serialization. The
 **layered-parsing lens** (E9) frames the views as parse layers (textual / markdown /
 document / synthetic) over one offset space, with cross-layer relationships as
-offset-containment queries; the synthetic (marker-tag) layer and future cross-layer structural
-edits are later phases that drop in via four cheap Phase-1 hooks. Subsumes the multi-level
-block-tallies work.
+offset-containment queries. Subsumes the multi-level block-tallies work.
 
+- Shipped in Phase 1 (on branch): recursive layer-tagged node table, `base_blocks()`,
+  `collect()` with `subtree_of=`/`within=`/`overlaps=` relations, `SpanRef`
+  (exact-quote resolution), the `DocGraph` Pydantic projection (`DocGraph/v0.1`),
+  `to_yaml()`, and the `chopdiff.docs.debug` dumper.
+- Remaining (later phases, via the four Phase-1 hooks): the synthetic (marker-tag)
+  layer, cross-layer structural edits, and `SpanRef` fuzzy re-anchoring.
 - Spec: [plan-2026-05-29-unified-document-model.md](docs/project/specs/active/plan-2026-05-29-unified-document-model.md)
-  (status: **all nine decisions settled (DR-1..DR-6) and E9 layered lens; Phase 0
-  design-of-record current; no code yet**). Design of record:
-  [docs/textdoc-spec.md](docs/textdoc-spec.md).
+  (status: **decisions settled (DR-1..DR-6) and E9 layered lens; Phase 1 implemented**).
+  Design of record: [docs/textdoc-spec.md](docs/textdoc-spec.md).
 - Research: the [document-model survey](docs/project/research/research-2026-05-29-document-model.md),
   [span-references](docs/project/research/research-2026-05-30-span-references.md), and
   [multi-layer parsing](docs/project/research/research-2026-05-30-multilayer-parsing.md) briefs.
-- Beads: epic `chopdiff-8q8q`; decisions gate `chopdiff-0vy6` closed. **Next: break Phase 1
-  (recursive node model, `layer` field, `collect()`, offset-containment, and `SpanRef`) into
-  implementation beads.**
+- Beads: epic `chopdiff-8q8q`; decisions gate `chopdiff-0vy6` closed. **Next: break the
+  remaining phases (synthetic layer, cross-layer edits, fuzzy re-anchoring) into beads.**
 
 ### Robustness Hardening: `docs/project/specs/active/`
 
