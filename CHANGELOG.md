@@ -4,15 +4,71 @@ All notable changes to chopdiff are documented here.
 This project uses [semantic versioning](https://semver.org/); while pre-1.0, breaking
 changes bump the **minor** version (see `docs/publishing.md`).
 
-## Unreleased
+## v0.3.1
 
-Adds the DocGraph node model and its supporting infrastructure: a recursive node table
-with layers, the `base_blocks()` sequential partition, `collect()` query primitive,
-`SpanRef` span-reference type, and the `DocGraph` Pydantic projection (schema
-“DocGraph/v0.1”).
+Versioned as a patch despite the breaking changes below: they touch only the block-type
+and sentence-splitting surface introduced in v0.3.0, which is very new and not yet relied
+upon. (The pre-1.0 policy otherwise bumps the minor version for breaking changes.)
+
+Makes `TextDoc` block-aware end to end and adds the DocGraph node model on top of it.
+The block-aware layer gives an exact-span structural block tree, a section hierarchy
+with rolled-up stats, inline-link rollups, and link-aware sentence spans. The DocGraph
+layer then adds a recursive, layer-tagged node table, the `base_blocks()` sequential
+partition, the `collect()` query primitive, the `SpanRef` span-reference type, and the
+`DocGraph` Pydantic projection (schema “DocGraph/v0.1”).
+The source text and its offset space are canonical; every view (the structural block
+tree, sections, block-type slices, tallies, and the node table) is a projection over
+that substrate: no stored counts.
+Block boundaries and spans now come straight from flowmark’s parser, so chopdiff carries
+no Markdown block-detection regex of its own.
+
+### Breaking Changes
+
+- **`BlockType.list` is now bullet-only; ordered lists are `BlockType.ordered_list`.**
+  Ordered-ness is carried from marko’s `List.ordered`. Callers that matched
+  `BlockType.list` to cover *both* list kinds now miss ordered lists; match
+  `{BlockType.list, BlockType.ordered_list}` for either.
+- **Default sentence splitting is now span-aware.** `TextDoc.from_text()` with the
+  default splitter now routes through `flowmark.atomic_spans.split_sentences_with_spans`
+  instead of calling `split_sentences_regex` directly, so sentences never bisect a link,
+  code span, or autolink.
+  Sentence boundaries can therefore differ from v0.3.0 for text containing those
+  constructs. `default_sentence_splitter` is unchanged and passing an explicit splitter
+  preserves the previous behavior.
 
 ### New Features
 
+- **Opt-in structural block tree with exact spans.** `TextDoc.blocks()` returns a
+  `Block(type, span, children, tight)` tree whose boundaries and `[start, end)` spans
+  come directly from flowmark’s parser (marko’s own source positions), so a fenced code
+  block stays whole through internal blank lines and a list always decomposes into
+  `list_item`s with nested sublists.
+  The tree is **density-invariant**: tight and loose spacing of the same list produce
+  identical block/item counts; `Block.tight` records the CommonMark spacing.
+- **Per-section structure and tallies.** `Section.blocks()` scopes the structural tree
+  to a section’s own content (document-absolute spans), and
+  `Section.block_type_counts()` / `TextDoc.block_type_counts()` give derived
+  `Counter[BlockType]` tallies over the live tree (no stored counts).
+  `Section.content` holds the section’s own paragraphs (renamed from `Section.blocks`,
+  which is now the structural method).
+- **Sections, TOC, and rolled-up size stats.** `TextDoc.sections()` returns a tree of
+  `Section`s over the heading hierarchy; `TextDoc.toc()` returns a flat
+  `(level, title, span)` list.
+  `Section.size(unit, subtree=True|False)`, `Section.size_summary()`, and
+  `TextDoc.section_size_tree(units=…)` roll up sizes per section in any `TextUnit`.
+- **Exact `[start, end)` spans on paragraphs and sentences.** Every `Paragraph` and
+  `Sentence` exposes a document-relative `span`; `TextDoc.source_text` is retained so
+  each unit’s `original_text` round-trips into the source.
+  `TextDoc.block_at_offset(o)` and `sentence_at_offset(o)` invert spans.
+- **Inline-link rollups and link-aware sentence spans.** `Link(text, url, title, span)`
+  via `Paragraph.links()`, `Section.links()`, and `TextDoc.links()`—identity from
+  flowmark’s `extract_links` (reference links resolve across the whole document), spans
+  recovered from `iter_atomic_spans`. The default sentence splitter is now
+  `flowmark.atomic_spans.split_sentences_with_spans`, so sentence spans are exact for
+  all content and never bisect a link, code span, or autolink.
+- **More block types:** `BlockType` gains `ordered_list`, `list_item`, and
+  `thematic_break`.
+- **New public exports:** `Block`, `Link`, `Section`.
 - **Recursive node table with layers.** The canonical node table fully populates
   container children (blockquotes, list items) and tags each node with its parse `layer`
   (textual, markdown, document, synthetic).
@@ -74,6 +130,16 @@ with layers, the `base_blocks()` sequential partition, `collect()` query primiti
   same value; reads are otherwise side-effect-free and deterministic. See the `TextDoc`
   read-time-caching contract.
 
+### Internal
+
+- **Dropped chopdiff’s regex block scanner.** `TextDoc.blocks()` and
+  `Paragraph.block_type` now walk flowmark’s annotated parse tree and map marko classes
+  to `BlockType` through a single table; the per-line regex scanner, `classify_block`,
+  and the cached `markdown_parser` singleton are gone (net negative code).
+  Because chopdiff no longer makes block-boundary decisions, two earlier bugs are fixed
+  by construction: reference links resolve across block boundaries, and adjacent blocks
+  with no blank line between them split correctly.
+
 ### Documentation
 
 - **Grounded design principles.** `docs/textdoc-spec.md` now leads with an explicit,
@@ -90,6 +156,10 @@ with layers, the `base_blocks()` sequential partition, `collect()` query primiti
 - New runtime dependency: `frontmatter-format>=0.3.0` (first-party; brings
   `ruamel-yaml`). Used for clean deterministic YAML (`DocGraph.to_yaml`, the debug
   dumper) and the Markdown-with-frontmatter golden-test corpus.
+- Requires `flowmark>=0.7.1` for the authoritative block spans
+  ([jlevy/flowmark#52](https://github.com/jlevy/flowmark/pull/52)); recorded as a
+  reviewed first-party cool-off exception in `SUPPLY-CHAIN-SECURITY.md`. No new
+  transitive dependencies over 0.7.0.
 
 ### Compatibility
 
@@ -98,91 +168,15 @@ with layers, the `base_blocks()` sequential partition, `collect()` query primiti
   `Layer`, `Detail`, `Views`, `build_doc_graph`, …) without removing or renaming any
   existing export. `Section.block_type_counts()` / `TextDoc.block_type_counts()` are
   retained; `collect()` is the preferred general query, not a replacement.
-- **Net release vs. v0.3.0.** Taken together with v0.4.0 (below), the upcoming release
-  removes no public symbol present in v0.3.0; every new capability is reached through
-  new methods, types, and exports.
-  The only behavior changes an existing caller can observe are the two noted under
-  v0.4.0: `BlockType.list` is now bullet-only, and default sentence splitting is now
-  span-aware (boundaries may differ; see below).
-
-## v0.4.0
-
-Makes `TextDoc` block-aware end to end: an exact-span structural block tree, a section
-hierarchy with rolled-up stats, inline-link rollups, and link-aware sentence spans.
-The source text and its offset space are canonical; every view (the structural block
-tree, sections, block-type slices, tallies) is a projection over that substrate: no
-stored counts.
-Block boundaries and spans now come straight from flowmark’s parser, so chopdiff carries
-no Markdown block-detection regex of its own.
-
-### Breaking Changes
-
-- **`BlockType.list` is now bullet-only; ordered lists are `BlockType.ordered_list`.**
-  Ordered-ness is carried from marko’s `List.ordered`. Callers that matched
-  `BlockType.list` to cover *both* list kinds now miss ordered lists; match
-  `{BlockType.list, BlockType.ordered_list}` for either.
-- **Default sentence splitting is now span-aware.** `TextDoc.from_text()` with the
-  default splitter now routes through `flowmark.atomic_spans.split_sentences_with_spans`
-  instead of calling `split_sentences_regex` directly, so sentences never bisect a link,
-  code span, or autolink.
-  Sentence boundaries can therefore differ from v0.3.0 for text containing those
-  constructs. `default_sentence_splitter` is unchanged and passing an explicit splitter
-  preserves the previous behavior.
-
-### New Features
-
-- **Opt-in structural block tree with exact spans.** `TextDoc.blocks()` returns a
-  `Block(type, span, children, tight)` tree whose boundaries and `[start, end)` spans
-  come directly from flowmark’s parser (marko’s own source positions), so a fenced code
-  block stays whole through internal blank lines and a list always decomposes into
-  `list_item`s with nested sublists.
-  The tree is **density-invariant**: tight and loose spacing of the same list produce
-  identical block/item counts; `Block.tight` records the CommonMark spacing.
-- **Per-section structure and tallies.** `Section.blocks()` scopes the structural tree
-  to a section’s own content (document-absolute spans), and
-  `Section.block_type_counts()` / `TextDoc.block_type_counts()` give derived
-  `Counter[BlockType]` tallies over the live tree (no stored counts).
-  `Section.content` holds the section’s own paragraphs (renamed from `Section.blocks`,
-  which is now the structural method).
-- **Sections, TOC, and rolled-up size stats.** `TextDoc.sections()` returns a tree of
-  `Section`s over the heading hierarchy; `TextDoc.toc()` returns a flat
-  `(level, title, span)` list.
-  `Section.size(unit, subtree=True|False)`, `Section.size_summary()`, and
-  `TextDoc.section_size_tree(units=…)` roll up sizes per section in any `TextUnit`.
-- **Exact `[start, end)` spans on paragraphs and sentences.** Every `Paragraph` and
-  `Sentence` exposes a document-relative `span`; `TextDoc.source_text` is retained so
-  each unit’s `original_text` round-trips into the source.
-  `TextDoc.block_at_offset(o)` and `sentence_at_offset(o)` invert spans.
-- **Inline-link rollups and link-aware sentence spans.** `Link(text, url, title, span)`
-  via `Paragraph.links()`, `Section.links()`, and `TextDoc.links()`—identity from
-  flowmark’s `extract_links` (reference links resolve across the whole document), spans
-  recovered from `iter_atomic_spans`. The default sentence splitter is now
-  `flowmark.atomic_spans.split_sentences_with_spans`, so sentence spans are exact for
-  all content and never bisect a link, code span, or autolink.
-- **More block types:** `BlockType` gains `ordered_list`, `list_item`, and
-  `thematic_break`.
-- **New public exports:** `Block`, `Link`, `Section`.
-
-### Internal
-
-- **Dropped chopdiff’s regex block scanner.** `TextDoc.blocks()` and
-  `Paragraph.block_type` now walk flowmark’s annotated parse tree and map marko classes
-  to `BlockType` through a single table; the per-line regex scanner, `classify_block`,
-  and the cached `markdown_parser` singleton are gone (net negative code).
-  Because chopdiff no longer makes block-boundary decisions, two earlier bugs are fixed
-  by construction: reference links resolve across block boundaries, and adjacent blocks
-  with no blank line between them split correctly.
-
-### Dependencies
-
-- Requires `flowmark>=0.7.1` for the authoritative block spans
-  ([jlevy/flowmark#52](https://github.com/jlevy/flowmark/pull/52)); recorded as a
-  reviewed first-party cool-off exception in `SUPPLY-CHAIN-SECURITY.md`. No new
-  transitive dependencies over 0.7.0.
+- **Net release vs. v0.3.0.** This release removes no public symbol present in v0.3.0;
+  every new capability is reached through new methods, types, and exports.
+  The only behavior changes an existing caller can observe are the two listed under
+  Breaking Changes above: `BlockType.list` is now bullet-only, and default sentence
+  splitting is now span-aware (boundaries may differ).
 
 ### Full Changelog
 
-https://github.com/jlevy/chopdiff/compare/v0.3.0...v0.4.0
+https://github.com/jlevy/chopdiff/compare/v0.3.0...v0.3.1
 
 ## v0.3.0
 

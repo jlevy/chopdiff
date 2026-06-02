@@ -4,7 +4,7 @@
 Python core and the `DocGraph` serialized projection.
 The design is settled (decision records DR-1..DR-6 in
 [`plan-2026-05-29-unified-document-model.md`](project/specs/active/plan-2026-05-29-unified-document-model.md));
-see §14 for what is implemented (v0.4.0) versus in progress.
+see §14 for what is implemented (v0.3.1) versus in progress.
 Dated plans under `docs/project/specs/` describe the incremental work toward this
 design.
 
@@ -432,7 +432,7 @@ doc.collect(within=section_id, kinds={NodeKind.link})      # links in a section
 Slice-by-block-type, per-section rollups, and element rollups are all expressions of
 this one primitive; relationships are node edges.
 There are no `tables()`/`code_blocks()` shortcuts to maintain.
-(The v0.4.0 `block_type_counts()` convenience accessors are superseded by `collect()`;
+(The v0.3.1 `block_type_counts()` convenience accessors are superseded by `collect()`;
 see §14.)
 
 **Query vs. partition; do not conflate.** `collect()` is a *query*: it gathers matching
@@ -602,11 +602,12 @@ Non-obvious choices, each grounded in a principle:
 
 ## 14. Implementation Status
 
-- **Shipped in v0.4.0:** exact spans; the opt-in structural block tree `blocks()`
-  (boundaries and spans from flowmark, no regex scanner); sections/TOC/size rollups;
-  inline-link rollups and link-aware sentences; `ordered_list`/density-invariant lists;
-  per-section blocks; and **top-level** `block_type_counts()`.
-- **Implemented (post-v0.4.0):** the recursive node table (containers fully populate
+- **Shipping in v0.3.1 (block-aware layer):** exact spans; the opt-in structural block
+  tree `blocks()` (boundaries and spans from flowmark, no regex scanner);
+  sections/TOC/size rollups; inline-link rollups and link-aware sentences;
+  `ordered_list`/density-invariant lists; per-section blocks; and **top-level**
+  `block_type_counts()`.
+- **Also in v0.3.1 (DocGraph layer):** the recursive node table (containers fully populate
   children, including blockquote and list-item block children); `base_blocks()`
   sequential partition with its non-overlapping cover invariant; the single `collect()`
   primitive (superseding `block_type_counts()`; migration:
@@ -629,7 +630,7 @@ Non-obvious choices, each grounded in a principle:
   [`research-2026-05-30-span-references.md`](project/research/research-2026-05-30-span-references.md),
   and the layered-parsing brief
   [`research-2026-05-30-multilayer-parsing.md`](project/research/research-2026-05-30-multilayer-parsing.md).
-- Completed block-aware plan (v0.4.0):
+- Completed block-aware plan (shipping in v0.3.1):
   [`plan-2026-05-26-block-aware-doc.md`](project/specs/archive/plan-2026-05-26-block-aware-doc.md).
 - flowmark v0.7.1 API: `flowmark.atomic_spans` (`iter_atomic_spans`,
   `split_sentences_with_spans`, named `AtomicSpan`s) and `flowmark.markdown_ast`
