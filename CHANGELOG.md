@@ -4,7 +4,11 @@ All notable changes to chopdiff are documented here.
 This project uses [semantic versioning](https://semver.org/); while pre-1.0, breaking
 changes bump the **minor** version (see `docs/publishing.md`).
 
-## v0.4.0
+## v0.3.1
+
+Versioned as a patch despite the breaking changes below: they touch only the block-type
+and sentence-splitting surface introduced in v0.3.0, which is very new and not yet relied
+upon. (The pre-1.0 policy otherwise bumps the minor version for breaking changes.)
 
 Makes `TextDoc` block-aware end to end and adds the DocGraph node model on top of it.
 The block-aware layer gives an exact-span structural block tree, a section hierarchy
@@ -172,7 +176,7 @@ no Markdown block-detection regex of its own.
 
 ### Full Changelog
 
-https://github.com/jlevy/chopdiff/compare/v0.3.0...v0.4.0
+https://github.com/jlevy/chopdiff/compare/v0.3.0...v0.3.1
 
 ## v0.3.0
 

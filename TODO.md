@@ -1,7 +1,7 @@
 # chopdiff: Open Work
 
 A concise index of planned work, the specs that describe it, and the beads that track
-it. Status as of 2026-06-02 (v0.4.0 — block-aware model + DocGraph Phase 1 — code-complete
+it. Status as of 2026-06-02 (v0.3.1 — block-aware model + DocGraph Phase 1 — code-complete
 on branch, pending release; latest published release is v0.3.0).
 
 Beads are tracked with `tbd` (git-native, on the `tbd-sync` branch). View them with:
@@ -20,7 +20,7 @@ tbd show <id>      # details + working notes (e.g. tbd show chopdiff-1x4u)
 
 ### Flexible Unified Document Model (DocGraph): `docs/project/specs/active/`
 
-**Phase 1 code-complete (pending release with v0.4.0); later phases remain.** A
+**Phase 1 code-complete (pending release with v0.3.1); later phases remain.** A
 source-grounded, JSON-serializable `DocGraph` projected from `TextDoc`: a stable node
 table (each node tagged with its parse **layer**) and derived views, and one general
 `collect()` query (values/counts/groupings via standard Python) at any scope
@@ -48,7 +48,7 @@ offset-containment queries. Subsumes the multi-level block-tallies work.
 ### Robustness Hardening: `docs/project/specs/active/`
 
 Correctness and API-contract fixes from the engineering review, **re-reviewed 2026-05-29
-against current v0.4.0 code**. Findings already fixed (console script, absolute offsets,
+against current v0.3.1 branch code**. Findings already fixed (console script, absolute offsets,
 `from_text` doc honesty, publish `--locked`, quiet tests) are recorded as resolved; the
 open items are verified with current evidence and grouped into three phases.
 
@@ -65,7 +65,7 @@ open items are verified with current evidence and grouped into three phases.
 
 ## Completed
 
-### Block-Aware Document Model / Normalized Form: Shipped in v0.4.0 (PR #12)
+### Block-Aware Document Model / Normalized Form: Shipping in v0.3.1 (PR #12)
 
 `TextDoc` gained exact `[start, end)` spans, a section/TOC hierarchy with rolled-up
 stats, inline-link rollups, link-aware sentences, and an opt-in structural block
@@ -104,7 +104,7 @@ Surfaced by the review reconciliation; fold into the robustness spec when picked
 ## Archive
 
 - [docs/project/specs/archive/plan-2026-05-26-block-aware-doc.md](docs/project/specs/archive/plan-2026-05-26-block-aware-doc.md)
-  (completed; shipped in v0.4.0). Superseded as a living doc by `docs/textdoc-spec.md`.
+  (completed; shipping in v0.3.1). Superseded as a living doc by `docs/textdoc-spec.md`.
 - [docs/project/specs/archive/plan-2026-05-26-markdown-block-segmentation.md](docs/project/specs/archive/plan-2026-05-26-markdown-block-segmentation.md)
   (superseded by the block-aware-doc plan; proposed a parallel `MarkdownDoc` module;
   the chosen direction extends `TextDoc` in place).
