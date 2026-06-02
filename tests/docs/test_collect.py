@@ -87,16 +87,32 @@ def test_non_recursive_returns_only_roots():
         assert n.id in root_ids
 
 
-def test_links_via_inline_flag():
-    """Links are inline nodes; they require `inline=True` to appear."""
+def test_explicit_link_kind_implies_inline():
+    """An explicit inline `kinds` selection returns inline nodes without `inline=True`."""
     _, table = _doc_and_table()
-    # Without inline flag, no links returned.
-    no_inline = collect(table, kinds={NodeKind.link}, recursive=True, inline=False)
-    assert len(no_inline) == 0
+    # Explicit kinds={link} works on its own (no inline flag needed).
+    links = collect(table, kinds={NodeKind.link}, recursive=True)
+    assert len(links) >= 2
 
-    # With inline flag, links are returned.
+    # Passing inline=True as well changes nothing.
     with_inline = collect(table, kinds={NodeKind.link}, recursive=True, inline=True)
-    assert len(with_inline) >= 2
+    assert len(with_inline) == len(links)
+
+
+def test_inline_excluded_by_default_without_explicit_kind():
+    """A query that does not name an inline kind still excludes inline nodes by default."""
+    _, table = _doc_and_table()
+    all_default = collect(table, recursive=True)
+    assert all(n.kind not in {NodeKind.link, NodeKind.code_span} for n in all_default)
+    # Opting in with inline=True surfaces them.
+    assert any(n.kind == NodeKind.link for n in collect(table, recursive=True, inline=True))
+
+
+def test_collect_single_link_minimal_doc():
+    """The common case from the review: kinds={link} on a tiny doc returns the one link."""
+    doc = TextDoc.from_text("[x](https://example.com)")
+    links = doc.collect(kinds={NodeKind.link}, recursive=True)
+    assert len(links) == 1
 
 
 def test_scope_restricts_to_subtree():
@@ -242,12 +258,10 @@ def test_textdoc_collect_with_scope():
 
 
 def test_code_spans_inline():
-    """Code spans are inline nodes and require inline=True."""
+    """Code spans are inline; an explicit kinds={code_span} returns them without inline=True."""
     doc = TextDoc.from_text(_RICH_DOC)
-    spans_no = doc.collect(kinds={NodeKind.code_span}, recursive=True, inline=False)
-    assert len(spans_no) == 0
-    spans_yes = doc.collect(kinds={NodeKind.code_span}, recursive=True, inline=True)
-    assert len(spans_yes) >= 1
+    spans = doc.collect(kinds={NodeKind.code_span}, recursive=True)
+    assert len(spans) >= 1
 
 
 def test_collect_layer_filters_cross_layer_duplicates():
@@ -275,6 +289,86 @@ def test_collect_layer_does_not_silently_drop_sections():
     td = TextDoc.from_text("# Title\n\nBody paragraph.\n")
     assert td.collect(kinds={NodeKind.section}, recursive=True)  # default: found
     assert td.collect(kinds={NodeKind.section}, recursive=True, layer={Layer.markdown}) == []
+
+
+def test_doc_collect_links_in_section_matches_spec_example():
+    """The spec §9 recipe: doc.collect(within=section.span, kinds={link})."""
+    doc = TextDoc.from_text(_RICH_DOC)
+    section_one = doc.sections()[0]
+    section_two = section_one.children[0]
+
+    one_links = doc.collect(within=section_one.span, kinds={NodeKind.link})
+    assert "https://one.example.com" in [n.attrs.get("url") for n in one_links]
+
+    # A leaf subsection's span scopes to its own content only.
+    two_links = doc.collect(within=section_two.span, kinds={NodeKind.link})
+    two_urls = [n.attrs.get("url") for n in two_links]
+    assert "https://two.example.com" in two_urls
+    assert "https://one.example.com" not in two_urls
+
+
+def test_within_node_id_scopes_cross_layer_without_recursive():
+    """`within=section_id` gathers cross-layer matches inside the section's span and
+    needs no `recursive=True`."""
+    doc = TextDoc.from_text(_RICH_DOC)
+    table = doc.node_table()
+    sec_two = next(
+        n
+        for n in table.nodes.values()
+        if n.kind == NodeKind.section and n.attrs.get("title") == "Section Two"
+    )
+    links = doc.collect(within=sec_two.id, kinds={NodeKind.link})
+    assert {n.attrs.get("url") for n in links} == {"https://two.example.com"}
+
+
+def test_contains_is_deprecated_alias_for_within():
+    doc = TextDoc.from_text(_RICH_DOC)
+    section_one = doc.sections()[0]
+    via_within = doc.collect(within=section_one.span, kinds={NodeKind.link}, recursive=True)
+    via_contains = doc.collect(contains=section_one.span, kinds={NodeKind.link}, recursive=True)
+    assert [n.id for n in via_within] == [n.id for n in via_contains]
+
+
+def test_subtree_of_is_alias_for_scope():
+    doc = TextDoc.from_text(_RICH_DOC)
+    bq = next(n for n in doc.node_table().nodes.values() if n.kind == NodeKind.blockquote)
+    via_scope = doc.collect(scope=bq.id, recursive=True)
+    via_subtree = doc.collect(subtree_of=bq.id, recursive=True)
+    assert [n.id for n in via_scope] == [n.id for n in via_subtree]
+
+
+def test_overlaps_matches_only_intersecting_spans():
+    """`overlaps` keeps nodes whose span intersects the region (not just containment)."""
+    doc = TextDoc.from_text("# Title\n\nBody paragraph here.")
+    # "# Title" is 0:7; the body paragraph starts at 9. A region straddling the gap
+    # intersects both blocks.
+    straddle = doc.collect(overlaps=(5, 12), layer={Layer.markdown}, recursive=True)
+    kinds = {n.kind for n in straddle}
+    assert NodeKind.heading in kinds
+    assert NodeKind.paragraph in kinds
+
+    # A region wholly inside the heading does not reach the paragraph.
+    heading_only = doc.collect(overlaps=(0, 3), layer={Layer.markdown}, recursive=True)
+    assert all(n.kind != NodeKind.paragraph for n in heading_only)
+
+
+def test_conflicting_alias_pairs_raise():
+    """Passing a deprecated alias together with its modern name is a ValueError, not
+    silent precedence."""
+    doc = TextDoc.from_text(_RICH_DOC)
+    rid = doc.node_table().roots[0]
+    try:
+        doc.collect(scope=rid, subtree_of=rid)
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("expected ValueError for scope + subtree_of")
+    try:
+        doc.collect(contains=(0, 5), within=(0, 5))
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("expected ValueError for contains + within")
 
 
 def test_textdoc_base_blocks_matches_free_function():

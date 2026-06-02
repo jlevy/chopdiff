@@ -5,11 +5,12 @@ after edits, persisted form resolution, and fast-path behavior.
 
 from __future__ import annotations
 
+import dataclasses
 from textwrap import dedent
 
 from chopdiff.docs.node import Layer, NodeKind
 from chopdiff.docs.node_table import build_node_table
-from chopdiff.docs.span_ref import SpanRef, resolve
+from chopdiff.docs.span_ref import SpanRef, resolve, resolve_and_update
 from chopdiff.docs.text_doc import TextDoc
 
 _DOC_TEXT = dedent("""
@@ -154,11 +155,41 @@ def test_resolve_returns_none_for_missing_text():
 
 
 def test_to_text_fragment():
-    """to_text_fragment produces a Chrome-style text fragment."""
+    """to_text_fragment produces a Chrome-style text fragment with encoded components."""
     ref = SpanRef(exact="sample link", prefix="A [", suffix="]")
     frag = ref.to_text_fragment()
-    assert frag.startswith("#:~:text=")
-    assert "sample link" in frag
+    assert frag == "#:~:text=A%20%5B-,sample%20link,-%5D"
+
+
+def test_to_text_fragment_percent_encoded():
+    """Spaces, delimiters, and non-ASCII in the exact text are percent-encoded."""
+    ref = SpanRef(exact="a b # c, π")
+    assert ref.to_text_fragment() == "#:~:text=a%20b%20%23%20c%2C%20%CF%80"
+
+
+def test_resolve_does_not_mutate():
+    """resolve() is pure: it never writes offsets back into the SpanRef."""
+    ref = SpanRef(exact="target")
+    before = dataclasses.replace(ref)
+    result = resolve(ref, "before target after")
+    assert result is not None
+    assert ref == before
+
+
+def test_resolve_and_update_writes_offsets():
+    """resolve_and_update() writes the recomputed offsets back for fast-path reuse."""
+    ref = SpanRef(exact="target")
+    result = resolve_and_update(ref, "before target after")
+    assert result is not None
+    assert (ref.start, ref.end) == result
+
+
+def test_to_persisted_can_keep_position_hint():
+    """to_persisted keeps offsets only when explicitly asked."""
+    ref = SpanRef(exact="x", start=3, end=4)
+    assert ref.to_persisted().start is None
+    kept = ref.to_persisted(include_position_hint=True)
+    assert (kept.start, kept.end) == (3, 4)
 
 
 def test_resolve_survives_reparse():

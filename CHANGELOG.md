@@ -29,9 +29,13 @@ with layers, the `base_blocks()` sequential partition, `collect()` query primiti
   block scope, superseding `block_type_counts()` convenience accessors.
   The `layer=` filter scopes a query to one or more parse layers (default: all layers),
   since the same span can appear as nodes in several layers.
+  Two relation families select candidates: the tree relation `subtree_of=` (a node's
+  within-layer subtree) and the cross-layer interval relations `within=` /`overlaps=`
+  (each takes a node id or a span), so `within=section_id` gathers everything inside a
+  section without `recursive=True`. (`scope=`/`contains=` remain as deprecated aliases.)
 - **`SpanRef` span-reference type.** Quote-canonical, offset-hinted span references for
-  durable annotation anchoring (exact fast path within a parse, fuzzy re-anchor across
-  edits).
+  durable annotation anchoring (exact-quote resolution with prefix/suffix
+  disambiguation; fuzzy re-anchoring deferred).
 - **`DocGraph` Pydantic projection.** `TextDoc.graph(include=, detail=)` builds a
   serialized, language-neutral JSON contract (schema “DocGraph/v0.1”) with composable
   `Layer` and `Detail` axes.
@@ -53,6 +57,22 @@ with layers, the `base_blocks()` sequential partition, `collect()` query primiti
 - **Structural-parse memoization.** `TextDoc.blocks()` is now cached on the immutable
   `source_text`, and `Section.blocks()` / `Section.links()` slice that single cached
   parse instead of re-parsing the whole document per section (a TOC walk was quadratic).
+- **Sections built from structural headings.** `sections()`/`toc()` now derive headings
+  from the structural parse (top-level `heading` blocks) instead of the blank-line
+  paragraph view, so a `#`-prefixed line isolated from inside a fenced code block is no
+  longer mistaken for a section heading. Behavior change: such phantom sections no longer
+  appear (e.g. the `malformed` golden loses one).
+- **Linear node-table assembly.** Inline-element attribution (containing block, section,
+  and sentence) now goes through a per-layer `IntervalIndex` instead of scanning the
+  whole table per inline element, so `build_node_table` is linear rather than
+  `O(inline × nodes)` on link-heavy or large documents.
+- **Single shared parse with thread-safe caching.** `blocks()`, `links()`, and
+  `base_blocks()` now derive from one cached marko parse of `source_text` instead of each
+  re-parsing the whole document, roughly halving `node_table()` build time (one full
+  parse instead of two). Document-level derivations are memoized under a per-instance
+  reentrant lock, so concurrent reads compute each cache at most once and observe the
+  same value; reads are otherwise side-effect-free and deterministic. See the `TextDoc`
+  read-time-caching contract.
 
 ### Documentation
 
@@ -89,8 +109,9 @@ with layers, the `base_blocks()` sequential partition, `collect()` query primiti
 
 Makes `TextDoc` block-aware end to end: an exact-span structural block tree, a section
 hierarchy with rolled-up stats, inline-link rollups, and link-aware sentence spans.
-The structural view is the canonical normalized form, with every other view (sections,
-block-type slices, tallies) derived from it: no stored counts.
+The source text and its offset space are canonical; every view (the structural block
+tree, sections, block-type slices, tallies) is a projection over that substrate: no
+stored counts.
 Block boundaries and spans now come straight from flowmark’s parser, so chopdiff carries
 no Markdown block-detection regex of its own.
 

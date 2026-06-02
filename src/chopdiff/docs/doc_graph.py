@@ -169,7 +169,6 @@ def build_doc_graph(
 
     # Build the node list, filtering by enabled layers (and inline detail).
     node_models: list[NodeModel] = []
-    included_ids: set[str] = set()
 
     for nid, node in table.nodes.items():
         if node.layer not in enabled_layers:
@@ -198,7 +197,8 @@ def build_doc_graph(
                 kind=node.kind.value,
                 layer=node.layer.value,
                 parent=node.parent
-                if node.parent and _is_parent_included(node.parent, table.nodes, enabled_layers)
+                if node.parent
+                and _is_parent_included(node.parent, table.nodes, enabled_layers, include_inline)
                 else None,
                 children=filtered_children,
                 source_span=span_model,
@@ -206,7 +206,6 @@ def build_doc_graph(
                 text=node_text,
             )
         )
-        included_ids.add(nid)
 
     # Build views from included nodes.
     toc_ids: list[str] = []
@@ -265,9 +264,13 @@ def _is_parent_included(
     parent_id: str,
     nodes: dict[str, Node],
     enabled_layers: frozenset[Layer],
+    include_inline: bool,
 ) -> bool:
-    """Check whether a parent node's layer is enabled."""
+    """
+    Check whether a parent node would itself be included, using the same predicate
+    as child filtering so a node never points to a parent that was omitted.
+    """
     parent = nodes.get(parent_id)
     if parent is None:
         return False
-    return parent.layer in enabled_layers
+    return _node_included(parent, enabled_layers, include_inline)

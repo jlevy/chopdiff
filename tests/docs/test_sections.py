@@ -134,3 +134,23 @@ def test_section_links_include_reference_links():
     section = TextDoc.from_text(text).sections()[0]
     urls = {lk.url for lk in section.links()}
     assert "https://docs.example" in urls
+
+
+def test_heading_inside_code_fence_is_not_a_section():
+    """A '#'-prefixed line inside a fenced code block (which blank-line paragraph
+    splitting can isolate) must not become a section; only the real heading counts."""
+    md = dedent(
+        """
+        # Real
+
+        ```
+        text
+
+        # Not a heading
+        ```
+
+        After.
+        """
+    ).strip()
+    doc = TextDoc.from_text(md)
+    assert [title for _, title, _ in doc.toc()] == ["Real"]

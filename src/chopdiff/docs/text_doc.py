@@ -1,18 +1,20 @@
 from __future__ import annotations
 
+import threading
+from bisect import bisect_left
 from collections import Counter, defaultdict
 from collections.abc import Callable, Generator, Iterable, Iterator
 from copy import deepcopy
 from dataclasses import dataclass, field
-from functools import cached_property
-from typing import TypeAlias
+from functools import cached_property, wraps
+from typing import NamedTuple, TypeAlias, TypeVar, cast
 
 import regex
 from flowmark import flowmark_markdown, split_sentences_regex
 from flowmark.atomic_spans import iter_atomic_spans, split_sentences_with_spans
 from flowmark.markdown_ast import extract_links
 from funlog import tally_calls
-from marko.block import BlankLine, Heading, SetextHeading
+from marko.block import BlankLine, Document, Heading, SetextHeading
 from typing_extensions import override
 
 from chopdiff.docs.base_blocks import BaseBlock, base_blocks
@@ -69,12 +71,13 @@ def is_markdown_header(markdown: str) -> bool:
     return regex.match(r"^#+ ", markdown) is not None
 
 
-def _heading_element(text: str) -> Heading | SetextHeading | None:
-    parsed = flowmark_markdown().parse(text)
-    for element in parsed.children:
-        if isinstance(element, (Heading, SetextHeading)):
-            return element
-    return None
+class _BlockInfo(NamedTuple):
+    """A paragraph's classification from one parse: its `BlockType` and, for headings,
+    the level and title. Caches the small derived values, not the marko `Document`."""
+
+    block_type: BlockType
+    heading_level: int | None
+    heading_title: str | None
 
 
 def _inline_text(element: object) -> str:
@@ -141,7 +144,7 @@ class Link:
     span: tuple[int, int] | None
 
 
-def _block_links(block_text: str, doc_offset: int) -> list[Link]:
+def _block_links(block_text: str, doc_offset: int, *, parsed: Document | None = None) -> list[Link]:
     """
     Links in a text region. Identity comes from `extract_links` (always correct,
     including reference links resolved against definitions anywhere in the region);
@@ -153,8 +156,14 @@ def _block_links(block_text: str, doc_offset: int) -> list[Link]:
     A forward character cursor (`char_cursor`) advances past each located span so that
     bracketed matches, autolinks, bare URLs, and repeated URLs resolve in document order
     without one no-span identity desyncing the next.
+
+    `parsed` is the marko parse of `block_text`; pass it to reuse a shared parse (the
+    caller guarantees it is the parse of exactly this `block_text`), else it is parsed
+    here.
     """
-    identities = extract_links(flowmark_markdown().parse(block_text))
+    identities = extract_links(
+        parsed if parsed is not None else flowmark_markdown().parse(block_text)
+    )
     # Only `markdown_link` atomics are bracketed `[...]` link constructs; autolinks come
     # through as `html_open_tag` and bare URLs are not atomic, so both are handled by the
     # literal fallback below.
@@ -411,42 +420,79 @@ class Paragraph:
         return FOOTNOTE_DEF_REGEX.match(initial_text) is not None
 
     @cached_property
-    def block_type(self) -> BlockType:
+    def _block_info(self) -> _BlockInfo:
         """
-        Classify this block by its Markdown kind. See `BlockType` for caveats about
-        blank-line splitting (e.g. a list is one block, not one block per item).
-
-        Cached: derived from `original_text`, which does not change after parsing.
+        Classify this paragraph and extract heading level/title from a single parse of
+        `original_text` (which does not change after parsing). Cached; the marko document
+        is not retained. See `BlockType` for blank-line-splitting caveats.
         """
         text = self.original_text.strip()
         if not text:
-            return BlockType.paragraph
+            return _BlockInfo(BlockType.paragraph, None, None)
         parsed = flowmark_markdown().parse(text)
         element = next((el for el in parsed.children if not isinstance(el, BlankLine)), None)
         block_type = block_type_for(element) if element is not None else BlockType.paragraph
         # marko treats a single-line HTML tag as an inline-HTML paragraph rather than
         # an HTML block, so fall back to chopdiff's own markup check for those.
         if block_type == BlockType.paragraph and self.is_markup():
-            return BlockType.html
-        return block_type
+            block_type = BlockType.html
+        if isinstance(element, (Heading, SetextHeading)):
+            return _BlockInfo(block_type, element.level, _inline_text(element).strip())
+        return _BlockInfo(block_type, None, None)
+
+    @property
+    def block_type(self) -> BlockType:
+        """This paragraph's Markdown block kind (see `_block_info`)."""
+        return self._block_info.block_type
 
     def heading_level(self) -> int | None:
         """The Markdown heading level (1-6) if this block is a heading, else None."""
-        if self.block_type != BlockType.heading:
-            return None
-        element = _heading_element(self.original_text.strip())
-        return element.level if element is not None else None
+        return self._block_info.heading_level
 
     def heading_title(self) -> str | None:
         """The heading text without `#` markers if this block is a heading, else None."""
-        if self.block_type != BlockType.heading:
-            return None
-        element = _heading_element(self.original_text.strip())
-        return _inline_text(element).strip() if element is not None else None
+        return self._block_info.heading_title
 
     def links(self) -> list[Link]:
         """Links in this block, in order (identity always; absolute span when recoverable)."""
         return _block_links(self.original_text, self.offsets.doc_offset)
+
+
+_DerivedT = TypeVar("_DerivedT")
+
+
+def _memoized_derivation(
+    attr_name: str,
+) -> Callable[[Callable[[TextDoc], _DerivedT]], Callable[[TextDoc], _DerivedT]]:
+    """
+    Memoize a zero-arg `TextDoc` derivation into `attr_name`, computed at most once.
+
+    Filling the cache is the only state change that happens during a read, and it is
+    idempotent and thread-safe: a lock-free fast path returns an already-cached value,
+    otherwise the instance's reentrant lock serializes the first computation so
+    concurrent readers compute it once and all observe the same object. This is sound
+    only because every memoized derivation is a pure, deterministic function of the
+    immutable-after-parse `source_text` (see the `TextDoc` contract); the lock is
+    reentrant so a derivation may call other memoized derivations (e.g. `node_table()`
+    uses `blocks()` and `links()`).
+    """
+
+    def decorator(func: Callable[[TextDoc], _DerivedT]) -> Callable[[TextDoc], _DerivedT]:
+        @wraps(func)
+        def wrapper(self: TextDoc) -> _DerivedT:
+            cached = getattr(self, attr_name)
+            if cached is not None:
+                return cached
+            with self._cache_lock:
+                cached = getattr(self, attr_name)
+                if cached is None:
+                    cached = func(self)
+                    setattr(self, attr_name, cached)
+                return cached
+
+        return wrapper
+
+    return decorator
 
 
 @dataclass
@@ -454,7 +500,7 @@ class TextDoc:
     """
     A class for parsing and handling documents consisting of sentences and paragraphs
     of text. Preserves original text, tracking offsets of each sentence and paragraph.
-    Compatible with Markdown and Markown with HTML tags.
+    Compatible with Markdown and Markdown with HTML tags.
 
     Contract and intended use:
 
@@ -490,25 +536,75 @@ class TextDoc:
       (their offsets still point into it). Docs built from synthetic content
       (`from_wordtoks`) set it to the reassembled text. `block_at_offset` /
       `sentence_at_offset` map an absolute offset back to the unit that contains it.
+
+    - Read-time thread-safety. The derived views — `blocks()`, `links()`, `sections()`,
+      `base_blocks()`, `node_table()`, `graph()`, `collect()`, and the size/TOC helpers —
+      are read-only with respect to your data: they are pure, deterministic functions of
+      `source_text` and never mutate paragraphs or sentences. The *only* state change
+      during such a read is idempotent population of internal caches. The document-level
+      caches (the shared marko parse, the block tree, the link list, the node table) are
+      filled under a per-instance reentrant lock, so concurrent readers compute each at
+      most once and all observe the same value. A few per-element values (e.g.
+      `Paragraph.block_type`) are memoized with `cached_property`, which is not lock-
+      guarded but is equally idempotent and deterministic — a pure function of that
+      element's immutable `original_text` — so a concurrent recompute is harmless (it
+      yields the same value). Because every derivation is deterministic, the result is
+      identical whether or not a cache was warm and regardless of read order. The
+      *editing* methods (`set_sent`, `replace_str`, `append_sent`, `sub_doc`, `filtered`,
+      etc.) do mutate and are not thread-safe; do not edit a document while another thread
+      reads it. Editing also does not invalidate the source-backed caches (they remain
+      keyed to the parsed `source_text`); re-parse with `from_text(doc.reassemble())` to
+      analyze edited content.
     """
 
     paragraphs: list[Paragraph]
     source_text: str = ""
+    # Reentrant lock guarding idempotent cache population (see the class contract and
+    # `_memoized_derivation`). Per-instance so reads of different documents never contend;
+    # reentrant so a derivation may use other memoized derivations.
+    _cache_lock: threading.RLock = field(
+        default_factory=threading.RLock, init=False, compare=False, repr=False
+    )
+    _cached_parsed: Document | None = field(default=None, init=False, compare=False, repr=False)
     _cached_node_table: NodeTable | None = field(
         default=None, init=False, compare=False, repr=False
     )
     _cached_blocks: list[Block] | None = field(default=None, init=False, compare=False, repr=False)
     _cached_links: list[Link] | None = field(default=None, init=False, compare=False, repr=False)
 
+    @override
+    def __getstate__(self) -> dict[str, object]:
+        # Pickle/deepcopy only the source data. The reentrant lock is not pickleable and
+        # the derived caches (incl. the marko parse) re-derive on demand, so both are
+        # dropped here and recreated in `__setstate__`. This keeps `TextDoc` copyable and
+        # picklable despite holding a lock.
+        return {"paragraphs": self.paragraphs, "source_text": self.source_text}
+
+    def __setstate__(self, state: dict[str, object]) -> None:
+        self.paragraphs = cast("list[Paragraph]", state["paragraphs"])
+        self.source_text = cast(str, state["source_text"])
+        self._cache_lock = threading.RLock()
+        self._cached_parsed = None
+        self._cached_node_table = None
+        self._cached_blocks = None
+        self._cached_links = None
+
+    @_memoized_derivation("_cached_parsed")
+    def _parsed(self) -> Document:
+        """
+        The single shared marko parse of `source_text`, computed once. `blocks()` and
+        `links()` (and `base_blocks()`) derive from this one parse rather than each
+        re-parsing the whole document. See the class contract on read-time caching.
+        """
+        return flowmark_markdown().parse(self.source_text or self.reassemble())
+
+    @_memoized_derivation("_cached_node_table")
     def node_table(self) -> NodeTable:
         """
-        Lazily build and cache the node table for this document. The table is a pure
-        function of the immutable `source_text`, so it is computed once and reused.
+        The node table for this document, computed once and cached. A pure function of
+        the immutable `source_text` (see the class contract on read-time caching).
         """
-        if self._cached_node_table is None:
-            self._cached_node_table = build_node_table(self)
-        assert self._cached_node_table is not None
-        return self._cached_node_table
+        return build_node_table(self)
 
     @classmethod
     @tally_calls(level="warning", min_total_runtime=5)
@@ -605,13 +701,28 @@ class TextDoc:
         The heading hierarchy as a tree of top-level `Section`s. A section owns the
         blocks from its heading up to the next heading of equal-or-higher level; deeper
         headings become nested `children`. Content before the first heading (preamble)
-        belongs to no section. Derived from heading levels; no whole-document re-parse.
+        belongs to no section.
+
+        Headings come from the structural parse — top-level `heading` blocks of
+        `blocks()` — not the blank-line paragraph view, so a `#`-prefixed line that the
+        paragraph splitter isolates from inside a fenced code block is not mistaken for a
+        section heading, and headings nested in blockquotes or list items (which are not
+        top-level blocks) do not start document sections.
         """
         source_text = self.source_text or self.reassemble()
+        # Start offsets of top-level structural heading blocks, sorted for bisect lookup.
+        heading_starts = sorted(
+            block.span[0] for block in self.blocks() if block.type == BlockType.heading
+        )
         roots: list[Section] = []
         stack: list[Section] = []
         for para in self.paragraphs:
-            level = para.heading_level()
+            # A paragraph is a heading iff its span contains a top-level structural
+            # heading start (a real ATX/setext heading is one paragraph and one block).
+            para_start, para_end = para.span
+            idx = bisect_left(heading_starts, para_start)
+            is_heading = idx < len(heading_starts) and heading_starts[idx] < para_end
+            level = para.heading_level() if is_heading else None
             if level is None:
                 if stack:
                     stack[-1].content.append(para)
@@ -633,36 +744,38 @@ class TextDoc:
             stack.append(section)
         return roots
 
+    @_memoized_derivation("_cached_links")
+    def _link_list(self) -> list[Link]:
+        return _block_links(self.source_text or self.reassemble(), 0, parsed=self._parsed())
+
     def links(self) -> list[Link]:
         """
-        All links in the document, in document order. Parsed from `source_text` once so
-        that reference-style links (`[text][ref]` with `[ref]: url` in a separate block)
-        resolve correctly. Lazily cached so per-section link rollups share one parse;
-        returns a fresh shallow copy each call so mutating the result cannot poison the
+        All links in the document, in document order. Derived from the document's single
+        shared parse (see the class contract on read-time caching), so reference-style
+        links (`[text][ref]` with `[ref]: url` in a separate block) resolve correctly.
+        Returns a fresh shallow copy each call so mutating the result cannot poison the
         cache (`Link` is frozen, so the shared elements are safe). See `Link`.
         """
-        if self._cached_links is None:
-            self._cached_links = _block_links(self.source_text or self.reassemble(), 0)
-        return list(self._cached_links)
+        return list(self._link_list())
+
+    @_memoized_derivation("_cached_blocks")
+    def _block_list(self) -> list[Block]:
+        return parse_blocks(self.source_text or self.reassemble(), self._parsed())
 
     def blocks(self) -> list[Block]:
         """
         The document's structural block tree (opt-in), with exact source spans. Unlike
         the blank-line `paragraphs`, this keeps a fenced code block whole (even with
         internal blank lines) and decomposes a tight list into `list_item`s with nested
-        sublists. Parsed from `source_text` (or the reassembled text if absent). See
-        `chopdiff.docs.block_tree`.
+        sublists. Derived from the document's single shared parse (see the class contract
+        on read-time caching), so `sections()`, `links()`, and the node table all reuse
+        one parse. See `chopdiff.docs.block_tree`.
 
-        Lazily cached on the immutable `source_text` (sentence edits touch the editing
-        view, not `source_text`), so derived views (`sections()`, the node table) can
-        share one parse rather than re-parsing. Returns a fresh shallow copy of the
-        cached list each call, so reordering/filtering the result cannot poison the
-        shared cache; the `Block` objects themselves are shared and must be treated as
-        read-only.
+        Returns a fresh shallow copy of the cached list each call, so reordering/filtering
+        the result cannot poison the shared cache; the `Block` objects themselves are
+        shared and must be treated as read-only.
         """
-        if self._cached_blocks is None:
-            self._cached_blocks = parse_blocks(self.source_text or self.reassemble())
-        return list(self._cached_blocks)
+        return list(self._block_list())
 
     def base_blocks(self, *, item_partition_depth: int = 6) -> list[BaseBlock]:
         """
@@ -671,17 +784,21 @@ class TextDoc:
         (except normalized paragraph-break whitespace). A thin method over the
         `chopdiff.docs.base_blocks.base_blocks` free function; see it for the
         `item_partition_depth` semantics. Distinct from `blocks()`, which is the
-        recursive structural tree (a query view, not a partition).
+        recursive structural tree (a query view, not a partition). Reuses the document's
+        single shared parse.
         """
         return base_blocks(
-            self.source_text or self.reassemble(), item_partition_depth=item_partition_depth
+            self.source_text or self.reassemble(),
+            item_partition_depth=item_partition_depth,
+            parsed=self._parsed(),
         )
 
     def block_type_counts(self) -> Counter[BlockType]:
         """
         Tally of top-level structural block types in the document. A derived view over
-        `blocks()` (no stored counts), density-invariant by construction — `Counter` over
-        the live block tree, so it always reflects current content.
+        `blocks()` (no stored counts), density-invariant by construction. Like all
+        structural views it describes the parsed `source_text` (see the class contract),
+        not in-place sentence edits; re-parse to tally edited content.
         """
         return Counter(block.type for block in self.blocks())
 
@@ -717,9 +834,14 @@ class TextDoc:
         return self.paragraphs[index.para_index].sentences[index.sent_index]
 
     def set_sent(self, index: SentIndex, sent_str: str) -> None:
+        # Preserve the replaced sentence's `original_text` so its `span` keeps
+        # pointing at the original source slice (the documented contract: source
+        # references describe the original blocks, not the edited content, which
+        # lives in `text`). Dropping it would make `span` describe the new text's
+        # length at the old offset, i.e. neither the old nor a valid source slice.
         old_sent = self.get_sent(index)
         self.paragraphs[index.para_index].sentences[index.sent_index] = Sentence(
-            sent_str, old_sent.offsets
+            sent_str, old_sent.offsets, original_text=old_sent.original_text
         )
 
     def seek_to_sent(self, offset: int, unit: TextUnit) -> tuple[SentIndex, int]:
@@ -971,11 +1093,14 @@ class TextDoc:
         self,
         scope: str | None = None,
         *,
+        subtree_of: str | None = None,
+        within: str | tuple[int, int] | None = None,
+        overlaps: str | tuple[int, int] | None = None,
+        contains: tuple[int, int] | None = None,
         kinds: set[NodeKind] | None = None,
         where: Callable[[Node], bool] | None = None,
         recursive: bool = False,
         inline: bool = False,
-        contains: tuple[int, int] | None = None,
         layer: set[Layer] | None = None,
     ) -> list[Node]:
         """
@@ -985,11 +1110,14 @@ class TextDoc:
         return _collect(
             self.node_table(),
             scope,
+            subtree_of=subtree_of,
+            within=within,
+            overlaps=overlaps,
+            contains=contains,
             kinds=kinds,
             where=where,
             recursive=recursive,
             inline=inline,
-            contains=contains,
             layer=layer,
         )
 

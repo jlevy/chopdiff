@@ -396,25 +396,37 @@ block↔inline relationships are node edges, and “links in section 3” is a s
 
 ## 9. Derived Views and Rollups
 
-All calculated over the node table; nothing stores counts.
+All derived from the canonical source/offset substrate (the node table is the
+id-addressed projection used for queries); nothing stores counts. These structural/query
+views describe the parsed `source_text`; after editing, re-parse with
+`from_text(doc.reassemble())` before structural analysis.
 The surface is **one general query primitive, no blessed per-kind rollups** (DR-4):
 
 ```python
-collect(*, kinds=None, where=None, recursive=False, inline=False) -> list[Node]
+collect(*, subtree_of=None, within=None, overlaps=None,
+        kinds=None, where=None, recursive=False, inline=False, layer=None) -> list[Node]
 ```
 
-at document / section / block scope (`dg`, `dg.section(id)`, `dg.node(id)`). `kinds=`
-selects by node kind (the typed common case); `where=` is a `Node -> bool` predicate
-escape hatch; `recursive` descends into children; `inline` includes inline nodes.
-It returns **nodes** (each with `span`, `attrs`, edges).
-**Counts, values, and groupings are standard Python** over the result, documented with
-worked examples, not separate methods:
+Available as `doc.collect(...)` (and as the free `collect(table, ...)` over a node
+table). Two distinct relations select candidates. The **tree** relation `subtree_of=`
+takes a node id and restricts to that node's within-layer parent/child subtree
+(`recursive` descends it). The **interval** relations are cross-layer and offset-based,
+each accepting a node id or `(start, end)` span: `within=` keeps nodes whose span is
+contained in the region (e.g. `within=section_id` for everything inside a section);
+`overlaps=` keeps nodes whose span merely intersects the region. Supplying an interval
+relation scans the whole document, so `within=section_id` needs no `recursive=True`.
+`kinds=` selects by node kind (the typed common case); `where=` is a `Node -> bool`
+predicate escape hatch; `inline` includes inline nodes (an explicit inline `kinds` such
+as `{NodeKind.link}` implies this); `layer=` restricts to parse layers. It returns
+**nodes** (each with `span`, `attrs`, edges). (`scope=` and `contains=` remain as
+deprecated aliases for `subtree_of=` and `within=`.) **Counts, values, and groupings are
+standard Python** over the result, documented with worked examples, not separate methods:
 
 ```python
-dg.collect(kinds={NodeKind.table}, recursive=True)        # the tables (values + spans)
-len(dg.collect(kinds={NodeKind.table}, recursive=True))   # how many
-Counter(n.kind for n in dg.collect(recursive=True))       # tally by kind
-dg.section(s3).collect(kinds={NodeKind.link}, recursive=True)   # links in section 3
+doc.collect(kinds={NodeKind.table}, recursive=True)        # the tables (values + spans)
+len(doc.collect(kinds={NodeKind.table}, recursive=True))   # how many
+Counter(n.kind for n in doc.collect(recursive=True))       # tally by kind
+doc.collect(within=section_id, kinds={NodeKind.link})      # links in a section
 ```
 
 Slice-by-block-type, per-section rollups, and element rollups are all expressions of
@@ -489,13 +501,17 @@ SpanRef = {
 
 - **Quote canonical, offset a hint.** Every mature annotation system (W3C `oa:Choice`,
   Hypothesis) treats the text quote as the durable anchor and offsets as accelerators,
-  because the quote survives edits and re-anchors fuzzily while offsets shift.
+  because the quote survives edits and re-anchors while offsets shift.
   Within one parse the offset is exact (the fast path); across edits the quote recovers
   the target.
-- **Resolution.** model→source is total (a node fills both span and quote); source→model
-  is exact fast-path then quote fuzzy re-anchor, updating offsets.
-- **Persistence** is quote-canonical and source-grounded; an in-memory `node_id` handle
-  is never persisted.
+- **Resolution.** model→source is total (a node fills both span and quote). source→model
+  is an exact offset fast path, then an exact quote search disambiguated by
+  prefix/suffix; `resolve()` is pure (it does not mutate the ref), and
+  `resolve_and_update()` is the explicit variant that writes the recomputed offsets back.
+  Fuzzy/edit-distance re-anchoring is deferred (not yet implemented).
+- **Persistence** is quote-canonical and source-grounded; offsets are an optional
+  position hint (`to_persisted(include_position_hint=...)`, dropped by default) and an
+  in-memory `node_id` handle is never persisted.
 - **Chrome URL Text Fragment convertible:** the quote maps to
   `#:~:text=[prefix-,]exact[,-suffix]` (a lossy projection: prose, word-boundary,
   case-insensitive), generated on demand, never stored.
@@ -594,9 +610,10 @@ Non-obvious choices, each grounded in a principle:
   children, including blockquote and list-item block children); `base_blocks()`
   sequential partition with its non-overlapping cover invariant; the single `collect()`
   primitive (superseding `block_type_counts()`; migration:
-  `Counter(n.kind for n in doc.graph().collect(...))`); composable `include` layers and
-  `detail` payload options; the `DocGraph` Pydantic schema ("DocGraph/v0.1"); and the
-  `SpanRef` contract with exact resolution (fuzzy re-anchor wired behind it).
+  `Counter(n.kind for n in doc.collect(recursive=True))`); composable `include` layers
+  and `detail` payload options; the `DocGraph` Pydantic schema ("DocGraph/v0.1"); and the
+  `SpanRef` contract with exact + prefix/suffix quote resolution (fuzzy re-anchoring
+  deferred).
 - **In progress:** annotation layer, synthetic layer (re-expressing `TextNode` tag
   chunking as a layer), cross-layer structural edits, and operation/provenance/layout
   layers. Tracked by epic `chopdiff-8q8q`; sequenced in

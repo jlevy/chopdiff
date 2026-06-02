@@ -56,9 +56,14 @@ class Block:
     tight: bool | None = None
 
 
-def parse_blocks(text: str) -> list[Block]:
-    """Parse `text` into a tree of structural `Block`s with exact source spans."""
-    return _blocks_from(text, flowmark_markdown().parse(text))
+def parse_blocks(text: str, parsed: Element | None = None) -> list[Block]:
+    """
+    Parse `text` into a tree of structural `Block`s with exact source spans.
+
+    `parsed` is the marko parse of `text`; pass it to reuse a shared parse (the caller
+    guarantees it is the parse of exactly this `text`), else `text` is parsed here.
+    """
+    return _blocks_from(text, parsed if parsed is not None else flowmark_markdown().parse(text))
 
 
 def walk_blocks(blocks: list[Block], _depth: int = 0) -> Iterator[tuple[Block, int]]:

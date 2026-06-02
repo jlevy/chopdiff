@@ -437,3 +437,19 @@ def test_is_footnote_def_detection():
     assert not doc.paragraphs[0].is_footnote_def()
     assert not doc.paragraphs[1].is_footnote_def()
     assert doc.paragraphs[2].is_footnote_def()
+
+
+def test_set_sent_preserves_original_source_span():
+    """set_sent keeps the replaced sentence's span pointing at the original source slice,
+    even when the replacement text has a different length (the documented contract)."""
+    doc = TextDoc.from_text("Hello world.")
+    idx = SentIndex(0, 0)
+    before = doc.get_sent(idx).span
+
+    doc.set_sent(idx, "Hello much longer replacement world.")
+    after_sent = doc.get_sent(idx)
+
+    # Editable text reflects the edit; the source span is unchanged.
+    assert after_sent.text == "Hello much longer replacement world."
+    assert after_sent.span == before
+    assert doc.source_text[before[0] : before[1]] == "Hello world."

@@ -34,10 +34,6 @@ sections:
   title: Malformed
   span: 0:234
   words: 43
-- level: 2
-  title: A heading that is actually inside the open fence?
-  span: 87:234
-  words: 30
 node_table:
 - id: n0001
   layer: markdown
@@ -61,76 +57,68 @@ node_table:
     level: 1
     title: Malformed
 - id: n0005
-  layer: document
-  kind: section
-  span: 87:234
-  parent: n0004
-  attrs:
-    level: 2
-    title: A heading that is actually inside the open fence?
+  layer: textual
+  kind: paragraph
+  span: 0:11
 - id: n0006
   layer: textual
-  kind: paragraph
-  span: 0:11
-- id: n0007
-  layer: textual
   kind: sentence
   span: 0:11
-  parent: n0006
+  parent: n0005
   attrs:
     text: '# Malformed'
+- id: n0007
+  layer: textual
+  kind: paragraph
+  span: 13:52
 - id: n0008
   layer: textual
-  kind: paragraph
-  span: 13:52
-- id: n0009
-  layer: textual
   kind: sentence
   span: 13:52
-  parent: n0008
+  parent: n0007
   attrs:
     text: 'A paragraph then an unterminated fence:'
+- id: n0009
+  layer: textual
+  kind: paragraph
+  span: 54:85
 - id: n0010
   layer: textual
-  kind: paragraph
-  span: 54:85
-- id: n0011
-  layer: textual
   kind: sentence
   span: 54:85
-  parent: n0010
+  parent: n0009
   attrs:
     text: '```python def f(): return 1'
+- id: n0011
+  layer: textual
+  kind: paragraph
+  span: 87:139
 - id: n0012
   layer: textual
-  kind: paragraph
-  span: 87:139
-- id: n0013
-  layer: textual
   kind: sentence
   span: 87:139
-  parent: n0012
+  parent: n0011
   attrs:
     text: '## A heading that is actually inside the open fence?'
+- id: n0013
+  layer: textual
+  kind: paragraph
+  span: 141:185
 - id: n0014
   layer: textual
-  kind: paragraph
-  span: 141:185
-- id: n0015
-  layer: textual
   kind: sentence
   span: 141:185
-  parent: n0014
+  parent: n0013
   attrs:
     text: '| ragged | table | - | | one | two | three |'
-- id: n0016
+- id: n0015
   layer: textual
   kind: paragraph
   span: 187:234
-- id: n0017
+- id: n0016
   layer: textual
   kind: sentence
   span: 187:234
-  parent: n0016
+  parent: n0015
   attrs:
     text: '- item with [an unclosed link](http://x.example'
