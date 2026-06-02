@@ -12,6 +12,7 @@ Counts, values, and groupings are left to the caller via plain Python
 
 from __future__ import annotations
 
+from collections import deque
 from collections.abc import Callable
 
 from chopdiff.docs.node import Layer, Node, NodeKind, NodeTable
@@ -41,7 +42,9 @@ def collect(
     `where`: additional predicate on each node. `recursive`: when True,
     descend into children recursively; when False, only direct children of the
     scope (or roots). `inline`: when True, include inline-kind nodes; when
-    False, exclude them. `contains`: an optional `(start, end)` span;
+    False, exclude them — but an explicit `kinds` selecting inline kinds (e.g.
+    `kinds={NodeKind.link}`) implies inline inclusion, so the common case works
+    without also passing `inline=True`. `contains`: an optional `(start, end)` span;
     restrict results to nodes whose `source_span` is within that span
     (offset-containment, the cross-layer query mechanism). `layer`: restrict to
     these parse layers (None = all layers); since the same span can appear as
@@ -57,9 +60,13 @@ def collect(
         # Non-recursive, no scope: just the root nodes.
         candidates = [table.nodes[rid] for rid in table.roots if rid in table.nodes]
 
+    # An explicit kind selection that names inline kinds implies inline inclusion,
+    # so `collect(kinds={NodeKind.link})` is not silently emptied by the inline guard.
+    include_inline = inline or (kinds is not None and bool(kinds & INLINE_KINDS))
+
     result: list[Node] = []
     for node in candidates:
-        if not inline and node.kind in INLINE_KINDS:
+        if not include_inline and node.kind in INLINE_KINDS:
             continue
         if layer is not None and node.layer not in layer:
             continue
@@ -101,14 +108,14 @@ def _subtree_nodes(table: NodeTable, scope_id: str, recursive: bool) -> list[Nod
     if not recursive:
         return [table.nodes[cid] for cid in scope_node.children if cid in table.nodes]
 
-    # BFS/DFS to collect all descendants.
+    # BFS to collect all descendants.
     result: list[Node] = []
-    stack = list(scope_node.children)
-    while stack:
-        nid = stack.pop(0)
+    queue: deque[str] = deque(scope_node.children)
+    while queue:
+        nid = queue.popleft()
         if nid not in table.nodes:
             continue
         node = table.nodes[nid]
         result.append(node)
-        stack.extend(node.children)
+        queue.extend(node.children)
     return result

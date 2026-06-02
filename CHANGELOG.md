@@ -89,8 +89,9 @@ with layers, the `base_blocks()` sequential partition, `collect()` query primiti
 
 Makes `TextDoc` block-aware end to end: an exact-span structural block tree, a section
 hierarchy with rolled-up stats, inline-link rollups, and link-aware sentence spans.
-The structural view is the canonical normalized form, with every other view (sections,
-block-type slices, tallies) derived from it: no stored counts.
+The source text and its offset space are canonical; every view (the structural block
+tree, sections, block-type slices, tallies) is a projection over that substrate: no
+stored counts.
 Block boundaries and spans now come straight from flowmark’s parser, so chopdiff carries
 no Markdown block-detection regex of its own.
 

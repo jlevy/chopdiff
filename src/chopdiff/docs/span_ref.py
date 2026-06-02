@@ -11,11 +11,22 @@ survives reparsing and re-anchors after edits that shift offsets.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from urllib.parse import quote
 
 from chopdiff.docs.node import Node
 
 # Default context window size for prefix/suffix capture.
 _CONTEXT_WINDOW = 24
+
+
+def _encode_fragment_part(text: str) -> str:
+    """
+    Percent-encode one component of a `#:~:text=` fragment. Encodes everything
+    that is not unreserved, and additionally `-` and `,` (which are structural
+    delimiters in the fragment grammar) so component text can never be mistaken
+    for a `prefix-,` / `,-suffix` boundary.
+    """
+    return quote(text, safe="").replace("-", "%2D").replace(",", "%2C")
 
 
 @dataclass
@@ -58,37 +69,46 @@ class SpanRef:
         suffix = source_text[end:suffix_end] if end < suffix_end else None
         return cls(exact=exact, prefix=prefix, suffix=suffix, start=start, end=end)
 
-    def to_persisted(self) -> SpanRef:
+    def to_persisted(self, *, include_position_hint: bool = False) -> SpanRef:
         """
-        Return a copy suitable for persistence: quote-canonical with no transient
-        offsets. The persisted form references text, not positions.
+        Return a copy suitable for persistence. The quote (`exact`/`prefix`/`suffix`)
+        is the durable anchor; offsets are valid only within the exact source they
+        were computed from, so by default they are dropped (`include_position_hint`
+        keeps them as a fast-path hint when persisting alongside that same source).
         """
-        return SpanRef(exact=self.exact, prefix=self.prefix, suffix=self.suffix)
+        return SpanRef(
+            exact=self.exact,
+            prefix=self.prefix,
+            suffix=self.suffix,
+            start=self.start if include_position_hint else None,
+            end=self.end if include_position_hint else None,
+        )
 
     def to_text_fragment(self) -> str:
         """
         Produce a Chrome-style `#:~:text=` URL text-fragment directive.
-        Format: `#:~:text=[prefix-,]exact[,-suffix]`.
-        This is a lossy projection (prose, word-boundary, case-insensitive).
+        Format: `#:~:text=[prefix-,]exact[,-suffix]`, with each component
+        percent-encoded. This is a lossy projection (prose, word-boundary,
+        case-insensitive).
         """
         parts: list[str] = []
         if self.prefix:
-            parts.append(f"{self.prefix}-,")
-        parts.append(self.exact)
+            parts.append(f"{_encode_fragment_part(self.prefix)}-,")
+        parts.append(_encode_fragment_part(self.exact))
         if self.suffix:
-            parts.append(f",-{self.suffix}")
+            parts.append(f",-{_encode_fragment_part(self.suffix)}")
         return "#:~:text=" + "".join(parts)
 
 
 def resolve(span_ref: SpanRef, source_text: str) -> tuple[int, int] | None:
     """
     Resolve a `SpanRef` against `source_text`, returning the `(start, end)`
-    offsets or None if the span cannot be found.
+    offsets or None if the span cannot be found. Pure: it does not mutate
+    `span_ref` (use `resolve_and_update` to also write the offsets back).
 
     Fast path: if `start`/`end` are present and the text at those offsets
     matches `exact`, return immediately. Otherwise, search the full text for
-    `exact`, disambiguating with `prefix`/`suffix` if needed, and update
-    the `SpanRef`'s offsets in place.
+    `exact`, disambiguating with `prefix`/`suffix` if needed.
     """
     # Fast path: offsets are valid.
     if span_ref.start is not None and span_ref.end is not None:
@@ -120,12 +140,20 @@ def resolve(span_ref: SpanRef, source_text: str) -> tuple[int, int] | None:
         # Disambiguate with prefix/suffix scoring.
         best = _best_match(occurrences, exact, span_ref.prefix, span_ref.suffix, source_text)
 
-    start = best
-    end = best + len(exact)
-    # Update offsets in place for future fast-path use.
-    span_ref.start = start
-    span_ref.end = end
-    return (start, end)
+    return (best, best + len(exact))
+
+
+def resolve_and_update(span_ref: SpanRef, source_text: str) -> tuple[int, int] | None:
+    """
+    Resolve a `SpanRef` and, on success, write the recomputed offsets back into
+    `span_ref.start`/`span_ref.end` so subsequent resolves hit the fast path.
+    Returns the `(start, end)` offsets or None. The mutating counterpart to
+    `resolve()`.
+    """
+    result = resolve(span_ref, source_text)
+    if result is not None:
+        span_ref.start, span_ref.end = result
+    return result
 
 
 def _best_match(

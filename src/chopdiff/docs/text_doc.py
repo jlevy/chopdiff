@@ -454,7 +454,7 @@ class TextDoc:
     """
     A class for parsing and handling documents consisting of sentences and paragraphs
     of text. Preserves original text, tracking offsets of each sentence and paragraph.
-    Compatible with Markdown and Markown with HTML tags.
+    Compatible with Markdown and Markdown with HTML tags.
 
     Contract and intended use:
 
@@ -717,9 +717,14 @@ class TextDoc:
         return self.paragraphs[index.para_index].sentences[index.sent_index]
 
     def set_sent(self, index: SentIndex, sent_str: str) -> None:
+        # Preserve the replaced sentence's `original_text` so its `span` keeps
+        # pointing at the original source slice (the documented contract: source
+        # references describe the original blocks, not the edited content, which
+        # lives in `text`). Dropping it would make `span` describe the new text's
+        # length at the old offset, i.e. neither the old nor a valid source slice.
         old_sent = self.get_sent(index)
         self.paragraphs[index.para_index].sentences[index.sent_index] = Sentence(
-            sent_str, old_sent.offsets
+            sent_str, old_sent.offsets, original_text=old_sent.original_text
         )
 
     def seek_to_sent(self, offset: int, unit: TextUnit) -> tuple[SentIndex, int]:

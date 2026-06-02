@@ -6,8 +6,10 @@ covering three layers (markdown, document, textual) over the same source text.
 is cached lazily on `TextDoc.node_table()` (safe because `source_text` is
 immutable after parse).
 
-The node table is the canonical normalized form from which derived views
-(block tree, section tree, inline index, etc.) are cheap projections.
+The source string and its offset space are canonical; the node table is the
+id-addressed query/serialization projection over that substrate, assigning ids
+and layer tags. The block tree, section tree, and inline index are sibling
+projections sharing the same source/offset substrate.
 """
 
 # pyright: reportImportCycles=false

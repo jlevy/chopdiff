@@ -400,21 +400,26 @@ All calculated over the node table; nothing stores counts.
 The surface is **one general query primitive, no blessed per-kind rollups** (DR-4):
 
 ```python
-collect(*, kinds=None, where=None, recursive=False, inline=False) -> list[Node]
+collect(scope=None, *, kinds=None, where=None, recursive=False, inline=False,
+        contains=None, layer=None) -> list[Node]
 ```
 
-at document / section / block scope (`dg`, `dg.section(id)`, `dg.node(id)`). `kinds=`
-selects by node kind (the typed common case); `where=` is a `Node -> bool` predicate
-escape hatch; `recursive` descends into children; `inline` includes inline nodes.
-It returns **nodes** (each with `span`, `attrs`, edges).
+Available as `doc.collect(...)` (and as the free `collect(table, ...)` over a node
+table). `scope=` restricts to a node id's subtree (within-layer parent/children);
+`contains=(start, end)` restricts to nodes whose span falls inside that offset range —
+the cross-layer mechanism, e.g. pass a section's `span` to gather what is inside it.
+`kinds=` selects by node kind (the typed common case); `where=` is a `Node -> bool`
+predicate escape hatch; `recursive` descends into children; `inline` includes inline
+nodes (an explicit inline `kinds` such as `{NodeKind.link}` implies this); `layer=`
+restricts to parse layers. It returns **nodes** (each with `span`, `attrs`, edges).
 **Counts, values, and groupings are standard Python** over the result, documented with
 worked examples, not separate methods:
 
 ```python
-dg.collect(kinds={NodeKind.table}, recursive=True)        # the tables (values + spans)
-len(dg.collect(kinds={NodeKind.table}, recursive=True))   # how many
-Counter(n.kind for n in dg.collect(recursive=True))       # tally by kind
-dg.section(s3).collect(kinds={NodeKind.link}, recursive=True)   # links in section 3
+doc.collect(kinds={NodeKind.table}, recursive=True)        # the tables (values + spans)
+len(doc.collect(kinds={NodeKind.table}, recursive=True))   # how many
+Counter(n.kind for n in doc.collect(recursive=True))       # tally by kind
+doc.collect(contains=section.span, kinds={NodeKind.link}, recursive=True)  # links in a section
 ```
 
 Slice-by-block-type, per-section rollups, and element rollups are all expressions of
@@ -594,9 +599,10 @@ Non-obvious choices, each grounded in a principle:
   children, including blockquote and list-item block children); `base_blocks()`
   sequential partition with its non-overlapping cover invariant; the single `collect()`
   primitive (superseding `block_type_counts()`; migration:
-  `Counter(n.kind for n in doc.graph().collect(...))`); composable `include` layers and
-  `detail` payload options; the `DocGraph` Pydantic schema ("DocGraph/v0.1"); and the
-  `SpanRef` contract with exact resolution (fuzzy re-anchor wired behind it).
+  `Counter(n.kind for n in doc.collect(recursive=True))`); composable `include` layers
+  and `detail` payload options; the `DocGraph` Pydantic schema ("DocGraph/v0.1"); and the
+  `SpanRef` contract with exact + prefix/suffix quote resolution (fuzzy re-anchoring
+  deferred).
 - **In progress:** annotation layer, synthetic layer (re-expressing `TextNode` tag
   chunking as a layer), cross-layer structural edits, and operation/provenance/layout
   layers. Tracked by epic `chopdiff-8q8q`; sequenced in
