@@ -328,12 +328,86 @@ are mapped for the program and detailed on their own branches.
 
 ### Stage 2: extract and publish FlexDoc (later branch / new repo)
 
-- [ ] New `flexdoc` repo; move `src/flexdoc/` + its tests (preserve history where practical).
-- [ ] `flexdoc` `pyproject.toml`: build/versioning, dependency subset, mirrored supply-chain
-      and lint/type config; `flexdoc` test suite green standalone.
-- [ ] Publish `flexdoc` to PyPI (confirm name).
-- [ ] chopdiff: drop moved modules, depend on `flexdoc`, prune flexdoc-only deps, rewrite
-      imports; chopdiff suite green against the published `flexdoc`.
+This is a **handoff runbook for a fresh agent working in a new repo.** Stage 1 already did
+the hard part (the one-way boundary is proven and enforced), so this is copy-and-rewire
+plus packaging. The partition below was computed from the merged Stage-1 tree; re-verify
+each fact against the source before relying on it (commands given inline).
+
+**Step 1 — Create the new `flexdoc` repo and copy the package.**
+
+- [ ] Copy `src/flexdoc/` verbatim into the new repo as `src/flexdoc/` (the whole package:
+      `docs/`, `html/`, `util/`, `__init__.py`, `py.typed`). Inline tests (`## Tests`
+      sections in e.g. `block_info.py`, `read_time.py`, `wordtoks.py`) travel with their
+      modules. Preserve git history if practical (`git filter-repo --path src/flexdoc` or
+      `git subtree split`), else a plain copy is fine.
+- [ ] Copy the document-model **tests**: `tests/docs/`, `tests/html/`, `tests/util/`, and
+      `tests/golden/` (including `tests/golden/documents/`, `tests/golden/expected/`, and
+      `tests/golden/README.md`), plus `tests/__init__.py`. **Do not** copy
+      `tests/test_package_boundary.py` (the boundary becomes a real package dependency) or
+      `tests/test_supply_chain.py` (write a fresh one for the new repo's settings).
+      `tests/divs/` and `tests/transforms/` stay in chopdiff.
+- [ ] Copy the document-model **examples** that import only `flexdoc.*`
+      (`examples/normalized_form.py`, `examples/doc_structure.py`, and
+      `examples/backfill_timestamps.py` — it uses `flexdoc.html`). `insert_para_breaks.py`
+      uses `chopdiff.transforms`, so it stays in chopdiff. Verify with
+      `grep -l "chopdiff\.\(transforms\|divs\)" examples/*.py`.
+- [ ] Copy the **design history** (this model's docs): `docs/textdoc-spec.md` (the design
+      of record — it already describes the flexdoc document model), the research briefs
+      `docs/project/research/*`, and the plan specs `plan-2026-05-29-unified-document-model.md`,
+      `plan-2026-06-11-structural-metadata.md`, `plan-2026-05-31-doc-model-refinements.md`,
+      `plan-2026-05-31-golden-doc-testing.md`, and this extraction plan. Leave chopdiff's
+      own copies in place (or cross-link).
+
+**Step 2 — Scaffold the new repo's tooling (mirror chopdiff's).**
+
+- [ ] `flexdoc/pyproject.toml`: `[project] name = "flexdoc"`, `requires-python = ">=3.11"`;
+      build-system `hatchling` + `uv-dynamic-versioning`;
+      `[tool.hatch.build.targets.wheel] packages = ["src/flexdoc"]`. Copy chopdiff's
+      `[tool.uv] exclude-newer` cool-off and `[tool.uv.exclude-newer-package]` exceptions,
+      and the `[tool.ruff]`/`[tool.basedpyright]` (`include = ["src", "tests"]`)/
+      `[tool.codespell]`/`[tool.pytest.ini_options]` (`testpaths = ["src", "tests"]`) blocks.
+- [ ] **Dependencies** (`[project.dependencies]`): `flowmark`, `marko`, `cydifflib`,
+      `funlog`, `regex`, `strif`, `frontmatter-format`, `pydantic`, `prettyfmt`,
+      `selectolax`, `typing-extensions`. **Optional extra** `extras = ["simplemma"]` (only
+      `flexdoc/util/lemmatize.py` uses it). Re-derive and confirm the exact set with:
+      `grep -rhoE '^(from|import) [a-z_]+' src/flexdoc | grep -oE '^[a-z_]+ [a-z_]+' | awk '{print $2}' | sort -u`
+      then drop stdlib and `flexdoc` itself. Keep version floors at chopdiff's current pins.
+- [ ] Copy `Makefile`, `devtools/lint.py`, `.github/workflows/ci.yml` (including the
+      `wheel-smoke` job and the audit-gate `--ignore-vuln` note),
+      `.github/workflows/publish.yml`, `SUPPLY-CHAIN-SECURITY.md`, `.gitignore`, `LICENSE`,
+      and a fresh `README.md` + `CHANGELOG.md`. `src/flexdoc/py.typed` is already present.
+- [ ] `uv lock` to generate `flexdoc`'s own committed lockfile; `make install`.
+
+**Step 3 — Verify `flexdoc` standalone.**
+
+- [ ] `make lint` and `make test` green in the new repo (the doc-model suite + goldens run
+      unchanged; regen goldens only if intentionally changed).
+- [ ] `uv build --wheel` produces `flexdoc-*.whl`; isolated import smoke test
+      (`uv pip install` into a throwaway venv, `import flexdoc; from flexdoc.docs import TextDoc`).
+      The boundary is now structural: `flexdoc` has no `chopdiff` dependency at all.
+
+**Step 4 — Publish `flexdoc`.**
+
+- [ ] Confirm the distribution name `flexdoc` is available on PyPI (`uv pip index versions
+      flexdoc`, or check pypi.org); pick an alternative if taken (see Open Questions).
+- [ ] Tag and publish `flexdoc 0.1.0` (its own independent version line) via `publish.yml`.
+
+**Step 5 — Rewire chopdiff to depend on the external `flexdoc` (the breaking release).**
+
+- [ ] In chopdiff: `git rm -r src/flexdoc/` and remove the moved tests
+      (`tests/{docs,html,util,golden}/`) and `tests/test_package_boundary.py`. The
+      `chopdiff.{transforms,divs}` code already imports `flexdoc.*`, so **no import rewrite
+      is needed** — those imports now resolve to the external package.
+- [ ] `pyproject.toml`: add `flexdoc>=<first published>`; **remove** the now-flexdoc-only
+      deps (`marko`, `cydifflib`, `funlog`, `regex`, `strif`, `frontmatter-format`,
+      `pydantic`, `selectolax`) and the `extras`/`simplemma` group; keep `flowmark` and
+      `prettyfmt` (chopdiff's `transforms`/`divs` import them directly). Remove `src/flexdoc`
+      from the wheel target (back to `packages = ["src/chopdiff"]`). `uv lock`.
+- [ ] `make lint` and `make test` green against the published `flexdoc`; the `wheel-smoke`
+      job now imports only `chopdiff` (with `flexdoc` pulled as a dependency).
+- [ ] `CHANGELOG.md`: this is chopdiff's first release depending on external `flexdoc` — a
+      **breaking** release (the `chopdiff.docs|html|util.*` paths are gone). Note the
+      migration (`pip install flexdoc`; `chopdiff.docs.* -> flexdoc.docs.*`).
 
 ### Stage 3: FlexDoc as a first-class, extensible document-layer API (later, its own repo)
 
