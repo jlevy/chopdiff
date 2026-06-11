@@ -1,11 +1,10 @@
 # TextDoc and DocGraph: Design Specification
 
-**Status:** Definitive front-to-back design of the document model — the `TextDoc`
-Python core and the `DocGraph` serialized projection — now housed in the `flexdoc`
-package (extracted from chopdiff; built in this repo, see §14).
+**Status:** Definitive front-to-back design of the document model (the `flexdoc`
+package): the `TextDoc` Python core and the `DocGraph` serialized projection.
 The design is settled (decision records DR-1..DR-6 in
 [`plan-2026-05-29-unified-document-model.md`](project/specs/active/plan-2026-05-29-unified-document-model.md));
-see §14 for what is implemented (v0.3.1) versus in progress.
+see §14 for what is implemented versus in progress.
 Dated plans under `docs/project/specs/` describe the incremental work toward this
 design.
 
@@ -448,8 +447,6 @@ doc.collect(within=section_id, kinds={NodeKind.link})      # links in a section
 Slice-by-block-type, per-section rollups, and element rollups are all expressions of
 this one primitive; relationships are node edges.
 There are no `tables()`/`code_blocks()` shortcuts to maintain.
-(The v0.3.1 `block_type_counts()` convenience accessors have since been **removed**; use
-`collect()` or `Counter(b.type for b in doc.blocks())`. See §14.)
 
 **Query vs. partition; do not conflate.** `collect()` is a *query*: it gathers matching
 nodes and the results may **overlap** their containers (a table nested in a blockquote
@@ -618,25 +615,18 @@ Non-obvious choices, each grounded in a principle:
 
 ## 14. Implementation Status
 
-- **Shipped in v0.3.1 (block-aware layer):** exact spans; the opt-in structural block
-  tree `blocks()` (boundaries and spans from flowmark, no regex scanner);
-  sections/TOC/size rollups; inline-link rollups and link-aware sentences;
-  `ordered_list`/density-invariant lists; and per-section blocks. (v0.3.1 also shipped
-  top-level `block_type_counts()`, since **removed** — see the unreleased changes below.)
-- **Also in v0.3.1 (DocGraph layer):** the recursive node table (containers fully populate
-  children, including blockquote and list-item block children); `base_blocks()`
+- **Implemented (block-aware layer):** exact spans; the opt-in structural block tree
+  `blocks()` (boundaries and spans from flowmark, no regex scanner); sections/TOC/size
+  rollups; inline-link rollups and link-aware sentences; `ordered_list`/density-invariant
+  lists; per-section blocks; and typed per-block metadata
+  (`CodeInfo`/`TableInfo`/`ListInfo`, §5).
+- **Implemented (DocGraph layer):** the recursive node table (containers fully populate
+  children, including blockquote and list-item block children); the `base_blocks()`
   sequential partition with its non-overlapping cover invariant; the single `collect()`
-  primitive; composable `include` layers and `detail` payload options; the `DocGraph`
-  Pydantic schema ("DocGraph/v0.1"); and the `SpanRef` contract with exact + prefix/suffix
-  quote resolution (fuzzy re-anchoring deferred).
-- **Unreleased (post-v0.3.1):** the document model was **extracted into the `flexdoc`
-  package** (`flexdoc.docs`/`html`/`util`; `chopdiff` keeps the diff/transform layer and
-  builds on `flexdoc` — one wheel, two import roots for now). Added: **typed per-block
-  metadata** — `CodeInfo` (`language`, `line_count`), `TableInfo` (`rows`, `cols`,
-  `cells`, `alignments`), `ListInfo` (`ordered`, `start`, `max_depth`, `item_count`) — on
-  `Block`/`Paragraph` and flattened into markdown node `attrs` (§5); the
-  **`footnote_ref`** inline kind (§8); and a `read_time` util. **Removed:**
-  `block_type_counts()` (use `collect()` / `Counter(b.type for b in doc.blocks())`).
+  query primitive; composable `include` layers and `detail` payload options; inline kinds
+  including `footnote_ref` (§8); the `DocGraph` Pydantic schema ("DocGraph/v0.1"); and the
+  `SpanRef` contract with exact + prefix/suffix quote resolution (fuzzy re-anchoring
+  deferred).
 - **In progress:** annotation layer, synthetic layer (re-expressing `TextNode` tag
   chunking as a layer), cross-layer structural edits, and operation/provenance/layout
   layers. Tracked by epic `chopdiff-8q8q`; sequenced in
@@ -652,7 +642,7 @@ Non-obvious choices, each grounded in a principle:
   [`research-2026-05-30-span-references.md`](project/research/research-2026-05-30-span-references.md),
   and the layered-parsing brief
   [`research-2026-05-30-multilayer-parsing.md`](project/research/research-2026-05-30-multilayer-parsing.md).
-- Completed block-aware plan (shipping in v0.3.1):
+- Completed block-aware plan:
   [`plan-2026-05-26-block-aware-doc.md`](project/specs/archive/plan-2026-05-26-block-aware-doc.md).
 - flowmark v0.7.1 API: `flowmark.atomic_spans` (`iter_atomic_spans`,
   `split_sentences_with_spans`, named `AtomicSpan`s) and `flowmark.markdown_ast`
