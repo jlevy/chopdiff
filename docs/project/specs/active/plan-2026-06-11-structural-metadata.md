@@ -15,11 +15,16 @@
 >   flattened into markdown node `attrs`; `Paragraph.code_info`/`.table_info`/`.list_info`.
 > - ✔︎ **`NodeKind.footnote_ref` (#21).** Added to `collect.INLINE_KINDS`; recognized in
 >   `node_table._build_inline_nodes` (fixes the silent drop); `tests/docs/test_footnote_ref.py`.
-> - ‼︎ **Deferred for review** (not yet implemented): the `block_type_counts()` removal
->   (breaking), the `read_time.py` salvage (depends on an abandoned branch), the frontmatter
->   isolation (#22; reworks `from_text`'s span model — higher regression risk), and the
->   `docs/textdoc-spec.md` / `CHANGELOG.md` / `TODO.md` updates. Checkboxes below are
->   unchanged; this banner is the source of truth for what landed.
+> - ✔︎ **`block_type_counts()` removal (breaking).** Removed from `TextDoc`/`Section`;
+>   callers/tests/examples migrated to `Counter(b.type for b in ...blocks())`; `CHANGELOG.md`
+>   records the migration.
+> - ✔︎ **`read_time.py` salvage.** `flexdoc/util/read_time.py` (`format_read_time`, with its
+>   inline tests) recovered from the abandoned branch and exported from `flexdoc.util`;
+>   depends only on `prettyfmt.fmt_timedelta` (already available).
+> - ‼︎ **Deferred for review** (not yet implemented): the frontmatter isolation (#22; reworks
+>   `from_text`'s span model, higher regression risk) and the `docs/textdoc-spec.md` /
+>   `TODO.md` updates. Checkboxes below are unchanged; this banner is the source of truth for
+>   what landed.
 
 ## Overview
 

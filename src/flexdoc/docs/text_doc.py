@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import threading
 from bisect import bisect_left
-from collections import Counter, defaultdict
+from collections import defaultdict
 from collections.abc import Callable, Generator, Iterable, Iterator
 from copy import deepcopy
 from dataclasses import dataclass, field
@@ -837,15 +837,6 @@ class TextDoc:
             parsed=self._parsed(),
         )
 
-    def block_type_counts(self) -> Counter[BlockType]:
-        """
-        Tally of top-level structural block types in the document. A derived view over
-        `blocks()` (no stored counts), density-invariant by construction. Like all
-        structural views it describes the parsed `source_text` (see the class contract),
-        not in-place sentence edits; re-parse to tally edited content.
-        """
-        return Counter(block.type for block in self.blocks())
-
     def toc(self) -> list[tuple[int, str, tuple[int, int]]]:
         """Flat table of contents in document order: `(level, title, span)` per heading."""
         entries: list[tuple[int, str, tuple[int, int]]] = []
@@ -1244,14 +1235,6 @@ class Section:
         return [
             block for block in self._all_blocks() if start <= block.span[0] and block.span[1] <= end
         ]
-
-    def block_type_counts(self) -> Counter[BlockType]:
-        """
-        Tally of top-level structural block types in this section's own content. A
-        derived view over `blocks()` (no stored counts), density-invariant by
-        construction.
-        """
-        return Counter(block.type for block in self.blocks())
 
     def subtree_blocks(self) -> list[Paragraph]:
         """All blocks of this section and its subsections, in document order."""

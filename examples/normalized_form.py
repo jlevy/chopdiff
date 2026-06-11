@@ -91,7 +91,7 @@ def main() -> None:
     show_own_links(doc.sections())
 
     print("\n--- Top-level block-type tally (whole document, no descent) ---")
-    for block_type, n in sorted(doc.block_type_counts().items()):
+    for block_type, n in sorted(Counter(b.type for b in doc.blocks()).items()):
         print(f"  {block_type.value}: {n}")
 
     print("\n--- Deep tally (descending into list items) ---")
