@@ -61,6 +61,8 @@ node_table:
   attrs:
     tight: true
     ordered: false
+    max_depth: 1
+    item_count: 3
 - id: n0003
   layer: markdown
   kind: list_item
@@ -104,6 +106,8 @@ node_table:
   attrs:
     tight: false
     ordered: false
+    max_depth: 1
+    item_count: 3
 - id: n0011
   layer: markdown
   kind: list_item

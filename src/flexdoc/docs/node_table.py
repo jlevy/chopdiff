@@ -94,6 +94,21 @@ def _build_markdown_nodes(
             attrs["tight"] = block.tight
             attrs["ordered"] = block.type.value == "ordered_list"
 
+        # Typed, parser-authoritative metadata flows into the markdown node's attrs (and
+        # thus DocGraph/collect) as flat keys; the structs themselves stay on the Block.
+        if block.code_info is not None:
+            attrs["language"] = block.code_info.language
+            attrs["line_count"] = block.code_info.line_count
+        if block.table_info is not None:
+            attrs["rows"] = block.table_info.rows
+            attrs["cols"] = block.table_info.cols
+            attrs["cells"] = block.table_info.cells
+            attrs["alignments"] = list(block.table_info.alignments)
+        if block.list_info is not None:
+            attrs["start"] = block.list_info.start
+            attrs["max_depth"] = block.list_info.max_depth
+            attrs["item_count"] = block.list_info.item_count
+
         node = Node(
             id=nid,
             kind=_node_kind_for_block(block),

@@ -18,6 +18,14 @@ from marko.block import BlankLine, Document, Heading, SetextHeading
 from typing_extensions import override
 
 from flexdoc.docs.base_blocks import BaseBlock, base_blocks
+from flexdoc.docs.block_info import (
+    CodeInfo,
+    ListInfo,
+    TableInfo,
+    code_info_for,
+    list_info_for,
+    table_info_for,
+)
 from flexdoc.docs.block_tree import Block, parse_blocks
 from flexdoc.docs.block_types import BlockType, block_type_for
 from flexdoc.docs.collect import collect as _collect
@@ -73,11 +81,15 @@ def is_markdown_header(markdown: str) -> bool:
 
 class _BlockInfo(NamedTuple):
     """A paragraph's classification from one parse: its `BlockType` and, for headings,
-    the level and title. Caches the small derived values, not the marko `Document`."""
+    the level and title, plus typed code/table/list metadata for the matching kinds.
+    Caches the small derived values, not the marko `Document`."""
 
     block_type: BlockType
     heading_level: int | None
     heading_title: str | None
+    code_info: CodeInfo | None = None
+    table_info: TableInfo | None = None
+    list_info: ListInfo | None = None
 
 
 def _inline_text(element: object) -> str:
@@ -436,9 +448,12 @@ class Paragraph:
         # an HTML block, so fall back to chopdiff's own markup check for those.
         if block_type == BlockType.paragraph and self.is_markup():
             block_type = BlockType.html
+        code_info = code_info_for(element) if element is not None else None
+        table_info = table_info_for(element) if element is not None else None
+        list_info = list_info_for(element) if element is not None else None
         if isinstance(element, (Heading, SetextHeading)):
             return _BlockInfo(block_type, element.level, _inline_text(element).strip())
-        return _BlockInfo(block_type, None, None)
+        return _BlockInfo(block_type, None, None, code_info, table_info, list_info)
 
     @property
     def block_type(self) -> BlockType:
@@ -452,6 +467,35 @@ class Paragraph:
     def heading_title(self) -> str | None:
         """The heading text without `#` markers if this block is a heading, else None."""
         return self._block_info.heading_title
+
+    @property
+    def code_info(self) -> CodeInfo | None:
+        """
+        Typed code metadata (`language`, `line_count`) if this paragraph is a code block,
+        else `None`. Density caveat (as for `block_type`): this is the editing view, split
+        on blank lines, so a fenced code block containing a blank line is several
+        paragraphs; the density-invariant source of truth is `Block.code_info` from
+        `TextDoc.blocks()`.
+        """
+        return self._block_info.code_info
+
+    @property
+    def table_info(self) -> TableInfo | None:
+        """
+        Typed table metadata (`rows`, `cols`, `cells`, `alignments`) if this paragraph is
+        a table, else `None`. Editing-view density caveat applies; see `code_info`.
+        """
+        return self._block_info.table_info
+
+    @property
+    def list_info(self) -> ListInfo | None:
+        """
+        Typed list metadata (`ordered`, `start`, `max_depth`, `item_count`) if this
+        paragraph is a list, else `None`. Editing-view density caveat applies: a loose
+        list is one paragraph per item, so the whole-list view is `Block.list_info` from
+        `TextDoc.blocks()`. See `code_info`.
+        """
+        return self._block_info.list_info
 
     def links(self) -> list[Link]:
         """Links in this block, in order (identity always; absolute span when recoverable)."""

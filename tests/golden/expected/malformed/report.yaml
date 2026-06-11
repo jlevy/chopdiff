@@ -49,6 +49,9 @@ node_table:
   layer: markdown
   kind: code
   span: 54:234
+  attrs:
+    language: python
+    line_count: 10
 - id: n0004
   layer: document
   kind: section
