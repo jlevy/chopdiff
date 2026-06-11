@@ -154,6 +154,11 @@ id and span — and is what the serialized contract and cross-layer queries are 
 3. **Language structure:** paragraphs, sentences, and the wordtok view, with spans and
    spacing tokens (the editing view).
 
+A leading YAML frontmatter block (`---`-delimited) is a **non-content region**: it is
+excluded from the node table, the block/section views, and the editing view (and so from
+every size/prose count), and exposed verbatim via `TextDoc.frontmatter`. `source_text`
+retains it, so spans stay absolute and the document still round-trips.
+
 Why a node table and not a single tree: a document has several hierarchies that overlap
 and do not nest: a **section** spans sibling blocks and is not a subtree of the block
 tree; **links** are inline ranges; **annotations** target arbitrary spans.

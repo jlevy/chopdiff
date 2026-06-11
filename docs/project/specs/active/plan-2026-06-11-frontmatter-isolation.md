@@ -4,7 +4,7 @@
 
 **Author:** Joshua Levy
 
-**Status:** Approved
+**Status:** Implemented
 
 ## Overview
 
@@ -81,13 +81,13 @@ One phase, two implementation steps (editing view, then structural views), then 
 
 ### Phase 1: Frontmatter isolation
 
-- [ ] `split_frontmatter` detector + inline tests (with/without frontmatter, body-immediately,
+- [x] `split_frontmatter` detector + inline tests (with/without frontmatter, body-immediately,
       CRLF, a `---` thematic break that is *not* frontmatter).
-- [ ] `from_text` isolates the block; `TextDoc.frontmatter` + `_content_offset()`; paragraphs
+- [x] `from_text` isolates the block; `TextDoc.frontmatter` + `_content_offset()`; paragraphs
       built over the body with shifted absolute offsets.
-- [ ] Filter the frontmatter region from `_block_list()`, `base_blocks()`, and the node
+- [x] Filter the frontmatter region from `_block_list()`, `base_blocks()`, and the node
       table's inline/link pass.
-- [ ] Tests + `docs/textdoc-spec.md` §8/§3 note and `CHANGELOG.md` (additive).
+- [x] Tests + `docs/textdoc-spec.md` §8/§3 note and `CHANGELOG.md` (additive).
 
 ## Testing Strategy
 
