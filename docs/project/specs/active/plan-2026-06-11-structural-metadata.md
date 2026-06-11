@@ -346,8 +346,8 @@ Independent of Phase 1: #21 and #22.
   synthetic / annotation layers, cross-layer edits).
 - Doc-model refinements (precedent for `attrs` / layer-aware `collect()`):
   `plan-2026-05-31-doc-model-refinements.md`.
-- FlexDoc package extraction: forthcoming design doc (the standalone document-model package
-  this surface is being shaped toward).
+- FlexDoc package extraction: [`plan-2026-06-11-flexdoc-extraction.md`](plan-2026-06-11-flexdoc-extraction.md)
+  (the standalone document-model package this surface is being shaped toward).
 
 <!-- This document follows common-doc-guidelines.md.
 See github.com/jlevy/practical-prose and review guidelines before editing.
