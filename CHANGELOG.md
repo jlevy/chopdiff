@@ -4,6 +4,38 @@ All notable changes to chopdiff are documented here.
 This project uses [semantic versioning](https://semver.org/); while pre-1.0, breaking
 changes bump the **minor** version (see `docs/publishing.md`).
 
+## Unreleased
+
+### Breaking Changes
+
+- **The document model moved to a new `flexdoc` package.** The document/markdown layer
+  (`docs`, `html`, `util`) now lives under `flexdoc`, so imports move:
+  `chopdiff.docs|html|util.*` becomes `flexdoc.docs|html|util.*`. `chopdiff` keeps the
+  diff/transform layer (`chopdiff.transforms`, `chopdiff.divs`) and is built on `flexdoc`.
+  For now both ship in a single `chopdiff` wheel as two import roots; `flexdoc` becomes a
+  separately published package in a later release. See
+  `docs/project/specs/active/plan-2026-06-11-flexdoc-extraction.md`.
+- **`TextDoc.block_type_counts()` and `Section.block_type_counts()` removed**, superseded
+  by `collect()`. Migrate to standard Python over `blocks()`:
+  `Counter(b.type for b in doc.blocks())` (per-section: `section.blocks()`), or
+  `Counter(n.kind for n in collect(doc.node_table(), layer={Layer.markdown}, recursive=True))`.
+
+### New Features
+
+- **Typed per-block metadata.** `flexdoc.docs.block_info` adds `CodeInfo` (`language`,
+  `line_count`), `TableInfo` (`rows`, `cols`, `cells`, `alignments`), and `ListInfo`
+  (`ordered`, `start`, `max_depth`, `item_count`), exposed as `Block.code_info` /
+  `.table_info` / `.list_info` and the matching `Paragraph` accessors, and flattened into
+  markdown node `attrs` (so they flow into `collect()`/`DocGraph`). Extraction is
+  parser-authoritative (marko attributes, no regex). Table `alignments` use an explicit
+  `"default"` for unaligned columns rather than `None`, so the per-column list is always
+  explicit strings.
+- **`NodeKind.footnote_ref`.** Footnote references (`[^label]`) are now first-class inline
+  nodes with a `label` attr, collected like links/code spans/images. Fixes a bug where a
+  footnote reference was silently dropped from the node table.
+- **`flexdoc.util.read_time.format_read_time(...)`.** Human-readable reading-time estimate
+  from a word count (built on `prettyfmt.fmt_timedelta`).
+
 ## v0.3.1
 
 Versioned as a patch despite the breaking changes below: they touch only the block-type

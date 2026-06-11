@@ -10,7 +10,7 @@ import cydifflib as difflib
 from funlog import log_calls, tally_calls
 from typing_extensions import override
 
-from chopdiff.docs.text_doc import TextDoc
+from flexdoc.docs.text_doc import TextDoc
 
 log = logging.getLogger(__name__)
 

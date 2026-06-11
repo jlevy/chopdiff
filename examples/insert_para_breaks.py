@@ -14,8 +14,8 @@ from textwrap import dedent
 import openai  # pyright: ignore  # Not a project dep.
 from flowmark import fill_text
 
-from chopdiff.docs import TextDoc
 from chopdiff.transforms import WINDOW_2K_WORDTOKS, changes_whitespace, filtered_transform
+from flexdoc.docs import TextDoc
 
 logging.basicConfig(format=">> %(message)s")
 log = logging.getLogger(__name__)

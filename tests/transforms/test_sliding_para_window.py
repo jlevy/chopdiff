@@ -1,5 +1,5 @@
-from chopdiff.docs.text_doc import TextDoc
 from chopdiff.transforms.sliding_windows import sliding_para_window
+from flexdoc.docs.text_doc import TextDoc
 
 
 def _identity_norm(s: str) -> str:

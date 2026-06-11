@@ -29,7 +29,15 @@ from marko.block import BlankLine, CodeBlock, List, ListItem
 from marko.block import Quote as MarkoQuote
 from marko.element import Element
 
-from chopdiff.docs.block_types import BlockType, block_type_for
+from flexdoc.docs.block_info import (
+    CodeInfo,
+    ListInfo,
+    TableInfo,
+    code_info_for,
+    list_info_for,
+    table_info_for,
+)
+from flexdoc.docs.block_types import BlockType, block_type_for
 
 
 @dataclass
@@ -48,12 +56,20 @@ class Block:
     The block tree is density-invariant: a loose list still decomposes into one list
     block with the same `list_item` children as its tight form, so `tight` records the
     spacing without changing the structure or the tallies.
+
+    `code_info`, `table_info`, and `list_info` carry typed, parser-authoritative metadata
+    (see `block_info`): each is non-`None` only for its block kind (`code` / `table` /
+    `list`/`ordered_list`). They are derived facts about the same source span, so they do
+    not participate in equality or `repr` (a block's identity is its type/span/children).
     """
 
     type: BlockType
     span: tuple[int, int]
     children: list[Block] = field(default_factory=list)
     tight: bool | None = None
+    code_info: CodeInfo | None = field(default=None, compare=False, repr=False)
+    table_info: TableInfo | None = field(default=None, compare=False, repr=False)
+    list_info: ListInfo | None = field(default=None, compare=False, repr=False)
 
 
 def parse_blocks(text: str, parsed: Element | None = None) -> list[Block]:
@@ -112,5 +128,15 @@ def _blocks_from(text: str, parent: Element) -> list[Block]:
             sub = _blocks_from(text, element)
         else:
             sub = []
-        blocks.append(Block(block_type, span, sub, tight))
+        blocks.append(
+            Block(
+                block_type,
+                span,
+                sub,
+                tight,
+                code_info=code_info_for(element),
+                table_info=table_info_for(element),
+                list_info=list_info_for(element),
+            )
+        )
     return blocks

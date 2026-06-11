@@ -7,9 +7,9 @@ from dataclasses import dataclass, field
 from prettyfmt.prettyfmt import fmt_lines
 from typing_extensions import override
 
-from chopdiff.docs.sizes import TextUnit
-from chopdiff.docs.text_doc import Splitter, TextDoc, default_sentence_splitter
-from chopdiff.html.html_in_md import div_wrapper
+from flexdoc.docs.sizes import TextUnit
+from flexdoc.docs.text_doc import Splitter, TextDoc, default_sentence_splitter
+from flexdoc.html.html_in_md import div_wrapper
 
 
 @dataclass

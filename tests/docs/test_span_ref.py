@@ -8,10 +8,10 @@ from __future__ import annotations
 import dataclasses
 from textwrap import dedent
 
-from chopdiff.docs.node import Layer, NodeKind
-from chopdiff.docs.node_table import build_node_table
-from chopdiff.docs.span_ref import SpanRef, resolve, resolve_and_update
-from chopdiff.docs.text_doc import TextDoc
+from flexdoc.docs.node import Layer, NodeKind
+from flexdoc.docs.node_table import build_node_table
+from flexdoc.docs.span_ref import SpanRef, resolve, resolve_and_update
+from flexdoc.docs.text_doc import TextDoc
 
 _DOC_TEXT = dedent("""
     # Introduction

@@ -2,7 +2,7 @@ from textwrap import dedent
 
 from chopdiff.divs.div_elements import CHUNK, chunk_text_as_divs, div, div_insert_wrapped
 from chopdiff.divs.parse_divs import parse_divs_single
-from chopdiff.docs.sizes import TextUnit
+from flexdoc.docs.sizes import TextUnit
 
 
 def test_div_insert_child():

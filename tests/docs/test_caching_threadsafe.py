@@ -14,8 +14,8 @@ from concurrent.futures import ThreadPoolExecutor
 
 import marko.parser as marko_parser
 
-from chopdiff.docs.block_tree import parse_blocks
-from chopdiff.docs.text_doc import TextDoc, _block_links
+from flexdoc.docs.block_tree import parse_blocks
+from flexdoc.docs.text_doc import TextDoc, _block_links
 
 _TEXT = (
     "# Title\n\n"

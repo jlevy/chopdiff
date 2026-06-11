@@ -11,12 +11,12 @@ from typing import Any, TypeAlias
 from flowmark import fill_markdown
 from prettyfmt.prettyfmt import fmt_lines
 
-from chopdiff.docs.sizes import TextUnit
-from chopdiff.docs.text_doc import Paragraph, TextDoc
-from chopdiff.docs.token_diffs import DIFF_FILTER_NONE, DiffFilter, diff_docs, find_best_alignment
-from chopdiff.docs.wordtoks import join_wordtoks
 from chopdiff.transforms.sliding_windows import sliding_para_window, sliding_word_window
 from chopdiff.transforms.window_settings import WINDOW_BR, WindowSettings
+from flexdoc.docs.sizes import TextUnit
+from flexdoc.docs.text_doc import Paragraph, TextDoc
+from flexdoc.docs.token_diffs import DIFF_FILTER_NONE, DiffFilter, diff_docs, find_best_alignment
+from flexdoc.docs.wordtoks import join_wordtoks
 
 log = logging.getLogger(__name__)
 

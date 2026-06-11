@@ -1,8 +1,8 @@
 from enum import Enum
 
-from chopdiff.docs.wordtoks import wordtokenize
-from chopdiff.html.html_plaintext import html_to_plaintext
-from chopdiff.util.token_estimate import estimate_tokens
+from flexdoc.docs.wordtoks import wordtokenize
+from flexdoc.html.html_plaintext import html_to_plaintext
+from flexdoc.util.token_estimate import estimate_tokens
 
 
 def size_in_bytes(text: str) -> int:

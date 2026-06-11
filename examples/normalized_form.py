@@ -19,7 +19,7 @@ Run with: `uv run examples/normalized_form.py`
 from collections import Counter
 from textwrap import dedent
 
-from chopdiff.docs import Block, BlockType, Section, TextDoc
+from flexdoc.docs import Block, BlockType, Section, TextDoc
 
 _SAMPLE = dedent(
     """
@@ -91,7 +91,7 @@ def main() -> None:
     show_own_links(doc.sections())
 
     print("\n--- Top-level block-type tally (whole document, no descent) ---")
-    for block_type, n in sorted(doc.block_type_counts().items()):
+    for block_type, n in sorted(Counter(b.type for b in doc.blocks()).items()):
         print(f"  {block_type.value}: {n}")
 
     print("\n--- Deep tally (descending into list items) ---")

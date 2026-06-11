@@ -97,6 +97,8 @@ node_table:
   attrs:
     tight: false
     ordered: false
+    max_depth: 2
+    item_count: 1
 - id: n0005
   layer: markdown
   kind: list_item
@@ -115,6 +117,8 @@ node_table:
   attrs:
     tight: true
     ordered: false
+    max_depth: 1
+    item_count: 2
 - id: n0008
   layer: markdown
   kind: list_item
@@ -147,6 +151,9 @@ node_table:
   attrs:
     tight: true
     ordered: true
+    start: 1
+    max_depth: 1
+    item_count: 2
 - id: n0014
   layer: markdown
   kind: list_item
@@ -187,6 +194,13 @@ node_table:
   kind: table
   span: 271:306
   parent: n0019
+  attrs:
+    rows: 2
+    cols: 2
+    cells: 4
+    alignments:
+    - default
+    - default
 - id: n0022
   layer: markdown
   kind: paragraph

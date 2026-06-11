@@ -94,8 +94,10 @@ style = "pep440"
 bump = true
 
 [tool.hatch.build.targets.wheel]
-# The source location for the package.
-packages = ["src/chopdiff"]
+# The source location for the packages. One distribution ships two import roots:
+# `flexdoc` (the document layer) and `chopdiff` (diff/transform layer built on it).
+# See docs/project/specs/active/plan-2026-06-11-flexdoc-extraction.md (Stage 1).
+packages = ["src/chopdiff", "src/flexdoc"]
 
 
 # ---- Settings ----

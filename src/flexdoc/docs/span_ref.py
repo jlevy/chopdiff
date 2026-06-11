@@ -13,7 +13,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from urllib.parse import quote
 
-from chopdiff.docs.node import Node
+from flexdoc.docs.node import Node
 
 # Default context window size for prefix/suffix capture.
 _CONTEXT_WINDOW = 24

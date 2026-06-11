@@ -1,7 +1,7 @@
 from textwrap import dedent
 
-from chopdiff.docs.search_tokens import search_tokens
-from chopdiff.docs.wordtoks import (
+from flexdoc.docs.search_tokens import search_tokens
+from flexdoc.docs.wordtoks import (
     Tag,
     _insert_para_wordtoks,
     is_entity,

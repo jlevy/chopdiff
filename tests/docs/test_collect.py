@@ -7,10 +7,10 @@ from __future__ import annotations
 from collections import Counter
 from textwrap import dedent
 
-from chopdiff.docs.collect import collect
-from chopdiff.docs.node import Layer, NodeKind, NodeTable
-from chopdiff.docs.node_table import build_node_table
-from chopdiff.docs.text_doc import TextDoc
+from flexdoc.docs.collect import collect
+from flexdoc.docs.node import Layer, NodeKind, NodeTable
+from flexdoc.docs.node_table import build_node_table
+from flexdoc.docs.text_doc import TextDoc
 
 # A rich document with nested structure: headings, a blockquote containing a table,
 # a list with a nested code block, inline links, and code spans.
@@ -372,7 +372,7 @@ def test_conflicting_alias_pairs_raise():
 
 
 def test_textdoc_base_blocks_matches_free_function():
-    from chopdiff.docs.base_blocks import base_blocks as base_blocks_fn
+    from flexdoc.docs.base_blocks import base_blocks as base_blocks_fn
 
     text = "- one\n  - a\n  - b\n- two\n"
     td = TextDoc.from_text(text)

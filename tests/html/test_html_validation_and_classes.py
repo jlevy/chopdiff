@@ -1,7 +1,7 @@
 from collections.abc import Callable
 
 from chopdiff.divs.parse_divs import parse_divs
-from chopdiff.html.html_in_md import tag_with_attrs
+from flexdoc.html.html_in_md import tag_with_attrs
 
 
 def _raises_value_error(fn: Callable[[], object]) -> bool:

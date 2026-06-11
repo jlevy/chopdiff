@@ -26,8 +26,8 @@ from dataclasses import dataclass
 
 from marko.element import Element
 
-from chopdiff.docs.block_tree import Block, parse_blocks
-from chopdiff.docs.block_types import BlockType
+from flexdoc.docs.block_tree import Block, parse_blocks
+from flexdoc.docs.block_types import BlockType
 
 # Block types that are always atomic (never decomposed into child base blocks).
 _ATOMIC_TYPES = frozenset(

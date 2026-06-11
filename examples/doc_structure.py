@@ -13,7 +13,7 @@ Run with: `uv run examples/doc_structure.py`
 
 from textwrap import dedent
 
-from chopdiff.docs import Block, BlockType, TextDoc, TextUnit
+from flexdoc.docs import Block, BlockType, TextDoc, TextUnit
 
 _SAMPLE = dedent(
     """

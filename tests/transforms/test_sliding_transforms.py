@@ -1,12 +1,12 @@
 from textwrap import dedent
 
-from chopdiff.docs.sizes import TextUnit
-from chopdiff.docs.text_doc import TextDoc
 from chopdiff.transforms.sliding_transforms import (
     sliding_para_window_transform,
     sliding_window_transform,
 )
 from chopdiff.transforms.window_settings import WINDOW_BR_SEP, WindowSettings
+from flexdoc.docs.sizes import TextUnit
+from flexdoc.docs.text_doc import TextDoc
 
 _example_text = dedent(
     """

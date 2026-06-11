@@ -1,7 +1,7 @@
-from chopdiff.docs.text_doc import TextDoc
-from chopdiff.docs.token_diffs import DiffOp
 from chopdiff.transforms.sliding_transforms import filtered_transform
 from chopdiff.transforms.window_settings import WINDOW_NONE
+from flexdoc.docs.text_doc import TextDoc
+from flexdoc.docs.token_diffs import DiffOp
 
 
 def _reject_all(op: DiffOp) -> bool:  # pyright: ignore[reportUnusedParameter]

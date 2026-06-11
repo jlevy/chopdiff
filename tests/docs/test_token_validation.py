@@ -1,7 +1,7 @@
 from collections.abc import Callable
 
-from chopdiff.docs.token_diffs import diff_wordtoks
-from chopdiff.docs.token_mapping import TokenMapping
+from flexdoc.docs.token_diffs import diff_wordtoks
+from flexdoc.docs.token_mapping import TokenMapping
 
 
 def _raises_value_error(fn: Callable[[], object]) -> bool:

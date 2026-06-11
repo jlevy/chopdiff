@@ -3,10 +3,10 @@ import logging
 from chopdiff.divs.chunk_utils import chunk_children, chunk_paras
 from chopdiff.divs.parse_divs import parse_divs
 from chopdiff.divs.text_node import TextNode
-from chopdiff.docs.sizes import TextUnit
-from chopdiff.docs.text_doc import TextDoc
-from chopdiff.docs.wordtoks import first_wordtok, is_div
-from chopdiff.html.html_in_md import Attrs, ClassNames, div_wrapper, html_join_blocks
+from flexdoc.docs.sizes import TextUnit
+from flexdoc.docs.text_doc import TextDoc
+from flexdoc.docs.wordtoks import first_wordtok, is_div
+from flexdoc.html.html_in_md import Attrs, ClassNames, div_wrapper, html_join_blocks
 
 log = logging.getLogger(__name__)
 

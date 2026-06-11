@@ -3,15 +3,15 @@ from typing import TypeAlias
 
 from typing_extensions import override
 
-from chopdiff.docs.token_diffs import DiffFilter, DiffOp, OpType
-from chopdiff.docs.wordtoks import (
+from flexdoc.docs.token_diffs import DiffFilter, DiffOp, OpType
+from flexdoc.docs.wordtoks import (
     is_break_or_space,
     is_tag_close,
     is_tag_open,
     is_whitespace_or_punct,
     is_word,
 )
-from chopdiff.util.lemmatize import lemmatize, lemmatized_equal
+from flexdoc.util.lemmatize import lemmatize, lemmatized_equal
 
 
 class WildcardToken:

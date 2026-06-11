@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import threading
 from bisect import bisect_left
-from collections import Counter, defaultdict
+from collections import defaultdict
 from collections.abc import Callable, Generator, Iterable, Iterator
 from copy import deepcopy
 from dataclasses import dataclass, field
@@ -17,15 +17,23 @@ from funlog import tally_calls
 from marko.block import BlankLine, Document, Heading, SetextHeading
 from typing_extensions import override
 
-from chopdiff.docs.base_blocks import BaseBlock, base_blocks
-from chopdiff.docs.block_tree import Block, parse_blocks
-from chopdiff.docs.block_types import BlockType, block_type_for
-from chopdiff.docs.collect import collect as _collect
-from chopdiff.docs.doc_graph import _DEFAULT_INCLUDE, Detail, DocGraph, build_doc_graph
-from chopdiff.docs.node import Layer, Node, NodeKind, NodeTable
-from chopdiff.docs.node_table import build_node_table
-from chopdiff.docs.sizes import TextUnit, size, size_in_bytes
-from chopdiff.docs.wordtoks import (
+from flexdoc.docs.base_blocks import BaseBlock, base_blocks
+from flexdoc.docs.block_info import (
+    CodeInfo,
+    ListInfo,
+    TableInfo,
+    code_info_for,
+    list_info_for,
+    table_info_for,
+)
+from flexdoc.docs.block_tree import Block, parse_blocks
+from flexdoc.docs.block_types import BlockType, block_type_for
+from flexdoc.docs.collect import collect as _collect
+from flexdoc.docs.doc_graph import _DEFAULT_INCLUDE, Detail, DocGraph, build_doc_graph
+from flexdoc.docs.node import Layer, Node, NodeKind, NodeTable
+from flexdoc.docs.node_table import build_node_table
+from flexdoc.docs.sizes import TextUnit, size, size_in_bytes
+from flexdoc.docs.wordtoks import (
     BOF_TOK,
     EOF_TOK,
     PARA_BR_STR,
@@ -39,7 +47,7 @@ from chopdiff.docs.wordtoks import (
     join_wordtoks,
     wordtokenize,
 )
-from chopdiff.util.token_estimate import estimate_tokens
+from flexdoc.util.token_estimate import estimate_tokens
 
 SYMBOL_PARA = "¶"
 
@@ -73,11 +81,15 @@ def is_markdown_header(markdown: str) -> bool:
 
 class _BlockInfo(NamedTuple):
     """A paragraph's classification from one parse: its `BlockType` and, for headings,
-    the level and title. Caches the small derived values, not the marko `Document`."""
+    the level and title, plus typed code/table/list metadata for the matching kinds.
+    Caches the small derived values, not the marko `Document`."""
 
     block_type: BlockType
     heading_level: int | None
     heading_title: str | None
+    code_info: CodeInfo | None = None
+    table_info: TableInfo | None = None
+    list_info: ListInfo | None = None
 
 
 def _inline_text(element: object) -> str:
@@ -436,9 +448,12 @@ class Paragraph:
         # an HTML block, so fall back to chopdiff's own markup check for those.
         if block_type == BlockType.paragraph and self.is_markup():
             block_type = BlockType.html
+        code_info = code_info_for(element) if element is not None else None
+        table_info = table_info_for(element) if element is not None else None
+        list_info = list_info_for(element) if element is not None else None
         if isinstance(element, (Heading, SetextHeading)):
             return _BlockInfo(block_type, element.level, _inline_text(element).strip())
-        return _BlockInfo(block_type, None, None)
+        return _BlockInfo(block_type, None, None, code_info, table_info, list_info)
 
     @property
     def block_type(self) -> BlockType:
@@ -452,6 +467,35 @@ class Paragraph:
     def heading_title(self) -> str | None:
         """The heading text without `#` markers if this block is a heading, else None."""
         return self._block_info.heading_title
+
+    @property
+    def code_info(self) -> CodeInfo | None:
+        """
+        Typed code metadata (`language`, `line_count`) if this paragraph is a code block,
+        else `None`. Density caveat (as for `block_type`): this is the editing view, split
+        on blank lines, so a fenced code block containing a blank line is several
+        paragraphs; the density-invariant source of truth is `Block.code_info` from
+        `TextDoc.blocks()`.
+        """
+        return self._block_info.code_info
+
+    @property
+    def table_info(self) -> TableInfo | None:
+        """
+        Typed table metadata (`rows`, `cols`, `cells`, `alignments`) if this paragraph is
+        a table, else `None`. Editing-view density caveat applies; see `code_info`.
+        """
+        return self._block_info.table_info
+
+    @property
+    def list_info(self) -> ListInfo | None:
+        """
+        Typed list metadata (`ordered`, `start`, `max_depth`, `item_count`) if this
+        paragraph is a list, else `None`. Editing-view density caveat applies: a loose
+        list is one paragraph per item, so the whole-list view is `Block.list_info` from
+        `TextDoc.blocks()`. See `code_info`.
+        """
+        return self._block_info.list_info
 
     def links(self) -> list[Link]:
         """Links in this block, in order (identity always; absolute span when recoverable)."""
@@ -769,7 +813,7 @@ class TextDoc:
         internal blank lines) and decomposes a tight list into `list_item`s with nested
         sublists. Derived from the document's single shared parse (see the class contract
         on read-time caching), so `sections()`, `links()`, and the node table all reuse
-        one parse. See `chopdiff.docs.block_tree`.
+        one parse. See `flexdoc.docs.block_tree`.
 
         Returns a fresh shallow copy of the cached list each call, so reordering/filtering
         the result cannot poison the shared cache; the `Block` objects themselves are
@@ -782,7 +826,7 @@ class TextDoc:
         The flat, depth-annotated sequential base-block partition of the document: a
         complete, ordered, non-overlapping cover whose reassembly reproduces the source
         (except normalized paragraph-break whitespace). A thin method over the
-        `chopdiff.docs.base_blocks.base_blocks` free function; see it for the
+        `flexdoc.docs.base_blocks.base_blocks` free function; see it for the
         `item_partition_depth` semantics. Distinct from `blocks()`, which is the
         recursive structural tree (a query view, not a partition). Reuses the document's
         single shared parse.
@@ -792,15 +836,6 @@ class TextDoc:
             item_partition_depth=item_partition_depth,
             parsed=self._parsed(),
         )
-
-    def block_type_counts(self) -> Counter[BlockType]:
-        """
-        Tally of top-level structural block types in the document. A derived view over
-        `blocks()` (no stored counts), density-invariant by construction. Like all
-        structural views it describes the parsed `source_text` (see the class contract),
-        not in-place sentence edits; re-parse to tally edited content.
-        """
-        return Counter(block.type for block in self.blocks())
 
     def toc(self) -> list[tuple[int, str, tuple[int, int]]]:
         """Flat table of contents in document order: `(level, title, span)` per heading."""
@@ -1105,7 +1140,7 @@ class TextDoc:
     ) -> list[Node]:
         """
         Convenience that calls `collect()` over `self.node_table()`. See
-        `chopdiff.docs.collect.collect` for parameter details.
+        `flexdoc.docs.collect.collect` for parameter details.
         """
         return _collect(
             self.node_table(),
@@ -1130,7 +1165,7 @@ class TextDoc:
         """
         Build a `DocGraph` projection of this document. `include` selects which
         layers to serialize (default: markdown + document); `detail` controls
-        payload richness (see `Detail`). See `chopdiff.docs.doc_graph` for the
+        payload richness (see `Detail`). See `flexdoc.docs.doc_graph` for the
         full contract.
         """
         effective_include = include if include is not None else _DEFAULT_INCLUDE
@@ -1200,14 +1235,6 @@ class Section:
         return [
             block for block in self._all_blocks() if start <= block.span[0] and block.span[1] <= end
         ]
-
-    def block_type_counts(self) -> Counter[BlockType]:
-        """
-        Tally of top-level structural block types in this section's own content. A
-        derived view over `blocks()` (no stored counts), density-invariant by
-        construction.
-        """
-        return Counter(block.type for block in self.blocks())
 
     def subtree_blocks(self) -> list[Paragraph]:
         """All blocks of this section and its subsections, in document order."""

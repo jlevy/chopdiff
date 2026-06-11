@@ -1,8 +1,9 @@
+from collections import Counter
 from textwrap import dedent
 
-from chopdiff.docs.block_types import BlockType
-from chopdiff.docs.sizes import TextUnit
-from chopdiff.docs.text_doc import TextDoc
+from flexdoc.docs.block_types import BlockType
+from flexdoc.docs.sizes import TextUnit
+from flexdoc.docs.text_doc import TextDoc
 
 _DOC = dedent(
     """
@@ -64,21 +65,23 @@ def test_section_blocks_are_scoped_and_in_span():
         assert s_start <= b.span[0] and b.span[1] <= s_end
 
 
-def test_section_block_type_counts_per_section():
+def test_section_block_type_tally_per_section():
+    # Per-section block-type tally is `Counter(b.type for b in section.blocks())` now that
+    # the block_type_counts() convenience is removed (superseded by collect()/blocks()).
     doc = TextDoc.from_text(_DOC)
     top = doc.sections()[0]
-    assert top.block_type_counts() == {BlockType.heading: 1, BlockType.paragraph: 1}
+    assert Counter(b.type for b in top.blocks()) == {BlockType.heading: 1, BlockType.paragraph: 1}
     sub_a = top.children[0]
-    assert sub_a.block_type_counts() == {BlockType.heading: 1, BlockType.paragraph: 1}
+    assert Counter(b.type for b in sub_a.blocks()) == {BlockType.heading: 1, BlockType.paragraph: 1}
 
 
-def test_block_type_counts_are_derived_not_stored():
-    # Counts always reflect current content; nothing is cached. A loose vs. tight list
-    # yields the same tally (density invariance carried through the rollup).
+def test_block_type_tally_is_density_invariant():
+    # A loose vs. tight list yields the same tally over blocks() (density invariance);
+    # the tree is a pure function of source_text, so nothing is cached.
     tight = TextDoc.from_text("# H\n\n- a\n- b\n- c")
     loose = TextDoc.from_text("# H\n\n- a\n\n- b\n\n- c")
-    assert tight.block_type_counts() == loose.block_type_counts()
-    assert tight.block_type_counts()[BlockType.list] == 1
+    assert Counter(b.type for b in tight.blocks()) == Counter(b.type for b in loose.blocks())
+    assert Counter(b.type for b in tight.blocks())[BlockType.list] == 1
 
 
 def test_toc_is_flat_document_order():
@@ -128,7 +131,7 @@ def test_section_links_includes_reference_links():
 def test_section_links_include_reference_links():
     """Section.links() derives from the document-level parse, so reference-style links
     (defined in a separate block) are attributed to their section (z8b2)."""
-    from chopdiff.docs.text_doc import TextDoc
+    from flexdoc.docs.text_doc import TextDoc
 
     text = "# Heading\n\nSee [docs][d] for more.\n\n[d]: https://docs.example\n"
     section = TextDoc.from_text(text).sections()[0]

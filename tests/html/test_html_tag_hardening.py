@@ -1,4 +1,4 @@
-from chopdiff.html.html_tags import html_extract_attribute_value, html_find_tag
+from flexdoc.html.html_tags import html_extract_attribute_value, html_find_tag
 
 
 def test_html_find_tag_nested_self_closing_same_name():

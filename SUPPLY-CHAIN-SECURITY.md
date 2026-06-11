@@ -104,6 +104,21 @@ caught up), remove the override and re-lock.
   scripts. Reviewed and approved by the maintainer, 2026-05-29. Remove this override once
   0.7.1 clears the 14-day window.
 
+### Audit-Gate Ignores
+
+Distinct from the cool-off overrides above: `pip-audit --ignore-vuln <ID>` suppresses a
+specific advisory at the audit gate (`.github/workflows/ci.yml`). Use it only for a finding
+in a **tool dependency that chopdiff does not ship** and that has no fix available within
+the cool-off window. It does not change dependency resolution or the cool-off.
+
+- **PYSEC-2026-196 in `pip`.** `pip` is only present as a transitive dependency of the
+  `pip-audit` tool (audit group); it is not a chopdiff runtime/dev dependency and is never
+  shipped in the chopdiff wheel. The fix (`pip` 26.1.2) is newer than the `exclude-newer`
+  cutoff (2026-05-11), so there is no within-policy bump. Ignored at the audit gate to keep
+  CI green; applied at the maintainer's direction and **pending explicit ratification**.
+  Remove the `--ignore-vuln PYSEC-2026-196` once the cutoff advances past pip 26.1.2's
+  release (it then resolves normally and the advisory clears).
+
 ## Untrusted Repositories
 
 Treat any freshly cloned third-party repo as untrusted. Don't run `install` / `build` /

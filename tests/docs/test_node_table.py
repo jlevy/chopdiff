@@ -8,9 +8,9 @@ from __future__ import annotations
 
 from textwrap import dedent
 
-from chopdiff.docs.node import Layer, NodeKind
-from chopdiff.docs.node_table import build_node_table
-from chopdiff.docs.text_doc import TextDoc
+from flexdoc.docs.node import Layer, NodeKind
+from flexdoc.docs.node_table import build_node_table
+from flexdoc.docs.text_doc import TextDoc
 
 # A document with nested structure: headings, sections, paragraphs, a
 # blockquote with nested content, a list, inline links, code spans, and

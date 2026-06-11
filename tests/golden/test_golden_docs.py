@@ -24,9 +24,9 @@ from pathlib import Path
 
 from frontmatter_format import fmf_read
 
-from chopdiff.docs.base_blocks import base_blocks
-from chopdiff.docs.debug import doc_graph_yaml, doc_report, doc_report_data
-from chopdiff.docs.text_doc import TextDoc
+from flexdoc.docs.base_blocks import base_blocks
+from flexdoc.docs.debug import doc_graph_yaml, doc_report, doc_report_data
+from flexdoc.docs.text_doc import TextDoc
 
 _HERE = Path(__file__).parent
 _DOCS_DIR = _HERE / "documents"

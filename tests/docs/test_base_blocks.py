@@ -1,7 +1,7 @@
 from textwrap import dedent
 
-from chopdiff.docs.base_blocks import BaseBlock, base_blocks
-from chopdiff.docs.block_types import BlockType
+from flexdoc.docs.base_blocks import BaseBlock, base_blocks
+from flexdoc.docs.block_types import BlockType
 
 
 def _types_and_depths(bbs: list[BaseBlock]) -> list[tuple[BlockType, int]]:
