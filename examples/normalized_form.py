@@ -19,7 +19,7 @@ Run with: `uv run examples/normalized_form.py`
 from collections import Counter
 from textwrap import dedent
 
-from chopdiff.docs import Block, BlockType, Section, TextDoc
+from flexdoc.docs import Block, BlockType, Section, TextDoc
 
 _SAMPLE = dedent(
     """

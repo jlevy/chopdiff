@@ -7,8 +7,8 @@ from collections.abc import Callable, Generator
 
 from flowmark import fill_markdown
 
-from chopdiff.docs.sizes import TextUnit
-from chopdiff.docs.text_doc import TextDoc
+from flexdoc.docs.sizes import TextUnit
+from flexdoc.docs.text_doc import TextDoc
 
 log = logging.getLogger(__name__)
 

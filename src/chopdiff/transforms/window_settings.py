@@ -2,7 +2,7 @@ from dataclasses import dataclass
 
 from typing_extensions import override
 
-from chopdiff.docs.sizes import TextUnit
+from flexdoc.docs.sizes import TextUnit
 
 WINDOW_BR = "<!--window-br-->"
 """Marker inserted into result documents to show where window breaks have occurred."""

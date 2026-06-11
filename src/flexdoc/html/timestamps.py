@@ -3,9 +3,9 @@ from collections.abc import Iterable
 import regex
 from typing_extensions import override
 
-from chopdiff.docs.search_tokens import search_tokens
-from chopdiff.docs.wordtoks import wordtokenize_with_offsets
-from chopdiff.html.extractor import ContentNotFound, Extractor, Match
+from flexdoc.docs.search_tokens import search_tokens
+from flexdoc.docs.wordtoks import wordtokenize_with_offsets
+from flexdoc.html.extractor import ContentNotFound, Extractor, Match
 
 # Match any span or div with a data-timestamp attribute.
 _TIMESTAMP_RE = regex.compile(r'(?:<\w+[^>]*\s)?data-timestamp=[\'"](\d+(\.\d+)?)[\'"][^>]*>')

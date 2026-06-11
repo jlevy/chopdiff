@@ -1,7 +1,7 @@
 from textwrap import dedent
 
-from chopdiff.html.extractor import ContentNotFound
-from chopdiff.html.timestamps import TimestampExtractor
+from flexdoc.html.extractor import ContentNotFound
+from flexdoc.html.timestamps import TimestampExtractor
 
 
 def test_timestamp_extractor():

@@ -312,16 +312,18 @@ are mapped for the program and detailed on their own branches.
 
 ### Stage 1: pure in-repo refactor (this branch)
 
-- [ ] Create `src/flexdoc/` and move `docs/`, `html/`, `util/` (and `divs/` per the open
-      decision) into it; keep `transforms/` (and `divs/` if it stays) under `src/chopdiff/`.
-- [ ] Add `src/flexdoc/__init__.py` with the document-layer public-surface docstring; update
-      `chopdiff/__init__.py`'s submodule inventory.
-- [ ] Rewrite all `chopdiff.{docs,html,util}` imports to `flexdoc.*` across `src/`, `tests/`,
-      `examples/`, and `devtools/`. No logic edits.
-- [ ] Update `pyproject.toml` wheel target to `["src/chopdiff", "src/flexdoc"]`.
-- [ ] Add `tests/test_package_boundary.py`: assert (via `ast`, stdlib only) that no
+- [x] Create `src/flexdoc/` and move `docs/`, `html/`, `util/` into it via `git mv` (renames
+      preserved); `transforms/` and `divs/` stay under `src/chopdiff/` (`divs/` kept in
+      chopdiff per the recommended option; migrates to flexdoc at Stage 4).
+- [x] Add `src/flexdoc/__init__.py` with the document-layer public-surface docstring and a
+      `src/flexdoc/py.typed` marker; update `chopdiff/__init__.py`'s submodule inventory.
+- [x] Rewrite all `chopdiff.{docs,html,util}` imports to `flexdoc.*` across `src/`, `tests/`,
+      and `examples/` (64 `.py` files). No logic edits.
+- [x] Update `pyproject.toml` wheel target to `["src/chopdiff", "src/flexdoc"]`.
+- [x] Add `tests/test_package_boundary.py`: assert (via `ast`, stdlib only) that no
       `src/flexdoc` module imports `chopdiff`.
-- [ ] `make lint` and `make test` clean; `uv build` produces one wheel from which both
+- [x] `make lint` and `make test` clean (314 passed); `uv build` produces one wheel
+      (`chopdiff-*.whl`) whose top-level packages are `chopdiff` and `flexdoc`, and both
       `import flexdoc` and `import chopdiff` succeed.
 
 ### Stage 2: extract and publish FlexDoc (later branch / new repo)
@@ -389,10 +391,10 @@ are mapped for the program and detailed on their own branches.
 
 ## Open Questions
 
-- **`divs/` placement for Stage 1.** Recommended: keep in chopdiff (it is chunking, matching
-  chopdiff's identity, and keeps flexdoc a minimal closed core), and migrate it into FlexDoc
-  as the synthetic layer at Stage 4. Alternative: move to flexdoc now as part of a larger
-  "structural cluster." Unresolved; does not affect the rest of the boundary.
+- **`divs/` placement for Stage 1.** Resolved for Stage 1: **kept in chopdiff** (the
+  recommended option — it is chunking, matching chopdiff's identity, and keeps flexdoc a
+  minimal closed core), to migrate into FlexDoc as the synthetic layer at Stage 4. Still
+  revisitable before that migration; it does not affect the rest of the boundary.
 - **FlexDoc distribution name.** Is `flexdoc` available on PyPI? Confirm at Stage 2.
 - **`token_diffs` long-term home.** Forced into flexdoc for v1 by the `docs` cycle; whether to
   relocate the diff primitives to chopdiff later (Stage 3) is open.

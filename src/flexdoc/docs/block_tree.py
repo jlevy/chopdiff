@@ -29,7 +29,7 @@ from marko.block import BlankLine, CodeBlock, List, ListItem
 from marko.block import Quote as MarkoQuote
 from marko.element import Element
 
-from chopdiff.docs.block_types import BlockType, block_type_for
+from flexdoc.docs.block_types import BlockType, block_type_for
 
 
 @dataclass

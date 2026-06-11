@@ -1,8 +1,8 @@
 from textwrap import dedent
 
-from chopdiff.docs.block_tree import Block
-from chopdiff.docs.block_types import BlockType
-from chopdiff.docs.text_doc import TextDoc
+from flexdoc.docs.block_tree import Block
+from flexdoc.docs.block_types import BlockType
+from flexdoc.docs.text_doc import TextDoc
 
 _DOC = dedent(
     """
@@ -264,7 +264,7 @@ def test_list_item_populates_all_block_children():
 
 
 def test_walk_blocks_traverses_depth():
-    from chopdiff.docs.block_tree import walk_blocks
+    from flexdoc.docs.block_tree import walk_blocks
 
     text = dedent(
         """
@@ -285,7 +285,7 @@ def test_density_invariant_walk_blocks_tallies():
     # Tight and loose forms produce identical walk_blocks tallies.
     from collections import Counter
 
-    from chopdiff.docs.block_tree import walk_blocks
+    from flexdoc.docs.block_tree import walk_blocks
 
     dense = TextDoc.from_text("- a\n- b\n- c").blocks()
     loose = TextDoc.from_text("- a\n\n- b\n\n- c").blocks()

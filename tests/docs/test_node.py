@@ -5,8 +5,8 @@ membership, and the `LAYER_NESTING` invariant.
 
 from __future__ import annotations
 
-from chopdiff.docs.block_types import BlockType
-from chopdiff.docs.node import LAYER_NESTING, Layer, NestingGuarantee, Node, NodeKind
+from flexdoc.docs.block_types import BlockType
+from flexdoc.docs.node import LAYER_NESTING, Layer, NestingGuarantee, Node, NodeKind
 
 
 def test_block_kinds_match_block_type_values():

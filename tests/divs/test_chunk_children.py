@@ -1,7 +1,7 @@
 from textwrap import dedent
 
 from chopdiff.divs.div_elements import chunk_text_as_divs
-from chopdiff.docs.sizes import TextUnit
+from flexdoc.docs.sizes import TextUnit
 
 
 def test_chunk_text_as_divs_with_div_leading_input():

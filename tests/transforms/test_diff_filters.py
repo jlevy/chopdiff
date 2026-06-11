@@ -1,6 +1,3 @@
-from chopdiff.docs.text_doc import TextDoc
-from chopdiff.docs.token_diffs import DiffOp, OpType, diff_wordtoks
-from chopdiff.docs.wordtoks import PARA_BR_TOK, SENT_BR_TOK, is_break_or_space
 from chopdiff.transforms.diff_filters import (
     WILDCARD_TOK,
     changes_whitespace,
@@ -9,6 +6,9 @@ from chopdiff.transforms.diff_filters import (
     removes_word_lemmas,
     removes_words,
 )
+from flexdoc.docs.text_doc import TextDoc
+from flexdoc.docs.token_diffs import DiffOp, OpType, diff_wordtoks
+from flexdoc.docs.wordtoks import PARA_BR_TOK, SENT_BR_TOK, is_break_or_space
 
 
 def test_filter_br_and_space():

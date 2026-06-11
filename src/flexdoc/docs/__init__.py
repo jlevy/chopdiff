@@ -1,16 +1,16 @@
 # flake8: noqa: F401
 
-from chopdiff.docs.base_blocks import BaseBlock, base_blocks
-from chopdiff.docs.block_tree import Block
-from chopdiff.docs.block_types import BlockType
-from chopdiff.docs.collect import collect
-from chopdiff.docs.debug import (
+from flexdoc.docs.base_blocks import BaseBlock, base_blocks
+from flexdoc.docs.block_tree import Block
+from flexdoc.docs.block_types import BlockType
+from flexdoc.docs.collect import collect
+from flexdoc.docs.debug import (
     doc_graph_yaml,
     doc_report,
     doc_report_data,
     dump_views,
 )
-from chopdiff.docs.doc_graph import (
+from flexdoc.docs.doc_graph import (
     Detail,
     DocGraph,
     NodeModel,
@@ -18,12 +18,12 @@ from chopdiff.docs.doc_graph import (
     Views,
     build_doc_graph,
 )
-from chopdiff.docs.node import LAYER_NESTING, Layer, NestingGuarantee, Node, NodeKind, NodeTable
-from chopdiff.docs.node_table import build_node_table
-from chopdiff.docs.search_tokens import search_tokens
-from chopdiff.docs.sizes import TextUnit
-from chopdiff.docs.span_ref import SpanRef
-from chopdiff.docs.text_doc import (
+from flexdoc.docs.node import LAYER_NESTING, Layer, NestingGuarantee, Node, NodeKind, NodeTable
+from flexdoc.docs.node_table import build_node_table
+from flexdoc.docs.search_tokens import search_tokens
+from flexdoc.docs.sizes import TextUnit
+from flexdoc.docs.span_ref import SpanRef
+from flexdoc.docs.text_doc import (
     Link,
     Offsets,
     Paragraph,
@@ -32,7 +32,7 @@ from chopdiff.docs.text_doc import (
     SentIndex,
     TextDoc,
 )
-from chopdiff.docs.token_diffs import (
+from flexdoc.docs.token_diffs import (
     DIFF_FILTER_NONE,
     DiffFilter,
     DiffOp,
@@ -43,8 +43,8 @@ from chopdiff.docs.token_diffs import (
     diff_wordtoks,
     scored_diff_wordtoks,
 )
-from chopdiff.docs.token_mapping import TokenMapping
-from chopdiff.docs.wordtoks import (
+from flexdoc.docs.token_mapping import TokenMapping
+from flexdoc.docs.wordtoks import (
     BOF_STR,
     BOF_TOK,
     EOF_STR,

@@ -1,8 +1,8 @@
 from textwrap import dedent
 
-from chopdiff.docs.block_types import BlockType
-from chopdiff.docs.sizes import TextUnit
-from chopdiff.docs.text_doc import TextDoc
+from flexdoc.docs.block_types import BlockType
+from flexdoc.docs.sizes import TextUnit
+from flexdoc.docs.text_doc import TextDoc
 
 _DOC = dedent(
     """
@@ -128,7 +128,7 @@ def test_section_links_includes_reference_links():
 def test_section_links_include_reference_links():
     """Section.links() derives from the document-level parse, so reference-style links
     (defined in a separate block) are attributed to their section (z8b2)."""
-    from chopdiff.docs.text_doc import TextDoc
+    from flexdoc.docs.text_doc import TextDoc
 
     text = "# Heading\n\nSee [docs][d] for more.\n\n[d]: https://docs.example\n"
     section = TextDoc.from_text(text).sections()[0]

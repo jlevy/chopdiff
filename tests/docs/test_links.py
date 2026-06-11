@@ -1,6 +1,6 @@
 from textwrap import dedent
 
-from chopdiff.docs.text_doc import TextDoc
+from flexdoc.docs.text_doc import TextDoc
 
 _DOC = dedent(
     """
@@ -141,7 +141,7 @@ def test_autolink_and_bare_url_get_spans():
 
 def test_autolink_is_single_link_node_not_inline_html():
     """An autolink resolves to one `link` node (deduped from the html_open_tag atomic)."""
-    from chopdiff.docs.node import NodeKind
+    from flexdoc.docs.node import NodeKind
 
     doc = TextDoc.from_text("Visit <https://auto.example> now.\n")
     spans = [(n.kind, n.source_span) for n in doc.node_table().nodes.values() if n.source_span]

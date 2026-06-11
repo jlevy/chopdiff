@@ -1,7 +1,7 @@
 """
 A lightweight per-layer index over node source spans for offset-containment
 queries, so node-table assembly does not rescan the whole table for each inline
-element. See `chopdiff.docs.node_table`.
+element. See `flexdoc.docs.node_table`.
 """
 
 from __future__ import annotations
@@ -9,7 +9,7 @@ from __future__ import annotations
 from bisect import bisect_right
 from dataclasses import dataclass, field
 
-from chopdiff.docs.node import Layer, Node, NodeKind
+from flexdoc.docs.node import Layer, Node, NodeKind
 
 # One entry per spanned node: (start, end, kind, id).
 _Entry = tuple[int, int, NodeKind, str]

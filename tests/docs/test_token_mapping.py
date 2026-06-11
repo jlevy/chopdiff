@@ -1,8 +1,8 @@
 from textwrap import dedent
 
-from chopdiff.docs.text_doc import TextDoc
-from chopdiff.docs.token_mapping import TokenMapping
-from chopdiff.docs.wordtoks import wordtokenize
+from flexdoc.docs.text_doc import TextDoc
+from flexdoc.docs.token_mapping import TokenMapping
+from flexdoc.docs.wordtoks import wordtokenize
 
 
 def test_offset_mapping():

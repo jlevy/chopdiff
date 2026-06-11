@@ -17,15 +17,15 @@ from funlog import tally_calls
 from marko.block import BlankLine, Document, Heading, SetextHeading
 from typing_extensions import override
 
-from chopdiff.docs.base_blocks import BaseBlock, base_blocks
-from chopdiff.docs.block_tree import Block, parse_blocks
-from chopdiff.docs.block_types import BlockType, block_type_for
-from chopdiff.docs.collect import collect as _collect
-from chopdiff.docs.doc_graph import _DEFAULT_INCLUDE, Detail, DocGraph, build_doc_graph
-from chopdiff.docs.node import Layer, Node, NodeKind, NodeTable
-from chopdiff.docs.node_table import build_node_table
-from chopdiff.docs.sizes import TextUnit, size, size_in_bytes
-from chopdiff.docs.wordtoks import (
+from flexdoc.docs.base_blocks import BaseBlock, base_blocks
+from flexdoc.docs.block_tree import Block, parse_blocks
+from flexdoc.docs.block_types import BlockType, block_type_for
+from flexdoc.docs.collect import collect as _collect
+from flexdoc.docs.doc_graph import _DEFAULT_INCLUDE, Detail, DocGraph, build_doc_graph
+from flexdoc.docs.node import Layer, Node, NodeKind, NodeTable
+from flexdoc.docs.node_table import build_node_table
+from flexdoc.docs.sizes import TextUnit, size, size_in_bytes
+from flexdoc.docs.wordtoks import (
     BOF_TOK,
     EOF_TOK,
     PARA_BR_STR,
@@ -39,7 +39,7 @@ from chopdiff.docs.wordtoks import (
     join_wordtoks,
     wordtokenize,
 )
-from chopdiff.util.token_estimate import estimate_tokens
+from flexdoc.util.token_estimate import estimate_tokens
 
 SYMBOL_PARA = "¶"
 
@@ -769,7 +769,7 @@ class TextDoc:
         internal blank lines) and decomposes a tight list into `list_item`s with nested
         sublists. Derived from the document's single shared parse (see the class contract
         on read-time caching), so `sections()`, `links()`, and the node table all reuse
-        one parse. See `chopdiff.docs.block_tree`.
+        one parse. See `flexdoc.docs.block_tree`.
 
         Returns a fresh shallow copy of the cached list each call, so reordering/filtering
         the result cannot poison the shared cache; the `Block` objects themselves are
@@ -782,7 +782,7 @@ class TextDoc:
         The flat, depth-annotated sequential base-block partition of the document: a
         complete, ordered, non-overlapping cover whose reassembly reproduces the source
         (except normalized paragraph-break whitespace). A thin method over the
-        `chopdiff.docs.base_blocks.base_blocks` free function; see it for the
+        `flexdoc.docs.base_blocks.base_blocks` free function; see it for the
         `item_partition_depth` semantics. Distinct from `blocks()`, which is the
         recursive structural tree (a query view, not a partition). Reuses the document's
         single shared parse.
@@ -1105,7 +1105,7 @@ class TextDoc:
     ) -> list[Node]:
         """
         Convenience that calls `collect()` over `self.node_table()`. See
-        `chopdiff.docs.collect.collect` for parameter details.
+        `flexdoc.docs.collect.collect` for parameter details.
         """
         return _collect(
             self.node_table(),
@@ -1130,7 +1130,7 @@ class TextDoc:
         """
         Build a `DocGraph` projection of this document. `include` selects which
         layers to serialize (default: markdown + document); `detail` controls
-        payload richness (see `Detail`). See `chopdiff.docs.doc_graph` for the
+        payload richness (see `Detail`). See `flexdoc.docs.doc_graph` for the
         full contract.
         """
         effective_include = include if include is not None else _DEFAULT_INCLUDE

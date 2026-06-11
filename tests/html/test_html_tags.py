@@ -2,7 +2,7 @@ from textwrap import dedent
 
 import pytest
 
-from chopdiff.html.html_tags import (
+from flexdoc.html.html_tags import (
     html_extract_attribute_value,
     html_find_tag,
     rewrite_html_img_urls,

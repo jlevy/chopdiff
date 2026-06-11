@@ -8,8 +8,8 @@
 import logging
 from textwrap import dedent
 
-from chopdiff.docs import BOF_TOK, EOF_TOK, PARA_BR_TOK, TextDoc, TokenMapping, search_tokens
-from chopdiff.html import ContentNotFound, TimestampExtractor
+from flexdoc.docs import BOF_TOK, EOF_TOK, PARA_BR_TOK, TextDoc, TokenMapping, search_tokens
+from flexdoc.html import ContentNotFound, TimestampExtractor
 
 logging.basicConfig(format=">> %(message)s")
 log = logging.getLogger(__name__)

@@ -1,7 +1,7 @@
-from chopdiff.docs.sizes import TextUnit
-from chopdiff.docs.text_doc import TextDoc
 from chopdiff.transforms.sliding_transforms import sliding_wordtok_window_transform
 from chopdiff.transforms.window_settings import WindowSettings
+from flexdoc.docs.sizes import TextUnit
+from flexdoc.docs.text_doc import TextDoc
 
 
 def _shrink_after_first():

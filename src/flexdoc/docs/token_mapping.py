@@ -1,6 +1,6 @@
 from typing_extensions import override
 
-from chopdiff.docs.token_diffs import SYMBOL_SEP, OpType, TokenDiff, diff_wordtoks
+from flexdoc.docs.token_diffs import SYMBOL_SEP, OpType, TokenDiff, diff_wordtoks
 
 
 class TokenMapping:

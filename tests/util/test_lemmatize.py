@@ -1,4 +1,4 @@
-from chopdiff.util.lemmatize import lemmatize, lemmatized_equal
+from flexdoc.util.lemmatize import lemmatize, lemmatized_equal
 
 
 def test_lemmatize():

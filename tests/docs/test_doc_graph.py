@@ -9,18 +9,18 @@ import json
 from pathlib import Path
 from textwrap import dedent
 
-from chopdiff.docs.doc_graph import (
+from flexdoc.docs.doc_graph import (
     Detail,
     DocGraph,
     NodeModel,
     SourceInfo,
     Views,
 )
-from chopdiff.docs.node import Layer
-from chopdiff.docs.text_doc import TextDoc
+from flexdoc.docs.node import Layer
+from flexdoc.docs.text_doc import TextDoc
 
 SCHEMA_PATH = (
-    Path(__file__).resolve().parent.parent.parent / "src/chopdiff/docs/doc_graph_schema.json"
+    Path(__file__).resolve().parent.parent.parent / "src/flexdoc/docs/doc_graph_schema.json"
 )
 
 # A representative multi-section document with nested blocks and links.
@@ -281,7 +281,7 @@ def test_json_schema_export_matches_committed_file():
     """
     The committed JSON Schema file must match what DocGraph.model_json_schema()
     produces. If this test fails, regenerate with:
-        python -c "from chopdiff.docs.doc_graph import DocGraph; ..."
+        python -c "from flexdoc.docs.doc_graph import DocGraph; ..."
     """
     current_schema = DocGraph.model_json_schema(by_alias=True)
     current_json = json.dumps(current_schema, indent=2, sort_keys=True) + "\n"

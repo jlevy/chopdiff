@@ -22,12 +22,12 @@ from typing import TYPE_CHECKING
 
 from flowmark.atomic_spans import iter_atomic_spans
 
-from chopdiff.docs.block_tree import Block
-from chopdiff.docs.interval_index import IntervalIndex
-from chopdiff.docs.node import Layer, Node, NodeKind, NodeTable
+from flexdoc.docs.block_tree import Block
+from flexdoc.docs.interval_index import IntervalIndex
+from flexdoc.docs.node import Layer, Node, NodeKind, NodeTable
 
 if TYPE_CHECKING:
-    from chopdiff.docs.text_doc import Section, TextDoc
+    from flexdoc.docs.text_doc import Section, TextDoc
 
 
 # Atomic-span pattern names that map to inline NodeKinds.

@@ -1,5 +1,5 @@
-from chopdiff.docs.text_doc import SentIndex, TextDoc
-from chopdiff.docs.wordtoks import BOF_TOK, EOF_TOK
+from flexdoc.docs.text_doc import SentIndex, TextDoc
+from flexdoc.docs.wordtoks import BOF_TOK, EOF_TOK
 
 
 def test_sub_doc_is_independent_copy():

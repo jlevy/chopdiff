@@ -15,7 +15,7 @@ diff-friendly:
   `docgraph.yaml`, `reassembled.md`) into a directory.
 
 Spans are rendered as compact `"start:end"` strings (Unicode code points), matching the
-`data-source-span` convention in `chopdiff.docs.render`.
+`data-source-span` convention in `flexdoc.docs.render`.
 """
 
 from __future__ import annotations
@@ -26,12 +26,12 @@ from typing import Any
 
 from strif import atomic_output_file
 
-from chopdiff.docs.base_blocks import base_blocks
-from chopdiff.docs.doc_graph import clean_yaml
-from chopdiff.docs.node import NodeKind
-from chopdiff.docs.sizes import TextUnit
-from chopdiff.docs.span_ref import SpanRef, resolve
-from chopdiff.docs.text_doc import TextDoc
+from flexdoc.docs.base_blocks import base_blocks
+from flexdoc.docs.doc_graph import clean_yaml
+from flexdoc.docs.node import NodeKind
+from flexdoc.docs.sizes import TextUnit
+from flexdoc.docs.span_ref import SpanRef, resolve
+from flexdoc.docs.text_doc import TextDoc
 
 # Inline kinds that carry a locatable span worth round-tripping through SpanRef.
 _LOCATABLE_INLINE = frozenset({NodeKind.link, NodeKind.image, NodeKind.code_span})

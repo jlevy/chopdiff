@@ -7,10 +7,10 @@ from __future__ import annotations
 
 from textwrap import dedent
 
-from chopdiff.docs.interval_index import IntervalIndex
-from chopdiff.docs.node import Layer, NodeKind
-from chopdiff.docs.node_table import build_node_table
-from chopdiff.docs.text_doc import TextDoc
+from flexdoc.docs.interval_index import IntervalIndex
+from flexdoc.docs.node import Layer, NodeKind
+from flexdoc.docs.node_table import build_node_table
+from flexdoc.docs.text_doc import TextDoc
 
 _DOC = dedent("""
     # Top

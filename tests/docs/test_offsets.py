@@ -1,6 +1,6 @@
 from textwrap import dedent
 
-from chopdiff.docs.text_doc import TextDoc
+from flexdoc.docs.text_doc import TextDoc
 
 
 def _assert_offsets_round_trip(text: str, doc: TextDoc) -> None:

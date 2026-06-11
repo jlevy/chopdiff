@@ -6,7 +6,7 @@ source text (textdoc-spec section 12, E8/D5).
 
 from __future__ import annotations
 
-from chopdiff.docs.node import Node
+from flexdoc.docs.node import Node
 
 
 def render_node_attrs(node: Node) -> str:
@@ -49,7 +49,7 @@ def parse_source_span_attr(attr_value: str) -> tuple[int, int] | None:
 
 
 def test_render_node_attrs_with_span():
-    from chopdiff.docs.node import Layer, NodeKind
+    from flexdoc.docs.node import Layer, NodeKind
 
     node = Node(
         id="n0001", kind=NodeKind.paragraph, layer=Layer.markdown, parent=None, source_span=(10, 25)
@@ -59,7 +59,7 @@ def test_render_node_attrs_with_span():
 
 
 def test_render_node_attrs_no_span():
-    from chopdiff.docs.node import Layer, NodeKind
+    from flexdoc.docs.node import Layer, NodeKind
 
     node = Node(id="n0002", kind=NodeKind.link, layer=Layer.markdown, parent=None, source_span=None)
     result = render_node_attrs(node)
@@ -67,7 +67,7 @@ def test_render_node_attrs_no_span():
 
 
 def test_wrap_with_node_attrs():
-    from chopdiff.docs.node import Layer, NodeKind
+    from flexdoc.docs.node import Layer, NodeKind
 
     node = Node(
         id="n0003", kind=NodeKind.heading, layer=Layer.markdown, parent=None, source_span=(0, 8)
@@ -85,7 +85,7 @@ def test_parse_source_span_attr():
 
 def test_round_trip():
     """A node's span survives render-then-parse."""
-    from chopdiff.docs.node import Layer, NodeKind
+    from flexdoc.docs.node import Layer, NodeKind
 
     node = Node(
         id="n0010", kind=NodeKind.paragraph, layer=Layer.markdown, parent=None, source_span=(42, 99)

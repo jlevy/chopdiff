@@ -5,9 +5,9 @@ import regex
 from prettyfmt import fmt_words
 from strif import abbrev_str
 
-from chopdiff.docs.sizes import TextUnit
-from chopdiff.docs.text_doc import SentIndex, TextDoc
-from chopdiff.docs.wordtoks import (
+from flexdoc.docs.sizes import TextUnit
+from flexdoc.docs.text_doc import SentIndex, TextDoc
+from flexdoc.docs.wordtoks import (
     PARA_BR_TOK,
     is_break_or_space,
     is_entity,
@@ -20,7 +20,7 @@ from chopdiff.docs.wordtoks import (
     wordtok_len,
     wordtokenize,
 )
-from chopdiff.util.token_estimate import estimate_tokens
+from flexdoc.util.token_estimate import estimate_tokens
 
 _med_test_doc = dedent(
     """
