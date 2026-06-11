@@ -21,8 +21,9 @@ from marko.block import CodeBlock, FencedCode, List, ListItem
 from marko.element import Element
 from marko.ext.gfm.elements import Table, TableCell, TableRow
 
-Alignment = Literal["left", "center", "right"] | None
-"""A table column's alignment, or `None` when the delimiter row leaves it undefined."""
+Alignment = Literal["left", "center", "right", "default"]
+"""A table column's alignment; `default` when the delimiter row leaves it undefined (no
+colon), so the per-column list is always explicit strings, never empty/null entries."""
 
 
 @dataclass(frozen=True)
@@ -80,6 +81,15 @@ def code_info_for(element: Element) -> CodeInfo | None:
     return CodeInfo(language=lang or None, line_count=len(_code_body(element).splitlines()))
 
 
+def _alignment(cell: object) -> Alignment:
+    """A cell's column alignment; `default` when the delimiter leaves it undefined."""
+    match getattr(cell, "align", None):
+        case "left" | "center" | "right" as align:
+            return align
+        case _:
+            return "default"
+
+
 def table_info_for(element: Element) -> TableInfo | None:
     """`TableInfo` if `element` is a GFM table, else `None`."""
     if not isinstance(element, Table):
@@ -89,7 +99,7 @@ def table_info_for(element: Element) -> TableInfo | None:
     header_cells = (
         [c for c in table_rows[0].children if isinstance(c, TableCell)] if table_rows else []
     )
-    alignments: list[Alignment] = [getattr(c, "align", None) for c in header_cells]
+    alignments: list[Alignment] = [_alignment(c) for c in header_cells]
     rows = len(table_rows)
     return TableInfo(rows=rows, cols=cols, cells=rows * cols, alignments=alignments)
 
@@ -141,6 +151,11 @@ def test_table_info_extractor():
     table = _parse_first("| a | b | c |\n|:--|:-:|--:|\n| 1 | 2 | 3 |\n| 4 | 5 | 6 |\n")
     info = table_info_for(table)
     assert info == TableInfo(rows=3, cols=3, cells=9, alignments=["left", "center", "right"])
+    # Columns with no alignment marker are "default", never empty/None.
+    plain = _parse_first("| a | b |\n| - | - |\n| 1 | 2 |\n")
+    assert table_info_for(plain) == TableInfo(
+        rows=2, cols=2, cells=4, alignments=["default", "default"]
+    )
     assert table_info_for(_parse_first("paragraph\n")) is None
 
 

@@ -199,8 +199,8 @@ node_table:
     cols: 2
     cells: 4
     alignments:
-    - 
-    - 
+    - default
+    - default
 - id: n0022
   layer: markdown
   kind: paragraph
