@@ -52,3 +52,28 @@ def test_thematic_break_is_not_frontmatter():
     doc = TextDoc.from_text("---\n\n# Real Heading\n\nBody.\n")
     assert doc.frontmatter is None
     assert doc.source_text == "---\n\n# Real Heading\n\nBody.\n"
+
+
+def test_frontmatter_excluded_from_structural_views():
+    doc = TextDoc.from_text(_FM + _BODY)
+    co = len(_FM)
+    assert doc.blocks() and all(b.span[0] >= co for b in doc.blocks())
+    assert doc.sections() and all(s.span[0] >= co for s in doc.sections())
+    assert all(bb.block.span[0] >= co for bb in doc.base_blocks())
+    table = doc.node_table()
+    assert all(n.source_span is None or n.source_span[0] >= co for n in table.nodes.values())
+
+
+def test_yaml_frontmatter_is_not_a_section():
+    # `title: Hello\n---` can parse as a setext H2; it must not become a document section.
+    doc = TextDoc.from_text(_FM + _BODY)
+    assert [s.title for s in doc.sections()] == ["Heading"]
+
+
+def test_body_blocks_unperturbed_by_frontmatter():
+    co = len(_FM)
+    with_fm = TextDoc.from_text(_FM + _BODY).blocks()
+    body_only = TextDoc.from_text(_BODY).blocks()
+    assert [b.type for b in with_fm] == [b.type for b in body_only]
+    # Same structure, spans shifted by exactly the frontmatter length.
+    assert [b.span for b in with_fm] == [(s + co, e + co) for s, e in (b.span for b in body_only)]

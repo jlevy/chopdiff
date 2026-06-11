@@ -145,11 +145,14 @@ def _build_inline_nodes(
     index = IntervalIndex.from_nodes(all_nodes)
 
     seen_spans: set[tuple[int, int]] = set()
+    # Frontmatter is a non-content region: skip any inline element located inside it (see
+    # TextDoc.frontmatter). Block/section/textual nodes are already frontmatter-free.
+    content_offset = doc._content_offset()
 
     # Links via doc.links() (handles reference resolution correctly).
     for link in doc.links():
         if link.span is not None:
-            if link.span in seen_spans:
+            if link.span[0] < content_offset or link.span in seen_spans:
                 continue
             seen_spans.add(link.span)
             nid = _next_id(counter)
@@ -199,6 +202,8 @@ def _build_inline_nodes(
         if not atomic.is_atomic or atomic.name is None:
             continue
         if atomic.name not in _INLINE_ATOMIC_KINDS:
+            continue
+        if atomic.start < content_offset:  # inside the frontmatter region
             continue
 
         span = (atomic.start, atomic.end)

@@ -825,7 +825,14 @@ class TextDoc:
 
     @_memoized_derivation("_cached_blocks")
     def _block_list(self) -> list[Block]:
-        return parse_blocks(self.source_text or self.reassemble(), self._parsed())
+        blocks = parse_blocks(self.source_text or self.reassemble(), self._parsed())
+        # Exclude any block in the leading frontmatter region (a non-content region; see
+        # `frontmatter`). Frontmatter parses into top-level blocks before the body, so a
+        # span-start guard drops them without disturbing the body's absolute spans.
+        content_offset = self._content_offset()
+        if content_offset:
+            blocks = [b for b in blocks if b.span[0] >= content_offset]
+        return blocks
 
     def blocks(self) -> list[Block]:
         """
@@ -852,11 +859,17 @@ class TextDoc:
         recursive structural tree (a query view, not a partition). Reuses the document's
         single shared parse.
         """
-        return base_blocks(
+        partition = base_blocks(
             self.source_text or self.reassemble(),
             item_partition_depth=item_partition_depth,
             parsed=self._parsed(),
         )
+        # Drop the leading frontmatter region (see `frontmatter`); it is not content, so it
+        # is not part of the document's base-block partition.
+        content_offset = self._content_offset()
+        if content_offset:
+            partition = [bb for bb in partition if bb.block.span[0] >= content_offset]
+        return partition
 
     def toc(self) -> list[tuple[int, str, tuple[int, int]]]:
         """Flat table of contents in document order: `(level, title, span)` per heading."""
