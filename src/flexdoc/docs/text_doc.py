@@ -30,6 +30,7 @@ from flexdoc.docs.block_tree import Block, parse_blocks
 from flexdoc.docs.block_types import BlockType, block_type_for
 from flexdoc.docs.collect import collect as _collect
 from flexdoc.docs.doc_graph import _DEFAULT_INCLUDE, Detail, DocGraph, build_doc_graph
+from flexdoc.docs.frontmatter import split_frontmatter
 from flexdoc.docs.node import Layer, Node, NodeKind, NodeTable
 from flexdoc.docs.node_table import build_node_table
 from flexdoc.docs.sizes import TextUnit, size, size_in_bytes
@@ -664,21 +665,41 @@ class TextDoc:
         `p.original_text`. `reassemble()` produces normalized editable text, not a
         byte-for-byte copy of the full input.
         """
+        # A leading YAML frontmatter block is isolated as a non-content region: paragraphs
+        # (and thus sentences, sizes, and prose counts) are built over the body only, with
+        # absolute offsets into the full `text` (kept as `source_text`). See `frontmatter`.
+        _raw, content_offset = split_frontmatter(text)
+        body = text[content_offset:]
         paragraphs: list[Paragraph] = []
         spans: list[tuple[int, int]] = []
         start = 0
-        for m in _PARA_BREAK_REGEX.finditer(text):
+        for m in _PARA_BREAK_REGEX.finditer(body):
             spans.append((start, m.start()))
             start = m.end()
-        spans.append((start, len(text)))
+        spans.append((start, len(body)))
         for span_start, span_end in spans:
-            piece = text[span_start:span_end]
+            piece = body[span_start:span_end]
             stripped = piece.strip()
             if stripped:
-                # Doc offset of the stripped content within the original text.
-                doc_offset = span_start + (len(piece) - len(piece.lstrip()))
+                # Doc offset of the stripped content within the original text (absolute).
+                doc_offset = content_offset + span_start + (len(piece) - len(piece.lstrip()))
                 paragraphs.append(Paragraph.from_text(stripped, doc_offset, sentence_splitter))
         return cls(paragraphs=paragraphs, source_text=text)
+
+    @property
+    def frontmatter(self) -> str | None:
+        """
+        The verbatim leading YAML frontmatter block (both `---` delimiters included), or
+        `None` if the document has none. Frontmatter is a non-content region: excluded from
+        `paragraphs`, `blocks()`, `sections()`, the node table, and every size/prose count,
+        but `source_text` retains it so the document round-trips.
+        """
+        return split_frontmatter(self.source_text)[0]
+
+    def _content_offset(self) -> int:
+        """Offset into `source_text` where the body (post-frontmatter content) begins;
+        0 when there is no frontmatter."""
+        return split_frontmatter(self.source_text)[1]
 
     @classmethod
     def from_wordtoks(cls, wordtoks: list[str]) -> TextDoc:
