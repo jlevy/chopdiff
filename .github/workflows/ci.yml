@@ -103,3 +103,32 @@ jobs:
       # SUPPLY-CHAIN-SECURITY.md (Audit-Gate Ignores).
       - name: Audit dependencies for known vulnerabilities
         run: uv run --locked --all-extras --group audit pip-audit --ignore-vuln PYSEC-2026-196
+
+  # Packaging check: the single chopdiff wheel must ship BOTH import roots (flexdoc and
+  # chopdiff) and import cleanly from an isolated install — not just from the source tree.
+  # This guards the two-import-root layout (one wheel, two packages) introduced by the
+  # FlexDoc extraction. See plan-2026-06-11-flexdoc-extraction.md.
+  wheel-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (official GitHub action)
+        uses: actions/checkout@v6
+        with:
+          # Needed for the dynamic-versioning build backend (reads git tags).
+          fetch-depth: 0
+
+      - name: Install uv (official Astral action)
+        uses: astral-sh/setup-uv@v8.1.0
+        with:
+          version: "0.11.12"
+          enable-cache: true
+
+      - name: Build the wheel
+        run: uv build --wheel
+
+      - name: Install the wheel in an isolated venv and import both packages
+        run: |
+          uv venv /tmp/wheelsmoke
+          VENV_PY=/tmp/wheelsmoke/bin/python
+          uv pip install --python "$VENV_PY" dist/*.whl
+          "$VENV_PY" -c "import flexdoc, chopdiff; from flexdoc.docs import TextDoc; from chopdiff.transforms import sliding_para_window; print('wheel imports OK:', flexdoc.__name__, chopdiff.__name__, TextDoc.__name__)"

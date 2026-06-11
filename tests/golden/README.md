@@ -17,7 +17,7 @@ expected/<doc>/docgraph.yaml    the DocGraph projection as clean YAML
 expected/<doc>/reassembled.md   the editing view's reassembled (normalized) text
 ```
 
-The serializer is the public, reusable `chopdiff.docs.debug` dumper (`doc_report`,
+The serializer is the public, reusable `flexdoc.docs.debug` dumper (`doc_report`,
 `doc_graph_yaml`, `dump_views`) — usable on any document from a REPL or script, not just
 here.
 

@@ -255,9 +255,9 @@ The bulk: #18 / #19 / #20, plus the two adjacent cleanups that share the release
   `node_table._build_markdown_nodes` (additive keys; existing `tight`/`ordered` unchanged).
 - [ ] Reuse the extractors in `Paragraph._block_info`; add `Paragraph.code_info` /
   `.table_info` / `.list_info` with the density caveat in their docstrings.
-- [ ] Remove `TextDoc.block_type_counts()` / `Section.block_type_counts()`; migrate internal
+- [x] Remove `TextDoc.block_type_counts()` / `Section.block_type_counts()`; migrate internal
   callers/tests/examples to `collect()` / `blocks()`; record the migration in `CHANGELOG.md`.
-- [ ] Salvage `src/chopdiff/util/read_time.py` (with its inline tests) from the abandoned
+- [x] Salvage `src/chopdiff/util/read_time.py` (with its inline tests) from the abandoned
   branch; confirm its `prettyfmt.fmt_timedelta` dependency is already satisfied.
 - [ ] Update `docs/textdoc-spec.md` §5 (block-type model: per-kind typed `attrs`) and §9
   (note typed attrs are element attributes, not rollups; `block_type_counts()` removed);
@@ -268,7 +268,7 @@ The bulk: #18 / #19 / #20, plus the two adjacent cleanups that share the release
 
 Independent of Phase 1: #21 and #22.
 
-- [ ] Add `NodeKind.footnote_ref` and include it in `collect.INLINE_KINDS`.
+- [x] Add `NodeKind.footnote_ref` and include it in `collect.INLINE_KINDS`.
 - [ ] In `node_table._build_inline_nodes`, recognize footnote-reference atomics (a
   `markdown_link` atomic whose text starts `[^` and is not a `:`-suffixed definition); emit a
   `footnote_ref` node with exact span and `attrs={"label": ...}`. Add tests: a `[^1]`

@@ -1,10 +1,10 @@
 # TextDoc and DocGraph: Design Specification
 
-**Status:** Definitive front-to-back design of chopdiff’s document model: the `TextDoc`
-Python core and the `DocGraph` serialized projection.
+**Status:** Definitive front-to-back design of the document model (the `flexdoc`
+package): the `TextDoc` Python core and the `DocGraph` serialized projection.
 The design is settled (decision records DR-1..DR-6 in
 [`plan-2026-05-29-unified-document-model.md`](project/specs/active/plan-2026-05-29-unified-document-model.md));
-see §14 for what is implemented (v0.3.1) versus in progress.
+see §14 for what is implemented versus in progress.
 Dated plans under `docs/project/specs/` describe the incremental work toward this
 design.
 
@@ -283,6 +283,17 @@ lists, so `len(list.children)` and any tally are density-invariant.
 Density is metadata, not structure: a `tight: bool` on the list (CommonMark semantics);
 the flag never enters a tally.
 
+**Typed per-block metadata.** Code, table, and list blocks carry parser-authoritative
+typed metadata (`flexdoc.docs.block_info`): `CodeInfo` (`language`, `line_count`),
+`TableInfo` (`rows`, `cols`, `cells`, `alignments`), and `ListInfo` (`ordered`, `start`,
+`max_depth`, `item_count`). It is computed once where the marko element is in hand and
+exposed on the structural `Block` (`Block.code_info`/`.table_info`/`.list_info` — the
+density-invariant source of truth) and, as a convenience carrying the editing-view density
+caveat, on `Paragraph`. The same facts are flattened into the markdown node's `attrs`, so
+they flow into `collect()`/`DocGraph`. Extraction is parser-authoritative (marko element
+attributes, never a regex over source); a table column with no alignment marker is
+`"default"`, not `None`, so `alignments` is always explicit strings of length `cols`.
+
 ## 6. Block Views: Structural Tree and Sequential Base-Block List
 
 **Terminology.** To avoid overloading “block”:
@@ -324,7 +335,7 @@ The structure is cross-checked against marko in tests.
 A **base block** is a `BaseBlock` wrapping a block node (`Block`) with a `depth`; the
 **base-block list** is a *partition* of the document: the ordered sequence of base
 blocks, each carrying its `depth`. `TextDoc.base_blocks()` is a thin method over the
-`chopdiff.docs.base_blocks.base_blocks(text, *, item_partition_depth=6)` free function
+`flexdoc.docs.base_blocks.base_blocks(text, *, item_partition_depth=6)` free function
 (the partition lives in its own module, distinct from the recursive tree in
 `block_tree.py`). It is the view for block-by-block pipelines and outline UIs that
 move/resequence blocks (e.g. Notion-style drag-and-drop, where every item is a draggable
@@ -381,10 +392,10 @@ A derived hierarchy over heading nodes, no re-parse:
 
 ## 8. Inline Elements and Links
 
-Inline elements (links, code spans, images, …) are **first-class nodes** whose `parent`
-is their containing block, with computed `section`/`sentence` associations, so
-block↔inline relationships are node edges, and “links in section 3” is a scoped
-`collect(kinds={link})`.
+Inline elements (links, code spans, images, inline HTML, footnote references, …) are
+**first-class nodes** whose `parent` is their containing block, with computed
+`section`/`sentence` associations, so block↔inline relationships are node edges, and
+“links in section 3” is a scoped `collect(kinds={link})`.
 
 - `Link(text, url, title, span)`: identity from `flowmark.markdown_ast.extract_links`
   (reference links resolved, escapes honored, autolinks/images handled), which carries
@@ -393,6 +404,10 @@ block↔inline relationships are node edges, and “links in section 3” is a s
   `flowmark.atomic_spans.iter_atomic_spans` (`markdown_link` / `autolink` / `bare_url`);
   reference links keep identity but no exact span.
 - `link → sentence` via `sentence_at_offset(link.span[0])`.
+- **`footnote_ref`**: a footnote reference `[^label]` is a first-class inline node
+  (`NodeKind.footnote_ref`) carrying its `label` in `attrs` and an exact span, collected
+  like any inline kind (`collect(kinds={NodeKind.footnote_ref}, recursive=True)`). A
+  footnote *definition* (`[^label]:`) is a `footnote` block, not a reference.
 
 ## 9. Derived Views and Rollups
 
@@ -432,8 +447,6 @@ doc.collect(within=section_id, kinds={NodeKind.link})      # links in a section
 Slice-by-block-type, per-section rollups, and element rollups are all expressions of
 this one primitive; relationships are node edges.
 There are no `tables()`/`code_blocks()` shortcuts to maintain.
-(The v0.3.1 `block_type_counts()` convenience accessors are superseded by `collect()`;
-see §14.)
 
 **Query vs. partition; do not conflate.** `collect()` is a *query*: it gathers matching
 nodes and the results may **overlap** their containers (a table nested in a blockquote
@@ -602,17 +615,16 @@ Non-obvious choices, each grounded in a principle:
 
 ## 14. Implementation Status
 
-- **Shipping in v0.3.1 (block-aware layer):** exact spans; the opt-in structural block
-  tree `blocks()` (boundaries and spans from flowmark, no regex scanner);
-  sections/TOC/size rollups; inline-link rollups and link-aware sentences;
-  `ordered_list`/density-invariant lists; per-section blocks; and **top-level**
-  `block_type_counts()`.
-- **Also in v0.3.1 (DocGraph layer):** the recursive node table (containers fully populate
-  children, including blockquote and list-item block children); `base_blocks()`
+- **Implemented (block-aware layer):** exact spans; the opt-in structural block tree
+  `blocks()` (boundaries and spans from flowmark, no regex scanner); sections/TOC/size
+  rollups; inline-link rollups and link-aware sentences; `ordered_list`/density-invariant
+  lists; per-section blocks; and typed per-block metadata
+  (`CodeInfo`/`TableInfo`/`ListInfo`, §5).
+- **Implemented (DocGraph layer):** the recursive node table (containers fully populate
+  children, including blockquote and list-item block children); the `base_blocks()`
   sequential partition with its non-overlapping cover invariant; the single `collect()`
-  primitive (superseding `block_type_counts()`; migration:
-  `Counter(n.kind for n in doc.collect(recursive=True))`); composable `include` layers
-  and `detail` payload options; the `DocGraph` Pydantic schema ("DocGraph/v0.1"); and the
+  query primitive; composable `include` layers and `detail` payload options; inline kinds
+  including `footnote_ref` (§8); the `DocGraph` Pydantic schema ("DocGraph/v0.1"); and the
   `SpanRef` contract with exact + prefix/suffix quote resolution (fuzzy re-anchoring
   deferred).
 - **In progress:** annotation layer, synthetic layer (re-expressing `TextNode` tag
@@ -630,12 +642,12 @@ Non-obvious choices, each grounded in a principle:
   [`research-2026-05-30-span-references.md`](project/research/research-2026-05-30-span-references.md),
   and the layered-parsing brief
   [`research-2026-05-30-multilayer-parsing.md`](project/research/research-2026-05-30-multilayer-parsing.md).
-- Completed block-aware plan (shipping in v0.3.1):
+- Completed block-aware plan:
   [`plan-2026-05-26-block-aware-doc.md`](project/specs/archive/plan-2026-05-26-block-aware-doc.md).
 - flowmark v0.7.1 API: `flowmark.atomic_spans` (`iter_atomic_spans`,
   `split_sentences_with_spans`, named `AtomicSpan`s) and `flowmark.markdown_ast`
   (`block_span`, `walk_elements`, `extract_links`, `Link`).
-- Source: `src/chopdiff/docs/text_doc.py`, `block_tree.py`, `block_types.py`.
+- Source: `src/flexdoc/docs/text_doc.py`, `block_tree.py`, `block_types.py`, `block_info.py`.
 
 * * *
 

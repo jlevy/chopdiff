@@ -267,10 +267,10 @@ of the people, by the people, for the people, shall not perish from the earth.
 
 Input document: 1466 bytes (17 lines, 1 paras, 10 sents, 264 words, ~383 tok)
 
-INFO:chopdiff.docs.sliding_transforms:Sliding word transform: Begin on doc: total 575 wordtoks, 1466 bytes, 1 windows, windowing size=2048, shift=1792, min_overlap=8 wordtoks
-INFO:chopdiff.docs.sliding_transforms:Sliding word transform window 1/1 (575 wordtoks, 1466 bytes), at 0 wordtoks so far
+INFO:chopdiff.transforms.sliding_transforms:Sliding word transform: Begin on doc: total 575 wordtoks, 1466 bytes, 1 windows, windowing size=2048, shift=1792, min_overlap=8 wordtoks
+INFO:chopdiff.transforms.sliding_transforms:Sliding word transform window 1/1 (575 wordtoks, 1466 bytes), at 0 wordtoks so far
 INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:chopdiff.docs.sliding_transforms:Accepted transform changes:
+INFO:chopdiff.transforms.sliding_transforms:Accepted transform changes:
     TextDiff: add/remove +3/-3 out of 575 total:
     at pos    0 keep    1 toks:   ⎪four⎪
     at pos    1 keep   62 toks:   ⎪ score and seven years ago our fathers brought forth on this continent, a new nation, conceived in Liberty, and dedicated to the proposition that all men are created equal.⎪
@@ -283,14 +283,14 @@ INFO:chopdiff.docs.sliding_transforms:Accepted transform changes:
     at pos  350 repl    1 toks: - ⎪<-SENT-BR->⎪
                 repl    1 toks: + ⎪<-PARA-BR->⎪
     at pos  351 keep  224 toks:   ⎪It is for us the living, rather, to be dedicated here to the unfinished work which they who fought here have thus far so nobly advanced.<-SENT-BR->It is rather for us to be here dedicated to the great task remaining before us—that from these honored dead we take increased devotion to that cause for which they gave the last full measure of devotion—that we here highly resolve that these dead shall not have died in vain—that this nation, under God, shall have a new birth of freedom—and that government of the people, by the people, for the people, shall not perish from the earth.⎪
-INFO:chopdiff.docs.sliding_transforms:Filtering extraneous changes:
+INFO:chopdiff.transforms.sliding_transforms:Filtering extraneous changes:
     TextDiff: add/remove +1/-1 out of 575 total:
     at pos    0 repl    1 toks: - ⎪four⎪
                 repl    1 toks: + ⎪Four⎪
-INFO:chopdiff.docs.sliding_transforms:Word token changes:
+INFO:chopdiff.transforms.sliding_transforms:Word token changes:
     Accepted: add/remove +3/-3 out of 575 total
     Rejected: add/remove +1/-1 out of 575 total
-INFO:chopdiff.docs.sliding_transforms:Sliding word transform: Done, output total 575 wordtoks
+INFO:chopdiff.transforms.sliding_transforms:Sliding word transform: Done, output total 575 wordtoks
 
 Output document: 1469 bytes (7 lines, 4 paras, 10 sents, 264 words, ~387 tok)
 

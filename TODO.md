@@ -1,8 +1,13 @@
 # chopdiff: Open Work
 
 A concise index of planned work, the specs that describe it, and the beads that track
-it. Status as of 2026-06-02 (v0.3.1 — block-aware model + DocGraph Phase 1 — code-complete
-on branch, pending release; latest published release is v0.3.0).
+it. Status as of 2026-06-11. v0.3.1 (block-aware model + DocGraph Phase 1) is released.
+Since then, on `main`: the document model was extracted into the **`flexdoc`** package
+(one wheel, two import roots — `src/flexdoc` and `src/chopdiff`); typed code/table/list
+block metadata and `NodeKind.footnote_ref` were added; `block_type_counts()` was removed;
+and a `read_time` util was salvaged. See CHANGELOG **Unreleased** and
+[plan-2026-06-11-flexdoc-extraction.md](docs/project/specs/active/plan-2026-06-11-flexdoc-extraction.md)
+(Stage 1 done; Stages 2–4 — extract to a new repo and publish — are the next program).
 
 Beads are tracked with `tbd` (git-native, on the `tbd-sync` branch). View them with:
 
@@ -33,7 +38,7 @@ offset-containment queries. Subsumes the multi-level block-tallies work.
 - Shipped in Phase 1 (on branch): recursive layer-tagged node table, `base_blocks()`,
   `collect()` with `subtree_of=`/`within=`/`overlaps=` relations, `SpanRef`
   (exact-quote resolution), the `DocGraph` Pydantic projection (`DocGraph/v0.1`),
-  `to_yaml()`, and the `chopdiff.docs.debug` dumper.
+  `to_yaml()`, and the `flexdoc.docs.debug` dumper.
 - Remaining (later phases, via the four Phase-1 hooks): the synthetic (marker-tag)
   layer, cross-layer structural edits, and `SpanRef` fuzzy re-anchoring.
 - Spec: [plan-2026-05-29-unified-document-model.md](docs/project/specs/active/plan-2026-05-29-unified-document-model.md)
@@ -65,7 +70,7 @@ open items are verified with current evidence and grouped into three phases.
 
 ## Completed
 
-### Block-Aware Document Model / Normalized Form: Shipping in v0.3.1 (PR #12)
+### Block-Aware Document Model / Normalized Form: Shipped in v0.3.1 (PR #12)
 
 `TextDoc` gained exact `[start, end)` spans, a section/TOC hierarchy with rolled-up
 stats, inline-link rollups, link-aware sentences, and an opt-in structural block
@@ -74,7 +79,7 @@ chopdiff's regex block scanner with flowmark's authoritative block spans (flowma
 0.7.1), and Phase 6 added the normalized-form views: `BlockType.ordered_list`,
 density-invariant lists
 (`Block.tight`), `Section.blocks()`, and derived `block_type_counts()` rollups (no stored
-counts).
+counts; `block_type_counts()` was later removed post-v0.3.1, superseded by `collect()`).
 
 - Design of record: [docs/textdoc-spec.md](docs/textdoc-spec.md).
 - Implementation plan (archived): [plan-2026-05-26-block-aware-doc.md](docs/project/specs/archive/plan-2026-05-26-block-aware-doc.md).
@@ -94,12 +99,17 @@ counts).
 
 ## Known Gaps Not Yet in Any Plan
 
-Surfaced by the review reconciliation; fold into the robustness spec when picked up:
+Surfaced by the review reconciliation:
 
 - `parse_tag()` extracts only double-quoted `\w+` attributes (misses single-quoted,
-  unquoted, hyphenated, boolean attrs).
-- No root-level `chopdiff` public API; no decision recorded on whether to add one.
-- CI runs Ubuntu only; no wheel install/import smoke test.
+  unquoted, hyphenated, boolean attrs). The limitation is documented as intentional;
+  hardening it is a candidate for the FlexDoc public-surface work (extraction Stage 3).
+- No root-level public API on `chopdiff`/`flexdoc`; the decision is deferred to FlexDoc
+  Stage 3 (settle the document-layer public surface, including root-level re-exports).
+- The deprecated `collect()` aliases `scope=`/`contains=` remain; remove when the public
+  surface is settled (FlexDoc Stage 3).
+- CI runs Ubuntu only. (A wheel install/import smoke test is added in the post-extraction
+  cleanup, validating the two-import-root wheel.)
 
 ## Archive
 
