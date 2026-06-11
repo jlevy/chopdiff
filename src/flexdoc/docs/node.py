@@ -39,6 +39,7 @@ class NodeKind(StrEnum):
     code_span = "code_span"
     image = "image"
     inline_html = "inline_html"
+    footnote_ref = "footnote_ref"
 
     # Document-layer kind.
     section = "section"

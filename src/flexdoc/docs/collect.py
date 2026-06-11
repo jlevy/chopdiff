@@ -19,7 +19,13 @@ from flexdoc.docs.node import Layer, Node, NodeKind, NodeTable
 
 # Inline NodeKinds: elements that live inside a block.
 INLINE_KINDS: frozenset[NodeKind] = frozenset(
-    {NodeKind.link, NodeKind.code_span, NodeKind.image, NodeKind.inline_html}
+    {
+        NodeKind.link,
+        NodeKind.code_span,
+        NodeKind.image,
+        NodeKind.inline_html,
+        NodeKind.footnote_ref,
+    }
 )
 
 

@@ -213,8 +213,15 @@ def _build_inline_nodes(
                 kind = NodeKind.image
                 span = (atomic.start - 1, atomic.end)
             else:
-                # A non-image markdown_link not found by doc.links(); skip.
-                continue
+                # flowmark tags a footnote reference `[^label]` as a markdown_link atomic;
+                # doc.links() doesn't resolve it, so it was previously dropped here.
+                # Recognize it, but not a footnote *definition* marker `[^label]:`.
+                link_text = source_text[atomic.start : atomic.end]
+                is_def_marker = atomic.end < len(source_text) and source_text[atomic.end] == ":"
+                if link_text.startswith("[^") and link_text.endswith("]") and not is_def_marker:
+                    kind = NodeKind.footnote_ref
+                else:
+                    continue
         else:
             kind = _INLINE_ATOMIC_KINDS[atomic.name]
 
@@ -231,6 +238,9 @@ def _build_inline_nodes(
             inline_attrs["content"] = stripped.strip()
         elif kind == NodeKind.inline_html:
             inline_attrs["tag"] = atomic.text
+        elif kind == NodeKind.footnote_ref:
+            # Label between the `[^` and `]` delimiters.
+            inline_attrs["label"] = source_text[span[0] + 2 : span[1] - 1]
         elif kind == NodeKind.image:
             inline_attrs["url"] = ""
             # Extract URL from the image markdown: ![alt](url)

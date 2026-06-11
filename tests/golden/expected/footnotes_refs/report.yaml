@@ -167,6 +167,15 @@ node_table:
     text: https://bare.example
     section: n0007
     sentence: n0013
+- id: n0022
+  layer: markdown
+  kind: footnote_ref
+  span: 62:69
+  parent: n0002
+  attrs:
+    label: note
+    section: n0007
+    sentence: n0011
 links:
 - kind: link
   text: docs
