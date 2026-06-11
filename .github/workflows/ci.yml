@@ -93,5 +93,13 @@ jobs:
 
       # --all-extras so optional dependencies (e.g. simplemma) are audited too,
       # matching the all-extras environment the build job tests.
+      #
+      # --ignore-vuln PYSEC-2026-196: a CVE in `pip` itself, which is only present as a
+      # transitive dependency of the pip-audit tool (audit group), not a chopdiff
+      # runtime/dev dependency, and is never shipped in the chopdiff wheel. Its fix
+      # (pip 26.1.2) is newer than the [tool.uv] exclude-newer cool-off cutoff, so there
+      # is no within-policy bump; this ignore does not touch dependency resolution or the
+      # cool-off. Remove it once the cutoff advances past pip 26.1.2's release. See
+      # SUPPLY-CHAIN-SECURITY.md (Audit-Gate Ignores).
       - name: Audit dependencies for known vulnerabilities
-        run: uv run --locked --all-extras --group audit pip-audit
+        run: uv run --locked --all-extras --group audit pip-audit --ignore-vuln PYSEC-2026-196

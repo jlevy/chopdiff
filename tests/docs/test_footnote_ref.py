@@ -20,7 +20,9 @@ def test_footnote_ref_collected_with_span_and_label():
         [^1]: First definition.
         [^note]: Second definition.
         """).strip()
-    refs = collect(TextDoc.from_text(src).node_table(), kinds={NodeKind.footnote_ref}, recursive=True)
+    refs = collect(
+        TextDoc.from_text(src).node_table(), kinds={NodeKind.footnote_ref}, recursive=True
+    )
 
     assert [r.attrs["label"] for r in refs] == ["1", "note"]
     for r in refs:

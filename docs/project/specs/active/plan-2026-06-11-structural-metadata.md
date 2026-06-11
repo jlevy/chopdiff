@@ -4,7 +4,22 @@
 
 **Author:** Joshua Levy
 
-**Status:** Draft
+**Status:** Partially implemented (additive surface landed; see Implementation Status).
+
+> **Implementation Status (2026-06-11).** Landed on branch `claude/eager-hawking-nyy2zz`
+> (atop the FlexDoc Stage-1 extraction, so the files below now live under `src/flexdoc/`,
+> not `src/chopdiff/`):
+>
+> - ✔︎ **Typed block metadata (#18/#19/#20).** `flexdoc/docs/block_info.py`
+>   (`CodeInfo`/`TableInfo`/`ListInfo` + extractors, inline tests); carried on `Block`;
+>   flattened into markdown node `attrs`; `Paragraph.code_info`/`.table_info`/`.list_info`.
+> - ✔︎ **`NodeKind.footnote_ref` (#21).** Added to `collect.INLINE_KINDS`; recognized in
+>   `node_table._build_inline_nodes` (fixes the silent drop); `tests/docs/test_footnote_ref.py`.
+> - ‼︎ **Deferred for review** (not yet implemented): the `block_type_counts()` removal
+>   (breaking), the `read_time.py` salvage (depends on an abandoned branch), the frontmatter
+>   isolation (#22; reworks `from_text`'s span model — higher regression risk), and the
+>   `docs/textdoc-spec.md` / `CHANGELOG.md` / `TODO.md` updates. Checkboxes below are
+>   unchanged; this banner is the source of truth for what landed.
 
 ## Overview
 

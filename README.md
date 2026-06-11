@@ -93,12 +93,12 @@ chopdiff.
 
 More on what's here:
 
-- The [`TextDoc`](src/chopdiff/docs/text_doc.py) class allows parsing of documents into
+- The [`TextDoc`](src/flexdoc/docs/text_doc.py) class allows parsing of documents into
   sentences and paragraphs.
   By default, this uses only regex heuristics for speed and simplicity, but optionally
   you can use a sentence splitter of your choice, like Spacy.
 
-- Tokenization using ["wordtoks"](src/chopdiff/docs/wordtoks.py) that lets you measure
+- Tokenization using ["wordtoks"](src/flexdoc/docs/wordtoks.py) that lets you measure
   size and extract subdocs via arbitrary units of paragraphs, sentences, words, chars,
   or tokens, with mappings between each, e.g. mapping sentence 3 of paragraph 2 to its
   corresponding character or token offset.
@@ -106,7 +106,7 @@ More on what's here:
   breaks) and HTML tags as single tokens.
   It also maintains exact offsets of each token in the original document text.
 
-- [Word-level diffs](src/chopdiff/docs/token_diffs.py) that don't work at the line level
+- [Word-level diffs](src/flexdoc/docs/token_diffs.py) that don't work at the line level
   (like usual git-style diffs) but rather treat whitespace, sentence, and paragraph
   breaks as individual tokens.
   It performs LCS-style token-based diffs with
@@ -118,11 +118,11 @@ More on what's here:
   For example, only adding or removing words, only changing whitespace, only changing
   word lemmas, etc.
 
-- The [`TokenMapping`](src/chopdiff/docs/token_mapping.py) class offers word-based
+- The [`TokenMapping`](src/flexdoc/docs/token_mapping.py) class offers word-based
   mappings between docs, allowing you to find what part of a doc corresponds with
   another doc as a token index mappings.
 
-- [`search_tokens`](src/chopdiff/docs/search_tokens.py) gives simple way to search back
+- [`search_tokens`](src/flexdoc/docs/search_tokens.py) gives simple way to search back
   and forth among the tokens of a document.
   That is, you can seek forward or backward to any desired token (HTML tag, word,
   punctuation, or sentence or paragraph break matching a predicate) from any given
@@ -167,7 +167,7 @@ from textwrap import dedent
 import openai
 from flowmark import fill_text
 
-from chopdiff.docs import TextDoc
+from flexdoc.docs import TextDoc
 from chopdiff.transforms import changes_whitespace, filtered_transform, WINDOW_2K_WORDTOKS
 
 def llm_insert_para_breaks(input_text: str) -> str:
