@@ -17,7 +17,7 @@ source documents, each converted by the model and serialized several ways, with 
 serializations committed as golden artifacts and compared on every run.
 
 The serializer is built as a **reusable developer tool**, not test-only glue: a public
-`chopdiff.docs.debug` dumper that can take any document and emit its model views in
+`flexdoc.docs.debug` dumper that can take any document and emit its model views in
 clean standard formats.
 Source documents are **Markdown with YAML frontmatter** (the frontmatter carries the
 test’s options); golden outputs are **pure, deterministic YAML**. We reuse
@@ -30,7 +30,7 @@ guarantees (cover, exact spans, round-trip, cross-serialization consistency).
 
 ## Goals
 
-- **A reusable debug dumper (public).** `chopdiff.docs.debug` turns any `TextDoc` /
+- **A reusable debug dumper (public).** `flexdoc.docs.debug` turns any `TextDoc` /
   `DocGraph` into clean, standard-format views (a multi-view report, the DocGraph, the
   reassembled source) usable from a REPL, a script, or the test harness.
 - **Clean YAML for DocGraph.** A deterministic, readable YAML serialization of
@@ -72,7 +72,7 @@ guarantees (cover, exact spans, round-trip, cross-serialization consistency).
 
 ### Components
 
-1. **`chopdiff.docs.debug` (public dumper).** Pure functions over public API:
+1. **`flexdoc.docs.debug` (public dumper).** Pure functions over public API:
    - `doc_report(doc: TextDoc) -> str` — the multi-view report as clean YAML: source
      metadata (sha, length, size summary), base-block partition with `cover_ok`,
      sections / TOC with rolled-up sizes, the full node table (id, layer, kind, span,
@@ -123,7 +123,7 @@ See Open Decisions for runtime-vs-extra placement.
 
 ### API Changes
 
-- **Additive (public):** new module `chopdiff.docs.debug` (`doc_report`,
+- **Additive (public):** new module `flexdoc.docs.debug` (`doc_report`,
   `doc_graph_yaml`, `dump_views`) and a `DocGraph.to_yaml()` method.
   No existing surface changes.
 
@@ -134,7 +134,7 @@ See Open Decisions for runtime-vs-extra placement.
 - [x] Adopt `frontmatter-format` per `SUPPLY-CHAIN-SECURITY.md` (cool-off entry,
   lockfile).
 - [x] Add `DocGraph.to_yaml()` (clean, key-sorted YAML via `to_yaml_string`); keep JSON.
-- [x] Build `chopdiff.docs.debug` with `doc_report`, `doc_graph_yaml`, `dump_views`,
+- [x] Build `flexdoc.docs.debug` with `doc_report`, `doc_graph_yaml`, `dump_views`,
   emitting deterministic clean YAML; export it.
 - [x] A few inline/unit checks that the dumper is deterministic (same input → identical
   bytes) and that YAML re-parses to the expected structure.

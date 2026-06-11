@@ -332,7 +332,7 @@ def find_best_alignment(
     prev_score = float("-inf")
 
     # Slide the second list over the first list, starting from the end of the first list.
-    # TODO: This could be much more efficient by being cleverer about reusing diff calculations.s
+    # TODO: This could be much more efficient by being cleverer about reusing diff calculations.
     for overlap in range(min_overlap, max_overlap + 1):
         start1 = len1 - overlap
         end1 = len1
