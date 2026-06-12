@@ -4,7 +4,7 @@
 
 **Author:** Joshua Levy
 
-**Status:** Partially implemented (additive surface landed; see Implementation Status).
+**Status:** Implemented (all of #18–#22 landed across three PRs; see Implementation Status).
 
 > **Implementation Status (2026-06-11).** Landed on branch `claude/eager-hawking-nyy2zz`
 > (atop the FlexDoc Stage-1 extraction, so the files below now live under `src/flexdoc/`,
@@ -21,10 +21,11 @@
 > - ✔︎ **`read_time.py` salvage.** `flexdoc/util/read_time.py` (`format_read_time`, with its
 >   inline tests) recovered from the abandoned branch and exported from `flexdoc.util`;
 >   depends only on `prettyfmt.fmt_timedelta` (already available).
-> - ‼︎ **Deferred for review** (not yet implemented): the frontmatter isolation (#22; reworks
->   `from_text`'s span model, higher regression risk) and the `docs/textdoc-spec.md` /
->   `TODO.md` updates. Checkboxes below are unchanged; this banner is the source of truth for
->   what landed.
+> - ✔︎ **Frontmatter isolation (#22).** Landed in its own PR
+>   ([`plan-2026-06-11-frontmatter-isolation.md`](plan-2026-06-11-frontmatter-isolation.md)):
+>   `TextDoc.frontmatter` excludes a leading YAML block from all views/counts. This completes
+>   issues #18–#22. The `docs/textdoc-spec.md` / `TODO.md` updates also landed (post-extraction
+>   cleanup PR).
 
 ## Overview
 
@@ -244,47 +245,47 @@ Migration: `Counter(b.type for b in doc.blocks())`, or
 
 The bulk: #18 / #19 / #20, plus the two adjacent cleanups that share the release.
 
-- [ ] Add `block_info.py`: `CodeInfo` / `TableInfo` / `ListInfo` and the pure extractors,
+- [x] Add `block_info.py`: `CodeInfo` / `TableInfo` / `ListInfo` and the pure extractors,
   reading marko attributes (`FencedCode.lang`, `Table.num_of_cols` + cell `.align`,
   `List.ordered`/`.start`/subtree). Inline tests under a `## Tests` section for the
   extractors over fenced/indented code, ordered/unordered/nested lists, and tables with
   mixed alignments.
-- [ ] Carry the info on `Block` (computed in `block_tree._blocks_from` where the element is in
+- [x] Carry the info on `Block` (computed in `block_tree._blocks_from` where the element is in
   hand) and expose `Block.code_info` / `.table_info` / `.list_info`.
-- [ ] Populate markdown-node `attrs` from the block info in
+- [x] Populate markdown-node `attrs` from the block info in
   `node_table._build_markdown_nodes` (additive keys; existing `tight`/`ordered` unchanged).
-- [ ] Reuse the extractors in `Paragraph._block_info`; add `Paragraph.code_info` /
+- [x] Reuse the extractors in `Paragraph._block_info`; add `Paragraph.code_info` /
   `.table_info` / `.list_info` with the density caveat in their docstrings.
 - [x] Remove `TextDoc.block_type_counts()` / `Section.block_type_counts()`; migrate internal
   callers/tests/examples to `collect()` / `blocks()`; record the migration in `CHANGELOG.md`.
 - [x] Salvage `src/chopdiff/util/read_time.py` (with its inline tests) from the abandoned
   branch; confirm its `prettyfmt.fmt_timedelta` dependency is already satisfied.
-- [ ] Update `docs/textdoc-spec.md` §5 (block-type model: per-kind typed `attrs`) and §9
+- [x] Update `docs/textdoc-spec.md` §5 (block-type model: per-kind typed `attrs`) and §9
   (note typed attrs are element attributes, not rollups; `block_type_counts()` removed);
   refresh the stale `TODO.md` status (v0.3.1 is released).
-- [ ] `make lint` and `make test` clean.
+- [x] `make lint` and `make test` clean.
 
 ### Phase 2: Inline + document-region completion
 
 Independent of Phase 1: #21 and #22.
 
 - [x] Add `NodeKind.footnote_ref` and include it in `collect.INLINE_KINDS`.
-- [ ] In `node_table._build_inline_nodes`, recognize footnote-reference atomics (a
+- [x] In `node_table._build_inline_nodes`, recognize footnote-reference atomics (a
   `markdown_link` atomic whose text starts `[^` and is not a `:`-suffixed definition); emit a
   `footnote_ref` node with exact span and `attrs={"label": ...}`. Add tests: a `[^1]`
   reference is collected via `collect(kinds={NodeKind.footnote_ref})` with the right span and
   label, and footnote *definitions* (`[^1]:`) are not mistaken for references.
-- [ ] In `TextDoc.from_text`, detect and isolate a leading YAML frontmatter block via
+- [x] In `TextDoc.from_text`, detect and isolate a leading YAML frontmatter block via
   `frontmatter-format`; store it; build `paragraphs` and the structural parse over the body
   (shifting spans by the content offset) so no paragraph/block/section/node originates inside
   the frontmatter region. Add `TextDoc.frontmatter`.
-- [ ] Tests: a document with frontmatter excludes it from `paragraphs`, `blocks()`,
+- [x] Tests: a document with frontmatter excludes it from `paragraphs`, `blocks()`,
   `sections()`, the node table, and `size(...)`; `frontmatter` returns the verbatim block;
   the span/round-trip invariant holds; a document without frontmatter is unchanged
   (`frontmatter is None`).
-- [ ] Update `docs/textdoc-spec.md` (inline kinds include `footnote_ref`; a short
+- [x] Update `docs/textdoc-spec.md` (inline kinds include `footnote_ref`; a short
   frontmatter note) and `CHANGELOG.md`.
-- [ ] `make lint` and `make test` clean.
+- [x] `make lint` and `make test` clean.
 
 ## Testing Strategy
 

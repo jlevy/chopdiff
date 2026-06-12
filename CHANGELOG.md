@@ -35,6 +35,11 @@ changes bump the **minor** version (see `docs/publishing.md`).
   footnote reference was silently dropped from the node table.
 - **`flexdoc.util.read_time.format_read_time(...)`.** Human-readable reading-time estimate
   from a word count (built on `prettyfmt.fmt_timedelta`).
+- **`TextDoc.frontmatter`.** A leading YAML frontmatter block (`---`-delimited) is now
+  isolated as a non-content region: excluded from `paragraphs`, `blocks()`, `sections()`,
+  the node table, `base_blocks()`, and all size/prose counts, and exposed verbatim via
+  `TextDoc.frontmatter` (or `None`). `source_text` keeps the full original and spans stay
+  absolute; frontmatter-free documents are unchanged.
 
 ## v0.3.1
 
