@@ -125,11 +125,15 @@ From the third-party imports per module (finalized precisely in Stage 2 by the b
 each side gets its own `pyproject.toml`):
 
 - **FlexDoc** (`docs`/`html`/`util`): `flowmark`, `marko`, `cydifflib`, `funlog`, `regex`,
-  `strif`, `frontmatter-format`, `pydantic`, `prettyfmt`, `selectolax`; optional extra
-  `simplemma` (for `util.lemmatize`).
+  `strif`, `frontmatter-format`, `pydantic`, `prettyfmt`, `selectolax`. No optional extras.
 - **chopdiff** after extraction (`transforms`, plus `divs` if it stays): `flexdoc`, plus the
-  small set its own code uses directly (`flowmark`, `prettyfmt`). chopdiff becomes a thin
-  layer over FlexDoc.
+  small set its own code uses directly (`flowmark`, `prettyfmt`), plus the optional extra
+  `simplemma` (for `chopdiff.util.lemmatize`, used only by `transforms.diff_filters`).
+  chopdiff becomes a thin layer over FlexDoc.
+
+`lemmatize` was moved out of FlexDoc into `chopdiff.util` (it is used only by the diff
+filters, not by the document model), so `simplemma` is chopdiff's optional extra, not
+FlexDoc's — keeping the FlexDoc core dependency-light.
 
 ### What FlexDoc houses, and a naming caveat
 
@@ -340,12 +344,13 @@ each fact against the source before relying on it (commands given inline).
       sections in e.g. `block_info.py`, `read_time.py`, `wordtoks.py`) travel with their
       modules. Preserve git history if practical (`git filter-repo --path src/flexdoc` or
       `git subtree split`), else a plain copy is fine.
-- [ ] Copy the document-model **tests**: `tests/docs/`, `tests/html/`, `tests/util/`, and
-      `tests/golden/` (including `tests/golden/documents/`, `tests/golden/expected/`, and
+- [ ] Copy the document-model **tests**: `tests/docs/`, `tests/html/`, and `tests/golden/`
+      (including `tests/golden/documents/`, `tests/golden/expected/`, and
       `tests/golden/README.md`), plus `tests/__init__.py`. **Do not** copy
       `tests/test_package_boundary.py` (the boundary becomes a real package dependency) or
       `tests/test_supply_chain.py` (write a fresh one for the new repo's settings).
-      `tests/divs/` and `tests/transforms/` stay in chopdiff.
+      `tests/divs/`, `tests/transforms/`, and `tests/util/` (now `chopdiff.util.lemmatize`)
+      stay in chopdiff.
 - [ ] Copy the document-model **examples** that import only `flexdoc.*`
       (`examples/normalized_form.py`, `examples/doc_structure.py`, and
       `examples/backfill_timestamps.py` — it uses `flexdoc.html`). `insert_para_breaks.py`
@@ -368,8 +373,8 @@ each fact against the source before relying on it (commands given inline).
       `[tool.codespell]`/`[tool.pytest.ini_options]` (`testpaths = ["src", "tests"]`) blocks.
 - [ ] **Dependencies** (`[project.dependencies]`): `flowmark`, `marko`, `cydifflib`,
       `funlog`, `regex`, `strif`, `frontmatter-format`, `pydantic`, `prettyfmt`,
-      `selectolax`, `typing-extensions`. **Optional extra** `extras = ["simplemma"]` (only
-      `flexdoc/util/lemmatize.py` uses it). Re-derive and confirm the exact set with:
+      `selectolax`, `typing-extensions`. **No optional extras** — `simplemma`/`lemmatize`
+      stayed in chopdiff. Re-derive and confirm the exact set with:
       `grep -rhoE '^(from|import) [a-z_]+' src/flexdoc | grep -oE '^[a-z_]+ [a-z_]+' | awk '{print $2}' | sort -u`
       then drop stdlib and `flexdoc` itself. Keep version floors at chopdiff's current pins.
 - [ ] Copy `Makefile`, `devtools/lint.py`, `.github/workflows/ci.yml` (including the
@@ -395,14 +400,16 @@ each fact against the source before relying on it (commands given inline).
 **Step 5 — Rewire chopdiff to depend on the external `flexdoc` (the breaking release).**
 
 - [ ] In chopdiff: `git rm -r src/flexdoc/` and remove the moved tests
-      (`tests/{docs,html,util,golden}/`) and `tests/test_package_boundary.py`. The
-      `chopdiff.{transforms,divs}` code already imports `flexdoc.*`, so **no import rewrite
-      is needed** — those imports now resolve to the external package.
+      (`tests/{docs,html,golden}/`) and `tests/test_package_boundary.py`; keep
+      `tests/{divs,transforms,util}/`. The `chopdiff.{transforms,divs,util}` code already
+      imports `flexdoc.*` for the document model, so **no import rewrite is needed** — those
+      imports now resolve to the external package.
 - [ ] `pyproject.toml`: add `flexdoc>=<first published>`; **remove** the now-flexdoc-only
       deps (`marko`, `cydifflib`, `funlog`, `regex`, `strif`, `frontmatter-format`,
-      `pydantic`, `selectolax`) and the `extras`/`simplemma` group; keep `flowmark` and
-      `prettyfmt` (chopdiff's `transforms`/`divs` import them directly). Remove `src/flexdoc`
-      from the wheel target (back to `packages = ["src/chopdiff"]`). `uv lock`.
+      `pydantic`, `selectolax`); **keep** `flowmark` and `prettyfmt` (used directly by
+      `transforms`/`divs`) and the `extras = ["simplemma"]` group (used by
+      `chopdiff.util.lemmatize`). Remove `src/flexdoc` from the wheel target (back to
+      `packages = ["src/chopdiff"]`). `uv lock`.
 - [ ] `make lint` and `make test` green against the published `flexdoc`; the `wheel-smoke`
       job now imports only `chopdiff` (with `flexdoc` pulled as a dependency).
 - [ ] `CHANGELOG.md`: this is chopdiff's first release depending on external `flexdoc` — a
