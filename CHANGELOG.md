@@ -6,40 +6,37 @@ changes bump the **minor** version (see `docs/publishing.md`).
 
 ## Unreleased
 
+This is chopdiff's intended breaking release: the document model now lives in the
+separately published [flexdoc](https://github.com/jlevy/flexdoc) package
+([PyPI](https://pypi.org/project/flexdoc/)), and chopdiff depends on `flexdoc>=0.1.0`.
+chopdiff keeps the diff/transform layer (`chopdiff.transforms`, `chopdiff.divs`,
+`chopdiff.util.lemmatize`) and is built on flexdoc.
+
 ### Breaking Changes
 
-- **The document model moved to a new `flexdoc` package.** The document/markdown layer
-  (`docs`, `html`, `util`) now lives under `flexdoc`, so imports move:
-  `chopdiff.docs|html|util.*` becomes `flexdoc.docs|html|util.*`. `chopdiff` keeps the
-  diff/transform layer (`chopdiff.transforms`, `chopdiff.divs`) and is built on `flexdoc`.
-  For now both ship in a single `chopdiff` wheel as two import roots; `flexdoc` becomes a
-  separately published package in a later release. See
-  `docs/project/specs/active/plan-2026-06-11-flexdoc-extraction.md`.
+Migration for downstream users, in one pass:
+
+- **The document model moved to the `flexdoc` package on PyPI.** Imports move:
+  `chopdiff.docs.TextDoc` becomes `flexdoc.FlexDoc` (the class is renamed; prefer the
+  root import `from flexdoc import FlexDoc`), and `chopdiff.docs|html|util.*` becomes
+  `flexdoc.docs|html|util.*` (`chopdiff.util.lemmatize` stays in chopdiff). The
+  chopdiff wheel no longer ships a `flexdoc` import root; it arrives as a normal
+  dependency.
+- **`TextDoc` is renamed `FlexDoc`** (module `flexdoc.docs.flex_doc`, was `text_doc`).
+- **`collect()` is keyword-only** and the `scope`/`contains` parameter aliases are
+  gone: use `collect(subtree_of=, within=)`.
+- **Editing-view method renames:** `block_at_offset` is now `paragraph_at_offset`,
+  `iter_blocks` is now `iter_paragraphs`, and `Section.own_blocks`/`subtree_blocks` are
+  now `own_paragraphs`/`subtree_paragraphs`.
 - **`TextDoc.block_type_counts()` and `Section.block_type_counts()` removed**, superseded
   by `collect()`. Migrate to standard Python over `blocks()`:
   `Counter(b.type for b in doc.blocks())` (per-section: `section.blocks()`), or
   `Counter(n.kind for n in collect(doc.node_table(), layer={Layer.markdown}, recursive=True))`.
 
-### New Features
-
-- **Typed per-block metadata.** `flexdoc.docs.block_info` adds `CodeInfo` (`language`,
-  `line_count`), `TableInfo` (`rows`, `cols`, `cells`, `alignments`), and `ListInfo`
-  (`ordered`, `start`, `max_depth`, `item_count`), exposed as `Block.code_info` /
-  `.table_info` / `.list_info` and the matching `Paragraph` accessors, and flattened into
-  markdown node `attrs` (so they flow into `collect()`/`DocGraph`). Extraction is
-  parser-authoritative (marko attributes, no regex). Table `alignments` use an explicit
-  `"default"` for unaligned columns rather than `None`, so the per-column list is always
-  explicit strings.
-- **`NodeKind.footnote_ref`.** Footnote references (`[^label]`) are now first-class inline
-  nodes with a `label` attr, collected like links/code spans/images. Fixes a bug where a
-  footnote reference was silently dropped from the node table.
-- **`flexdoc.util.read_time.format_read_time(...)`.** Human-readable reading-time estimate
-  from a word count (built on `prettyfmt.fmt_timedelta`).
-- **`TextDoc.frontmatter`.** A leading YAML frontmatter block (`---`-delimited) is now
-  isolated as a non-content region: excluded from `paragraphs`, `blocks()`, `sections()`,
-  the node table, `base_blocks()`, and all size/prose counts, and exposed verbatim via
-  `TextDoc.frontmatter` (or `None`). `source_text` keeps the full original and spans stay
-  absolute; frontmatter-free documents are unchanged.
+See flexdoc's CHANGELOG for the full list of document-model changes. Document-model
+features developed in this repo since v0.3.1 (typed per-block metadata,
+`NodeKind.footnote_ref`, `format_read_time`, frontmatter isolation) ship in
+flexdoc 0.1.0 rather than in this chopdiff release.
 
 ## v0.3.1
 

@@ -39,16 +39,10 @@ classifiers = [
 # ---- Main dependencies ----
 
 dependencies = [
+    "flexdoc>=0.1.0",
     "prettyfmt>=0.3.0",
     "flowmark>=0.7.1",
-    "marko>=2.2.2",
-    "strif>=3.1.0",
-    "funlog>=0.2.1",
-    "cydifflib>=1.2.0",
-    "regex>=2024.11.6",
-    "selectolax>=0.3.32",
-    "pydantic>=2.13.4",
-    "frontmatter-format>=0.3.0",
+    "typing-extensions>=4.12.0",
 ]
 
 [project.optional-dependencies]
@@ -94,10 +88,8 @@ style = "pep440"
 bump = true
 
 [tool.hatch.build.targets.wheel]
-# The source location for the packages. One distribution ships two import roots:
-# `flexdoc` (the document layer) and `chopdiff` (diff/transform layer built on it).
-# See docs/project/specs/active/plan-2026-06-11-flexdoc-extraction.md (Stage 1).
-packages = ["src/chopdiff", "src/flexdoc"]
+# The source location for the package.
+packages = ["src/chopdiff"]
 
 
 # ---- Settings ----
@@ -114,10 +106,12 @@ exclude-newer = "2026-05-11T00:00:00Z"
 # - strif 3.1.0: first-party, zero-dependency package, full source diff reviewed.
 # - idna 3.15: fixes CVE-2026-45409 reported against the in-window 3.14.
 # - flowmark 0.7.1: first-party package (maintainer-reviewed), block-span API.
+# - flexdoc 0.1.0: first-party package extracted from this repo (maintainer-directed).
 [tool.uv.exclude-newer-package]
 strif = "2026-05-24T00:00:00Z"
 idna = "2026-05-13T00:00:00Z"
 flowmark = "2026-05-30T00:00:00Z"
+flexdoc = "2026-06-13T00:00:00Z"
 
 [tool.ruff]
 # Set as desired, typically 88 (black standard) or 100 (wide).

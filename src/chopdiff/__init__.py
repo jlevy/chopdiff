@@ -5,10 +5,11 @@ submodules, which carry the explicit public surfaces:
 
 - `chopdiff.transforms` — sliding-window transforms, diff filters, window settings.
 - `chopdiff.divs` — `TextNode` and HTML-`div` chunking.
+- `chopdiff.util` — optional lemmatization helpers.
 
-The document model (`TextDoc`, the node table, `collect()`, `DocGraph`, `SpanRef`,
-html-in-md, lemmatization) lives in the `flexdoc` package; import it from `flexdoc.docs`,
-`flexdoc.html`, and `flexdoc.util`.
+The document model (`FlexDoc`, the node table, `collect()`, `DocGraph`, `SpanRef`,
+html-in-md) lives in the separately published `flexdoc` package; import it from
+`flexdoc` (root exports), `flexdoc.docs`, `flexdoc.html`, and `flexdoc.util`.
 
 Root-level convenience re-exports may be added once the public-API surface (see
 `docs/project/specs/active/plan-2026-05-29-unified-document-model.md`) is settled, so the

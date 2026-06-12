@@ -8,8 +8,10 @@ Basically, it lets you parse, diff, and transform text at the level of words, se
 paragraphs, and "chunks" (paragraphs grouped in an HTML tag like a `<div>`). It aims to
 have minimal dependencies.
 
-At its core is `TextDoc`, an in-memory data structure that consolidates several views of
-a document:
+At its core is `FlexDoc`, an in-memory data structure that consolidates several views of
+a document. The document model lives in the separately published
+[**flexdoc**](https://github.com/jlevy/flexdoc) package
+([PyPI](https://pypi.org/project/flexdoc/)), which chopdiff builds on:
 
 - **Markdown block structure:** headings, lists, tables, code, blockquotes, …
 - **Markdown inline structure:** links and other inline elements
@@ -19,11 +21,13 @@ a document:
 Every unit is anchored back to the original text by exact character offset, so nothing is
 copied and nothing drifts. Markdown parsers give you a block/inline tree but not
 sentences, sizes, or rollups; NLP tools give you sentences but not Markdown structure or
-exact source mapping. `TextDoc` is both: good for **textual analysis of a fixed
+exact source mapping. `FlexDoc` is both: good for **textual analysis of a fixed
 document** (spans, sizes, sections, link rollups) and as an **editable model** you can
 modify in place and then reassemble into a clean, normalized new document.
 
-See [docs/textdoc-spec.md](docs/textdoc-spec.md) for the definitive `TextDoc` design.
+See
+[flexdoc's docs/flexdoc-spec.md](https://github.com/jlevy/flexdoc/blob/main/docs/flexdoc-spec.md)
+for the definitive `FlexDoc` design.
 
 Example use cases:
 
@@ -93,12 +97,12 @@ chopdiff.
 
 More on what's here:
 
-- The [`TextDoc`](src/flexdoc/docs/text_doc.py) class allows parsing of documents into
-  sentences and paragraphs.
+- The [`FlexDoc`](https://github.com/jlevy/flexdoc) class (from the flexdoc package)
+  allows parsing of documents into sentences and paragraphs.
   By default, this uses only regex heuristics for speed and simplicity, but optionally
   you can use a sentence splitter of your choice, like Spacy.
 
-- Tokenization using ["wordtoks"](src/flexdoc/docs/wordtoks.py) that lets you measure
+- Tokenization using "wordtoks" (`flexdoc.docs.wordtoks`) that lets you measure
   size and extract subdocs via arbitrary units of paragraphs, sentences, words, chars,
   or tokens, with mappings between each, e.g. mapping sentence 3 of paragraph 2 to its
   corresponding character or token offset.
@@ -106,7 +110,7 @@ More on what's here:
   breaks) and HTML tags as single tokens.
   It also maintains exact offsets of each token in the original document text.
 
-- [Word-level diffs](src/flexdoc/docs/token_diffs.py) that don't work at the line level
+- Word-level diffs (`flexdoc.docs.token_diffs`) that don't work at the line level
   (like usual git-style diffs) but rather treat whitespace, sentence, and paragraph
   breaks as individual tokens.
   It performs LCS-style token-based diffs with
@@ -118,11 +122,11 @@ More on what's here:
   For example, only adding or removing words, only changing whitespace, only changing
   word lemmas, etc.
 
-- The [`TokenMapping`](src/flexdoc/docs/token_mapping.py) class offers word-based
+- The `TokenMapping` class (`flexdoc.docs`) offers word-based
   mappings between docs, allowing you to find what part of a doc corresponds with
   another doc as a token index mappings.
 
-- [`search_tokens`](src/flexdoc/docs/search_tokens.py) gives simple way to search back
+- `search_tokens` (`flexdoc.docs`) gives simple way to search back
   and forth among the tokens of a document.
   That is, you can seek forward or backward to any desired token (HTML tag, word,
   punctuation, or sentence or paragraph break matching a predicate) from any given
@@ -167,7 +171,7 @@ from textwrap import dedent
 import openai
 from flowmark import fill_text
 
-from flexdoc.docs import TextDoc
+from flexdoc import FlexDoc
 from chopdiff.transforms import changes_whitespace, filtered_transform, WINDOW_2K_WORDTOKS
 
 def llm_insert_para_breaks(input_text: str) -> str:
@@ -204,15 +208,15 @@ def llm_insert_para_breaks(input_text: str) -> str:
 
 
 def insert_paragraph_breaks(text: str) -> str:
-    # Create a TextDoc from the input text
-    doc = TextDoc.from_text(text)
+    # Create a FlexDoc from the input text
+    doc = FlexDoc.from_text(text)
     print(f"Input document: {doc.size_summary()}")
 
     # Define the transformation function.
     # Note in this case we run the LLM on strings, but you could also work directly
-    # on the TextDoc if appropriate.
-    def transform(doc: TextDoc) -> TextDoc:
-        return TextDoc.from_text(llm_insert_para_breaks(doc.reassemble()))
+    # on the FlexDoc if appropriate.
+    def transform(doc: FlexDoc) -> FlexDoc:
+        return FlexDoc.from_text(llm_insert_para_breaks(doc.reassemble()))
 
     # Apply the transformation with windowing and filtering.
     #
@@ -324,9 +328,11 @@ $
 ### Backfilling Timestamps
 
 Here is an example of backfilling data from one text file to another similar but not
-identical text file (see [backfill_timestamps.py](examples/backfill_timestamps.py) for
-code). As you can see, the text is aligned by mapping the words and then the timestamps
-inserted at the end of each paragraph based on the first sentence of each paragraph:
+identical text file (see
+[backfill_timestamps.py](https://github.com/jlevy/flexdoc/blob/main/examples/backfill_timestamps.py),
+which now ships with flexdoc). As you can see, the text is aligned by mapping the words
+and then the timestamps inserted at the end of each paragraph based on the first
+sentence of each paragraph:
 
 ```
 $ uv run examples/backfill_timestamps.py 
@@ -459,8 +465,9 @@ $
 
 ## Project Docs
 
-For the definitive design of the `TextDoc` data structure, see
-[textdoc-spec.md](docs/textdoc-spec.md).
+For the definitive design of the `FlexDoc` data structure, see
+[flexdoc's docs/flexdoc-spec.md](https://github.com/jlevy/flexdoc/blob/main/docs/flexdoc-spec.md)
+(`docs/textdoc-spec.md` here is a pointer to it).
 
 For how to install uv and Python, see [installation.md](docs/installation.md).
 

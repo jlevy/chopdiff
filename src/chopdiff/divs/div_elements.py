@@ -1,12 +1,13 @@
 import logging
 
+from flexdoc import FlexDoc
+from flexdoc.docs.sizes import TextUnit
+from flexdoc.docs.wordtoks import first_wordtok, is_div
+from flexdoc.html.html_in_md import Attrs, ClassNames, div_wrapper, html_join_blocks
+
 from chopdiff.divs.chunk_utils import chunk_children, chunk_paras
 from chopdiff.divs.parse_divs import parse_divs
 from chopdiff.divs.text_node import TextNode
-from flexdoc.docs.sizes import TextUnit
-from flexdoc.docs.text_doc import TextDoc
-from flexdoc.docs.wordtoks import first_wordtok, is_div
-from flexdoc.html.html_in_md import Attrs, ClassNames, div_wrapper, html_join_blocks
 
 log = logging.getLogger(__name__)
 
@@ -88,7 +89,7 @@ def chunk_text_as_divs(
         size_summary = parsed.size_summary()
     else:
         log.info("Chunking paragraphs using newlines.")
-        doc = TextDoc.from_text(text)
+        doc = FlexDoc.from_text(text)
         doc_chunks = chunk_paras(doc, min_size, unit)
         chunk_strs = [chunk.reassemble() for chunk in doc_chunks]
         size_summary = doc.size_summary()

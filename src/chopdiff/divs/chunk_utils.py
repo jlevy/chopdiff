@@ -1,9 +1,10 @@
 from collections.abc import Callable, Generator
 from typing import TypeVar
 
-from chopdiff.divs.text_node import TextNode
+from flexdoc import FlexDoc
 from flexdoc.docs.sizes import TextUnit
-from flexdoc.docs.text_doc import TextDoc
+
+from chopdiff.divs.text_node import TextNode
 
 T = TypeVar("T")
 
@@ -36,15 +37,15 @@ def chunk_generator(
         yield slicer(doc, start_index, total_size)
 
 
-def chunk_paras(doc: TextDoc, min_size: int, unit: TextUnit) -> Generator[TextDoc, None, None]:
+def chunk_paras(doc: FlexDoc, min_size: int, unit: TextUnit) -> Generator[FlexDoc, None, None]:
     """
-    Generate TextDoc chunks where each chunk is at least the specified minimum size.
+    Generate FlexDoc chunks where each chunk is at least the specified minimum size.
     """
 
-    def condition(slice: TextDoc) -> bool:
+    def condition(slice: FlexDoc) -> bool:
         return slice.size(unit) >= min_size
 
-    def slicer(doc: TextDoc, start: int, end: int) -> TextDoc:
+    def slicer(doc: FlexDoc, start: int, end: int) -> FlexDoc:
         return doc.sub_paras(start, end)
 
     total_paragraphs = len(doc.paragraphs)

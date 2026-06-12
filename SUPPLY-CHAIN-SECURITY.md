@@ -104,6 +104,15 @@ caught up), remove the override and re-lock.
   scripts. Reviewed and approved by the maintainer, 2026-05-29. Remove this override once
   0.7.1 clears the 14-day window.
 
+- **flexdoc 0.1.0** (published 2026-06-12, inside the window). First-party package,
+  authored and maintained by the same maintainer: the document model extracted from
+  this repo's own `src/flexdoc/` (Stage 1 of the flexdoc extraction plan), refined and
+  published from jlevy/flexdoc. Parse behavior is identical to the in-repo copy (golden
+  fixtures byte-for-byte); only Python surfaces changed (`TextDoc` renamed `FlexDoc`,
+  editing-view method renames, keyword-only `collect()`). The maintainer directed this
+  migration in [chopdiff#27](https://github.com/jlevy/chopdiff/issues/27), which is the
+  sign-off. Remove this override once 0.1.0 clears the 14-day window.
+
 ### Audit-Gate Ignores
 
 Distinct from the cool-off overrides above: `pip-audit --ignore-vuln <ID>` suppresses a

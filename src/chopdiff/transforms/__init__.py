@@ -9,7 +9,7 @@ from chopdiff.transforms.diff_filters import (
     removes_words,
 )
 from chopdiff.transforms.sliding_transforms import (
-    TextDocTransform,
+    FlexDocTransform,
     filtered_transform,
     remove_window_br,
     sliding_para_window_transform,
@@ -45,7 +45,7 @@ __all__ = [
     "no_word_lemma_changes",
     "removes_word_lemmas",
     "removes_words",
-    "TextDocTransform",
+    "FlexDocTransform",
     "filtered_transform",
     "remove_window_br",
     "sliding_para_window_transform",

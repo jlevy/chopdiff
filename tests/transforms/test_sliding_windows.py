@@ -1,9 +1,10 @@
 from pprint import pprint
 from textwrap import dedent
 
-from chopdiff.transforms.sliding_windows import sliding_word_window
+from flexdoc import FlexDoc
 from flexdoc.docs.sizes import TextUnit, size
-from flexdoc.docs.text_doc import TextDoc
+
+from chopdiff.transforms.sliding_windows import sliding_word_window
 
 _example_text = dedent(
     """
@@ -17,7 +18,7 @@ _example_text = dedent(
 
 
 def test_sliding_window():
-    doc = TextDoc.from_text(_example_text)
+    doc = FlexDoc.from_text(_example_text)
     window_size = 80
     window_shift = 60
 

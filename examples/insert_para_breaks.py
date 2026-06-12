@@ -12,10 +12,10 @@ from pathlib import Path
 from textwrap import dedent
 
 import openai  # pyright: ignore  # Not a project dep.
+from flexdoc import FlexDoc
 from flowmark import fill_text
 
 from chopdiff.transforms import WINDOW_2K_WORDTOKS, changes_whitespace, filtered_transform
-from flexdoc.docs import TextDoc
 
 logging.basicConfig(format=">> %(message)s")
 log = logging.getLogger(__name__)
@@ -27,17 +27,17 @@ def heading(text: str):
 
 
 def insert_paragraph_breaks(text: str) -> str:
-    # Create a TextDoc from the input text
-    doc = TextDoc.from_text(text)
+    # Create a FlexDoc from the input text
+    doc = FlexDoc.from_text(text)
 
     # Handy calculations of document size in paragraphs, sentences, etc.
     print(f"\nInput document: {doc.size_summary()}")
 
     # Define the transformation function.
     # Note in this case we run the LLM on strings, but you could also work directly
-    # on the TextDoc if appropriate.
-    def transform(doc: TextDoc) -> TextDoc:
-        return TextDoc.from_text(llm_insert_para_breaks(doc.reassemble()))
+    # on the FlexDoc if appropriate.
+    def transform(doc: FlexDoc) -> FlexDoc:
+        return FlexDoc.from_text(llm_insert_para_breaks(doc.reassemble()))
 
     # Apply the transformation with windowing and filtering.
     #

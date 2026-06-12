@@ -7,6 +7,7 @@ exclude-newer = "2026-05-11T00:00:00Z"
 
 [options.exclude-newer-package]
 strif = "2026-05-24T00:00:00Z"
+flexdoc = "2026-06-13T00:00:00Z"
 flowmark = "2026-05-30T00:00:00Z"
 idna = "2026-05-13T00:00:00Z"
 
@@ -160,16 +161,10 @@ wheels = [
 name = "chopdiff"
 source = { editable = "." }
 dependencies = [
-    { name = "cydifflib" },
+    { name = "flexdoc" },
     { name = "flowmark" },
-    { name = "frontmatter-format" },
-    { name = "funlog" },
-    { name = "marko" },
     { name = "prettyfmt" },
-    { name = "pydantic" },
-    { name = "regex" },
-    { name = "selectolax" },
-    { name = "strif" },
+    { name = "typing-extensions" },
 ]
 
 [package.optional-dependencies]
@@ -193,17 +188,11 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "cydifflib", specifier = ">=1.2.0" },
+    { name = "flexdoc", specifier = ">=0.1.0" },
     { name = "flowmark", specifier = ">=0.7.1" },
-    { name = "frontmatter-format", specifier = ">=0.3.0" },
-    { name = "funlog", specifier = ">=0.2.1" },
-    { name = "marko", specifier = ">=2.2.2" },
     { name = "prettyfmt", specifier = ">=0.3.0" },
-    { name = "pydantic", specifier = ">=2.13.4" },
-    { name = "regex", specifier = ">=2024.11.6" },
-    { name = "selectolax", specifier = ">=0.3.32" },
     { name = "simplemma", marker = "extra == 'extras'", specifier = ">=1.1.2" },
-    { name = "strif", specifier = ">=3.1.0" },
+    { name = "typing-extensions", specifier = ">=4.12.0" },
 ]
 provides-extras = ["extras"]
 
@@ -328,6 +317,28 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/b5/fe/997687a931ab51049acce6fa1f23e8f01216374ea81374ddee763c493db5/filelock-3.29.0.tar.gz", hash = "sha256:69974355e960702e789734cb4871f884ea6fe50bd8404051a3530bc07809cf90", size = 57571, upload-time = "2026-04-19T15:39:10.068Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/81/47/dd9a212ef6e343a6857485ffe25bba537304f1913bdbed446a23f7f592e1/filelock-3.29.0-py3-none-any.whl", hash = "sha256:96f5f6344709aa1572bbf631c640e4ebeeb519e08da902c39a001882f30ac258", size = 39812, upload-time = "2026-04-19T15:39:08.752Z" },
+]
+
+[[package]]
+name = "flexdoc"
+version = "0.1.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "cydifflib" },
+    { name = "flowmark" },
+    { name = "frontmatter-format" },
+    { name = "funlog" },
+    { name = "marko" },
+    { name = "prettyfmt" },
+    { name = "pydantic" },
+    { name = "regex" },
+    { name = "selectolax" },
+    { name = "strif" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/06/82/f58d8d0b6250c28e11a226cc0a6220d729bf060f2a4ec4bcef8dde4d722a/flexdoc-0.1.0.tar.gz", hash = "sha256:37c6fc533fa8075f9a783d0922937d239f66a5bf763ad6b32a24587f0a781c73", size = 341393, upload-time = "2026-06-12T21:02:26.835Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/25/88/a41fbfa44177d69f8e037abdd7236a1e4477d06c249212d6c805fed6429f/flexdoc-0.1.0-py3-none-any.whl", hash = "sha256:a4fae55a2e399b4ad8b85e4c3d8b959edad4cb424e5f198268736e171e34f275", size = 79567, upload-time = "2026-06-12T21:02:25.535Z" },
 ]
 
 [[package]]

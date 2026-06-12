@@ -1,3 +1,9 @@
+from textwrap import dedent
+
+from flexdoc import FlexDoc
+from flexdoc.docs.token_diffs import DiffOp, OpType, diff_wordtoks
+from flexdoc.docs.wordtoks import PARA_BR_TOK, SENT_BR_TOK, is_break_or_space
+
 from chopdiff.transforms.diff_filters import (
     WILDCARD_TOK,
     changes_whitespace,
@@ -6,17 +12,41 @@ from chopdiff.transforms.diff_filters import (
     removes_word_lemmas,
     removes_words,
 )
-from flexdoc.docs.text_doc import TextDoc
-from flexdoc.docs.token_diffs import DiffOp, OpType, diff_wordtoks
-from flexdoc.docs.wordtoks import PARA_BR_TOK, SENT_BR_TOK, is_break_or_space
+
+_short_text1 = dedent(
+    """
+    Paragraph one. Sentence 1a. Sentence 1b. Sentence 1c.
+
+    Paragraph two. Sentence 2a. Sentence 2b. Sentence 2c.
+
+    Paragraph three. Sentence 3a. Sentence 3b. Sentence 3c.
+    """
+).strip()
+
+_short_text2 = dedent(
+    """
+    Paragraph one. Sentence 1a. Sentence 1b. Sentence 1c.
+    Paragraph two blah. Sentence 2a. Sentence 2b. Sentence 2c.
+
+    Paragraph three! Sentence 3a. Sentence 3b.
+    """
+).strip()
+
+# _short_text3 contains all the whitespace and break-only changes from _short_text1 to _short_text2.
+_short_text3 = dedent(
+    """
+    Paragraph one. Sentence 1a. Sentence 1b. Sentence 1c.
+    Paragraph two. Sentence 2a. Sentence 2b. Sentence 2c.
+
+    Paragraph three. Sentence 3a. Sentence 3b. Sentence 3c.
+    """
+).strip()
 
 
 def test_filter_br_and_space():
-    from ..docs.test_token_diffs import _short_text1, _short_text2, _short_text3
-
-    wordtoks1 = list(TextDoc.from_text(_short_text1).as_wordtoks())
-    wordtoks2 = list(TextDoc.from_text(_short_text2).as_wordtoks())
-    wordtoks3 = list(TextDoc.from_text(_short_text3).as_wordtoks())
+    wordtoks1 = list(FlexDoc.from_text(_short_text1).as_wordtoks())
+    wordtoks2 = list(FlexDoc.from_text(_short_text2).as_wordtoks())
+    wordtoks3 = list(FlexDoc.from_text(_short_text3).as_wordtoks())
 
     diff = diff_wordtoks(wordtoks1, wordtoks2)
 

@@ -4,12 +4,16 @@ from collections.abc import Callable
 from copy import copy
 from dataclasses import dataclass, field
 
+from flexdoc import FlexDoc
+
+# Splitter and default_sentence_splitter are public (used in FlexDoc.from_text's
+# signature) but not re-exported from flexdoc.docs in 0.1.0; import from the
+# defining module. See docs/project/review/flexdoc-0.1.0-integration-review.md.
+from flexdoc.docs.paragraphs import Splitter, default_sentence_splitter
+from flexdoc.docs.sizes import TextUnit
+from flexdoc.html.html_in_md import div_wrapper
 from prettyfmt.prettyfmt import fmt_lines
 from typing_extensions import override
-
-from flexdoc.docs.sizes import TextUnit
-from flexdoc.docs.text_doc import Splitter, TextDoc, default_sentence_splitter
-from flexdoc.html.html_in_md import div_wrapper
 
 
 @dataclass
@@ -43,13 +47,13 @@ class TextNode:
     def contents(self) -> str:
         return self.original_text[self.content_start : self.content_end]
 
-    def text_doc(self, sentence_splitter: Splitter = default_sentence_splitter) -> TextDoc:
-        return TextDoc.from_text(self.contents, sentence_splitter=sentence_splitter)
+    def flex_doc(self, sentence_splitter: Splitter = default_sentence_splitter) -> FlexDoc:
+        return FlexDoc.from_text(self.contents, sentence_splitter=sentence_splitter)
 
     def slice_children(self, start: int, end: int) -> TextNode:
         """
         Return a copy holding children `[start, end]` (inclusive end), matching the
-        inclusive-range convention of `TextDoc.sub_paras` and `chunk_generator`.
+        inclusive-range convention of `FlexDoc.sub_paras` and `chunk_generator`.
         """
         if not self.children:
             raise ValueError("Cannot slice_children on a non-container node.")
@@ -62,7 +66,7 @@ class TextNode:
         if self.children:
             return sum(child.size(unit) for child in self.children)
         else:
-            return self.text_doc().size(unit)
+            return self.flex_doc().size(unit)
 
     def structure_summary(self) -> dict[str, int]:
         """
@@ -117,7 +121,7 @@ class TextNode:
         Return a summary of the size of the doc as well as a summary of its
         div/HTML structure.
         """
-        summary = self.text_doc().size_summary()
+        summary = self.flex_doc().size_summary()
         if structure_summary_str := self.structure_summary_str():
             summary += "\n" + structure_summary_str
         return summary
