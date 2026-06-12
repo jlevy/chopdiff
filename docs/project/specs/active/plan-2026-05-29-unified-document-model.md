@@ -4,22 +4,31 @@
 
 **Author:** chopdiff maintainers
 
-**Status:** Draft: **all nine decisions settled (2026-05-29 / 2026-05-30).** Decision
-records DR-1..DR-6 cover the architecture (node table; `DocGraph` projection; Pydantic
-authoring; one `collect()` rollup primitive; composable `include` layers; the `SpanRef`
-span-reference type), plus 6 (minimal phase-1 scope), 8 (lazy-cache), 9 (count list-item
-wrapper paragraphs). The **layered-parsing lens (E9, 2026-05-30)** is folded in as a
-consolidating frame: it validates DR-1..DR-6, adds four cheap Phase-1 hooks (node `layer`
-field, offset-containment queries, per-layer nesting guarantee, `SpanRef`-anchored edits),
-unifies the `Layer` vocabulary, and names later Phases 3–4 (synthetic layer; cross-layer
-structural edits). Ready to break Phase 1 into implementation beads.
+**Status:** **Phases 0–2 implemented; Phases 3–4 deferred to after the FlexDoc separation.**
+All nine decisions are settled (2026-05-29 / 2026-05-30): decision records DR-1..DR-6 cover
+the architecture (node table; `DocGraph` projection; Pydantic authoring; one `collect()`
+rollup primitive; composable `include` layers; the `SpanRef` span-reference type), plus 6
+(minimal phase-1 scope), 8 (lazy-cache), 9 (count list-item wrapper paragraphs). The
+**layered-parsing lens (E9, 2026-05-30)** is folded in as a consolidating frame: it validates
+DR-1..DR-6, adds four cheap Phase-1 hooks (node `layer` field, offset-containment queries,
+per-layer nesting guarantee, `SpanRef`-anchored edits), unifies the `Layer` vocabulary, and
+names later Phases 3–4 (synthetic layer; cross-layer structural edits).
 
-**Implementation status:** **None yet; design settled, ready to build.** All nine
-decisions are recorded (DR-1..DR-6); the next step is to break Phase 1 into implementation
-beads. It builds on the block-aware/normalized-form work shipped in v0.4.0 (exact spans,
-structural `blocks()`, sections, links, top-level `block_type_counts()`); everything
-proposed here (recursive/nested rollups, the `SpanRef` model, and the `DocGraph`
-projection) is not yet built. Tracked by epic `chopdiff-8q8q`.
+**Implementation status (2026-06-12):** **Phases 0–2 shipped; Phases 3–4 deferred to
+post-separation.** The document-model core is built: the recursive, layer-tagged node table,
+`base_blocks()`, the single `collect()` query (with `subtree_of`/`within`/`overlaps`
+relations), the `DocGraph/v0.1` Pydantic projection, and the `SpanRef` contract
+(`from_node`/`from_span`/`resolve` with exact + quote-based re-anchoring, `to_persisted`, and
+Chrome text-fragment export; fuzzy/edit-distance re-anchoring deferred). The markdown layer
+was then completed: typed `CodeInfo`/`TableInfo`/`ListInfo`, `NodeKind.footnote_ref`, and
+`TextDoc.frontmatter`. This shipped in v0.3.1 and the subsequent markdown-completion work.
+**Phase 3 (the synthetic layer) and Phase 4 (cross-layer edits, the annotation stand-off
+layer, operation/provenance/layout) are not built and are deliberately deferred until after
+the FlexDoc package is separated into its own repo:** the synthetic layer's only source
+(`divs`/`TextNode`) stays in chopdiff until the extraction plan
+([`plan-2026-06-11-flexdoc-extraction.md`](plan-2026-06-11-flexdoc-extraction.md)) Stage 4
+migrates it into the flexdoc repo, so building it now would re-couple the two packages.
+Tracked by epic `chopdiff-8q8q`.
 
 > **Inputs:** the surveys in
 > [`research-2026-05-29-document-model.md`](../../research/research-2026-05-29-document-model.md)
@@ -81,7 +90,7 @@ every tree, slice, and rollup a cheap projection. `TextDoc` remains the Python c
 
 ## Background
 
-Where we are after v0.4.0:
+Where we are after v0.3.1:
 
 - `TextDoc` is source-referenced (paragraph/sentence spans), block-aware
   (`TextDoc.blocks()` structural tree via flowmark spans), section-aware
@@ -105,7 +114,7 @@ sub-document slicing, and transforms. Phase 1 of
 should land first: `sub_doc`/`sub_paras` currently alias caller objects (the node
 table/`SpanRef` model wants safe copies), `filtered_transform` can skip its filter, and
 div chunking mis-slices. The doc-model's source-grounding assumptions (exact spans,
-honest `from_text` normalization) are already satisfied in v0.4.0.
+honest `from_text` normalization) are already satisfied in v0.3.1.
 
 ## Requirements (from the Request)
 
@@ -459,7 +468,7 @@ deliberately minimal: **one general query primitive, no blessed per-kind rollups
 
 This makes the structural block tree fully recursive (containers populate children),
 fixing the tallies gap: a table inside a blockquote or list item is a node and is found.
-The existing v0.4.0 convenience accessors (`TextDoc.block_type_counts()`,
+The existing v0.3.1 convenience accessors (`TextDoc.block_type_counts()`,
 `Section.block_type_counts()`) are **superseded by `collect()`** and are removed when the
 unified model lands (migration: `Counter(n.kind for n in dg.collect(...))`); this is a
 semi-breaking change for the next minor.
@@ -713,7 +722,7 @@ stored counts" by construction. The maintenance cost of shortcuts of uncertain v
 not worth embedding in a low-level dependency.
 
 **Consequences:** discoverability rests on clear docs and worked examples (the
-`examples/normalized_form.py` pattern) rather than autocomplete; the v0.4.0
+`examples/normalized_form.py` pattern) rather than autocomplete; the v0.3.1
 `block_type_counts()` accessors are superseded by `collect()` and removed in the next minor
 (migration documented). Add named conveniences later only if docs/usage prove a specific
 one is broadly needed.
@@ -802,41 +811,41 @@ updates" below for the per-section detail):
 
 ### Phase 1: recursive node model and flexible rollups (Python)
 
-- [ ] Make the structural block tree fully recursive (containers populate block children);
+- [x] Make the structural block tree fully recursive (containers populate block children);
       keep top-level `blocks()` shape, add deep traversal. Density-invariant preserved.
-- [ ] Add `base_blocks(*, item_partition_depth=6)`: the flat, depth-annotated **sequential block
+- [x] Add `base_blocks(*, item_partition_depth=6)`: the flat, depth-annotated **sequential block
       list** (partition). `item_partition_depth` controls list decomposition (default 6; `-1`
       unlimited; `0` lists unsplit); blockquotes always atomic. Invariant: ordered,
       non-overlapping, complete cover whose reassembly reproduces the document (exact except
       normalized paragraph-break whitespace; exact via offsets). A base block is a block
       node; the base-block *list* is the partition. (textdoc-spec §6.)
-- [ ] Model inline items as nodes with `parent` block and computed `section`/`sentence`.
-- [ ] **Tag every node with its `layer`** (textual / markdown / document) and record each
+- [x] Model inline items as nodes with `parent` block and computed `section`/`sentence`.
+- [x] **Tag every node with its `layer`** (textual / markdown / document) and record each
       layer's **nesting guarantee** (tree vs ordered list). Reserve the `synthetic` layer
       (not built in Phase 1). (E9 hooks 1 and 3; cheap now, enables Phases 3–4.)
-- [ ] Lazy-cache the node table on the immutable `source_text`; make `Section.blocks()`
+- [x] Lazy-cache the node table on the immutable `source_text`; make `Section.blocks()`
       slice the cached tree (remove per-section reparse).
-- [ ] Add the single `collect(*, kinds=, where=, recursive=, inline=)` query primitive
+- [x] Add the single `collect(*, kinds=, where=, recursive=, inline=)` query primitive
       with document / section / block scope handles, **including an offset-containment mode
       for cross-layer queries** (E9 hook 2). No per-kind rollup methods (DR-4).
-- [ ] Define the `SpanRef` type and resolution: `SpanRef.from_node(node)` (total
+- [x] Define the `SpanRef` type and resolution: `SpanRef.from_node(node)` (total
       model→source), `resolve(span_ref, doc)` (source→model: exact fast path, then quote fuzzy re-anchor),
       and `to_persisted()` (drop transient `node_id`). `SpanRef` is the anchor for edits too,
       not just annotations (E9 hook 4). No annotation *storage* yet; just the targeting
       contract the rest of the model is designed around.
-- [ ] Tests: nested tables/code in blockquotes and list items are counted and locatable;
+- [x] Tests: nested tables/code in blockquotes and list items are counted and locatable;
       per-section value and count rollups; density invariance; section slicing; `SpanRef`
       round-trips (node → source-grounded → re-resolved node) and survives a reparse.
 
 ### Phase 2: `DocGraph` serialization and detail levels
 
-- [ ] Pydantic/dataclass models for the schema (nodes, views, source, reserved
+- [x] Pydantic/dataclass models for the schema (nodes, views, source, reserved
       `annotations` layer with the `SpanRef` target shape); `offset_unit` pinned to
       Unicode code points; optional derived coords.
-- [ ] `TextDoc.graph(*, include=…)` builder and `Layer` set (no ladder); render helpers emit
+- [x] `TextDoc.graph(*, include=…)` builder and `Layer` set (no ladder); render helpers emit
       `data-node-id` / `data-source-span` so rendered selections resolve back to source.
-- [ ] Round-trip and golden tests; a tiny UI fixture is out of scope here (later phase).
-- [ ] Author the standalone language-neutral JSON Schema once the shape is confirmed
+- [x] Round-trip and golden tests; a tiny UI fixture is out of scope here (later phase).
+- [x] Author the standalone language-neutral JSON Schema once the shape is confirmed
       (decision 5).
 
 ### Phase 3 (later): the synthetic layer
@@ -844,8 +853,13 @@ updates" below for the per-section detail):
 Re-express the existing `<div>`/`<span>` structural parsing (`TextNode`, `parse_divs`,
 chunking) as the **synthetic layer** keyed into the shared node table, reconciling the two
 structural models the codebase has today (marko block model vs the `TextNode` tag parser).
-Deferred by design (E9): not needed to ship the core, and the Phase-1 hooks (`layer` field,
-offset-containment `collect()`) make it additive rather than a rewrite.
+Deferred by design (E9), and specifically until **after the FlexDoc package separation**:
+its only source (`divs`/`TextNode`) lives in chopdiff and migrates into the flexdoc repo at
+the extraction plan's Stage 4
+([`plan-2026-06-11-flexdoc-extraction.md`](plan-2026-06-11-flexdoc-extraction.md)), so
+building it earlier would re-couple the packages. It is not needed to ship the core, and the
+Phase-1 hooks (`layer` field, offset-containment `collect()`) make it additive rather than a
+rewrite when it does land.
 
 The **synthetic layer is the general "structure from marker tags" mechanism**, not just
 `<div>`/`<span>`. "Synthetic" means structure that is not inherent in the prose or Markdown
@@ -868,7 +882,9 @@ principle; the initial implementation need only cover today's `<div>`/`<span>`.
 The eventual payoff: **structural-edit operations anchored on `SpanRef` that work uniformly
 across layers**, generalizing today's synthetic-structure edits (`div_insert_wrapped`,
 wrap/splice). Plus the built-out `annotations` (stand-off), `operation`/`provenance`, and
-`layout` layers the schema reserves.
+`layout` layers the schema reserves. Like Phase 3, this is **deferred to after the FlexDoc
+separation** and lands in the flexdoc repo (it builds on the synthetic layer and the
+`SpanRef` contract).
 
 - [ ] Operation records (move section, wrap region, replace block, splice) that resolve
       targets via `SpanRef`, apply to source, re-derive, and validate (reparse and token diff).
