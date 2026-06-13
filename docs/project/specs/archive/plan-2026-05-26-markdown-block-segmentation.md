@@ -6,13 +6,13 @@
 
 **Status:** Superseded (archived 2026-05-28)
 
-> **Superseded by [`plan-2026-05-26-block-aware-doc.md`](plan-2026-05-26-block-aware-doc.md).**
-> This draft proposed a separate parallel module (`MarkdownDoc`/`MarkdownBlock`)
-> alongside `TextDoc`. After v0.3.0 made `TextDoc` block-aware, the maintainers chose
-> to add spans, sections, and structural blocks *in place on `TextDoc`* rather than
-> introduce a parallel model. Kept for reference: the Marko parser-subclass span
-> attachment technique and GFM table handling here inform the structural-block layer of
-> the active spec.
+> **Superseded by
+> [`plan-2026-05-26-block-aware-doc.md`](plan-2026-05-26-block-aware-doc.md).** This
+> draft proposed a separate parallel module (`MarkdownDoc`/`MarkdownBlock`) alongside
+> `TextDoc`. After v0.3.0 made `TextDoc` block-aware, the maintainers chose to add
+> spans, sections, and structural blocks *in place on `TextDoc`* rather than introduce a
+> parallel model. Kept for reference: the Marko parser-subclass span attachment technique
+> and GFM table handling here inform the structural-block layer of the active spec.
 
 ## Overview
 

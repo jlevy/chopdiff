@@ -15,14 +15,14 @@ This review covers the full `chopdiff` package as currently checked out at commi
 - The project instructions plus tbd Python, general coding, comment, testing, and
   error-handling guidelines.
 
-This was a review pass, not a fix pass. I did not intentionally change implementation
-code.
+This was a review pass, not a fix pass.
+I did not intentionally change implementation code.
 
 ## Post-v0.3.0 Reconciliation (2026-05-29)
 
 This file remains the historical review of commit `0ad8288`; line references and probes
-below intentionally describe that pre-v0.3.0 state. Current `origin/main` has since
-resolved some findings and left others open.
+below intentionally describe that pre-v0.3.0 state.
+Current `origin/main` has since resolved some findings and left others open.
 
 Resolved or materially changed:
 
@@ -37,10 +37,10 @@ Still open after local probes on 2026-05-29:
 
 - `filtered_transform()` still ignores `diff_filter` when windowing is disabled.
 - `sub_doc()` and `sub_paras()` still alias live paragraph/sentence objects.
-- `TextDoc.from_text("  hello  ").reassemble()` still returns `"hello"`, so exact source
+- `TextDoc.from_text(" hello ").reassemble()` still returns `"hello"`, so exact source
   references should not be documented as exact full-document reassembly.
-- `html_find_tag()` still truncates an outer same-name tag when a nested same-name tag is
-  self-closing.
+- `html_find_tag()` still truncates an outer same-name tag when a nested same-name tag
+  is self-closing.
 - `TextDoc.from_text("").as_wordtoks(bof_eof=True)` still raises `IndexError`.
 - `TokenMapping`, `TokenDiff.apply_to()`, runtime `assert`s, HTML attribute/name
   validation, strict HTML parsing diagnostics, empty attribute handling, and
@@ -66,7 +66,7 @@ Commands run:
     dependency, which is expected.
 - `uv tree --outdated --all-groups`
   - Resolved successfully under the active `exclude-newer` policy.
-  - I did not bypass the repo's 14-day cool-off policy to inspect releases newer than
+  - I did not bypass the repo’s 14-day cool-off policy to inspect releases newer than
     the configured cutoff.
 
 Targeted probes were also run for behavior not covered by the current test suite:
@@ -77,7 +77,7 @@ Targeted probes were also run for behavior not covered by the current test suite
   - Returns an illegal word change unchanged, so the filter is ignored without
     windowing.
 - Word-window `filtered_transform` on a document containing `<!--window-br-->`
-  - Mutates the caller's original `TextDoc`.
+  - Mutates the caller’s original `TextDoc`.
 - `sliding_para_window` with a normalizer disabled on multi-sentence paragraphs
   - Drops all but the first sentence of each selected paragraph.
 - `chunk_children` on a parsed div document
@@ -92,16 +92,16 @@ Targeted probes were also run for behavior not covered by the current test suite
 ## Executive Summary
 
 `chopdiff` has a useful core idea: preserve enough text structure and token mapping to
-make LLM-oriented transforms auditable, filterable, and stitchable. The code is compact,
-typed, reasonably easy to read, and already has meaningful coverage for many happy-path
-behaviors.
+make LLM-oriented transforms auditable, filterable, and stitchable.
+The code is compact, typed, reasonably easy to read, and already has meaningful coverage
+for many happy-path behaviors.
 
 The main release risk is that several core API contracts are currently stronger in the
-README and docstrings than in the implementation. Exact preservation, safe chunking,
-diff-filter enforcement, and stable offsets are key promises for downstream consumers,
-and there are concrete cases where those promises fail. Before widening downstream use,
-the package should harden its invariants, clarify mutability/copy semantics, and add
-regression tests around boundary behavior.
+README and docstrings than in the implementation.
+Exact preservation, safe chunking, diff-filter enforcement, and stable offsets are key
+promises for downstream consumers, and there are concrete cases where those promises
+fail. Before widening downstream use, the package should harden its invariants, clarify
+mutability/copy semantics, and add regression tests around boundary behavior.
 
 ## Priority Findings
 
@@ -119,16 +119,17 @@ References:
 chopdiff = "chopdiff:main"
 ```
 
-But `src/chopdiff/__init__.py` is empty and no `main` object exists. Running the
-installed script fails immediately:
+But `src/chopdiff/__init__.py` is empty and no `main` object exists.
+Running the installed script fails immediately:
 
 ```text
 ImportError: cannot import name 'main' from 'chopdiff'
 ```
 
 This affects every installed package user because console entry points are part of the
-distribution metadata. The PyPA entry point specification expects `console_scripts`
-targets to refer to an importable function that can be called with no arguments.
+distribution metadata.
+The PyPA entry point specification expects `console_scripts` targets to refer to an
+importable function that can be called with no arguments.
 
 Recommendation:
 
@@ -144,8 +145,9 @@ References:
 - `src/chopdiff/transforms/sliding_transforms.py:53`
 
 The function promises to apply a transform and enforce allowed changes via
-`diff_filter`. The enforcement logic is nested inside the windowed path. If `windowing`
-is `None` or `WINDOW_NONE`, the transform result is returned without diff filtering.
+`diff_filter`. The enforcement logic is nested inside the windowed path.
+If `windowing` is `None` or `WINDOW_NONE`, the transform result is returned without diff
+filtering.
 
 Observed behavior:
 
@@ -159,16 +161,16 @@ filtered_transform(
 # "goodbye"
 ```
 
-That violates the core safety use case of the library. A caller can reasonably use
-`filtered_transform` on a small document without windowing and expect the same filter
-contract.
+That violates the core safety use case of the library.
+A caller can reasonably use `filtered_transform` on a small document without windowing
+and expect the same filter contract.
 
 Recommendation:
 
 - Factor transform-and-filter into a single helper used by both whole-document and
   windowed paths.
-- Add tests for `windowing=None`, `WINDOW_NONE`, and a real window setting with the
-  same illegal transform.
+- Add tests for `windowing=None`, `WINDOW_NONE`, and a real window setting with the same
+  illegal transform.
 
 ### P1: Sub-document APIs alias mutable sentence and paragraph objects
 
@@ -183,15 +185,15 @@ References:
 - `src/chopdiff/transforms/sliding_transforms.py:59`
 
 `TextDoc.sub_doc()` and `TextDoc.sub_paras()` reuse existing `Paragraph` and `Sentence`
-objects. That makes subdocuments mutable views rather than independent values. The
-public API does not document this, and several transform paths mutate their input
+objects. That makes subdocuments mutable views rather than independent values.
+The public API does not document this, and several transform paths mutate their input
 windows.
 
 Concrete issue:
 
 - Word-window `filtered_transform` calls `remove_window_br(input_doc)`.
 - Word windows are created via `sub_doc()`.
-- Because subdocuments share `Sentence` objects, this mutates the caller's original
+- Because subdocuments share `Sentence` objects, this mutates the caller’s original
   document.
 
 Observed behavior:
@@ -201,8 +203,9 @@ Input original doc: A <!--window-br--> marker. B sentence.
 After word-window filtered_transform: A  marker. B sentence.
 ```
 
-This is a downstream-consumer hazard. Transform callbacks may also mutate windows
-directly, accidentally corrupting the original document.
+This is a downstream-consumer hazard.
+Transform callbacks may also mutate windows directly, accidentally corrupting the
+original document.
 
 Recommendation:
 
@@ -223,8 +226,8 @@ References:
 - `src/chopdiff/docs/text_doc.py:213`
 
 `Sentence.char_offset` is documented as the offset of the sentence in the original text.
-`Paragraph.char_offset` is also an original-text offset. But `Paragraph.from_text()`
-stores sentence offsets relative to the paragraph:
+`Paragraph.char_offset` is also an original-text offset.
+But `Paragraph.from_text()` stores sentence offsets relative to the paragraph:
 
 ```python
 sentences.append(Sentence(sent_str, sent_offset))
@@ -234,7 +237,7 @@ It does not add the paragraph `char_offset`. For a two-paragraph document, the s
 paragraph can have `Paragraph.char_offset == 8` and its first sentence
 `Sentence.char_offset == 0`.
 
-This matters because the package's value proposition is exact mapping back to source
+This matters because the package’s value proposition is exact mapping back to source
 text. Consumers doing timestamp insertion, annotations, surgical rewriting, or UI
 highlighting will get wrong offsets.
 
@@ -295,14 +298,15 @@ References:
 - `src/chopdiff/divs/text_node.py:56`
 - `src/chopdiff/divs/div_elements.py:83`
 
-`chunk_generator()` assumes the `slicer` end index is inclusive. `TextDoc.sub_paras()`
-uses inclusive semantics, but `TextNode.slice_children()` uses normal Python exclusive
-slicing. The first slice for child chunking is therefore empty (`children[0:0]`).
+`chunk_generator()` assumes the `slicer` end index is inclusive.
+`TextDoc.sub_paras()` uses inclusive semantics, but `TextNode.slice_children()` uses
+normal Python exclusive slicing.
+The first slice for child chunking is therefore empty (`children[0:0]`).
 
 An empty child slice then becomes a `TextNode` with no children, so `TextNode.size()`
-falls back to measuring `self.contents`, which is the whole original document. That
-causes the empty slice to satisfy the size condition and yields repeated whole-document
-chunks.
+falls back to measuring `self.contents`, which is the whole original document.
+That causes the empty slice to satisfy the size condition and yields repeated
+whole-document chunks.
 
 Observed behavior for three top-level divs:
 
@@ -316,9 +320,9 @@ This directly affects `chunk_text_as_divs()` when input already starts with a di
 
 Recommendation:
 
-- Standardize slicer semantics. The simplest fix is to make `chunk_generator()` use
-  exclusive end indexes and adjust `chunk_paras()`, or make `slice_children()` inclusive
-  through a wrapper.
+- Standardize slicer semantics.
+  The simplest fix is to make `chunk_generator()` use exclusive end indexes and adjust
+  `chunk_paras()`, or make `slice_children()` inclusive through a wrapper.
 - Make empty child slices have size zero, not whole-document size.
 - Add tests for div-leading input with multiple top-level divs.
 
@@ -336,9 +340,9 @@ References:
 doc.sub_doc(SentIndex(i, 0), SentIndex(end_index, 0))
 ```
 
-For a paragraph window, the end index should include the full ending paragraph. This
-code includes only sentence `0` of the ending paragraph. For `nparas=1`, it keeps only
-the first sentence of every paragraph.
+For a paragraph window, the end index should include the full ending paragraph.
+This code includes only sentence `0` of the ending paragraph.
+For `nparas=1`, it keeps only the first sentence of every paragraph.
 
 The default `fill_markdown` normalizer can obscure this in some cases, but the slicing
 bug is still present.
@@ -360,7 +364,8 @@ References:
 - `src/chopdiff/html/html_tags.py:157`
 
 `_find_balanced_closing_tag()` increments depth for any same-name opening tag and does
-not recognize nested self-closing tags. Example:
+not recognize nested self-closing tags.
+Example:
 
 ```html
 <div id=outer>before <div id=inner/> after</div>
@@ -373,8 +378,8 @@ outer -> <div id=outer>
 inner/ -> <div id=inner/>
 ```
 
-The outer match should include the full enclosing div. This breaks the documented goal
-of surgical HTML editing with accurate offsets.
+The outer match should include the full enclosing div.
+This breaks the documented goal of surgical HTML editing with accurate offsets.
 
 Recommendation:
 
@@ -395,9 +400,10 @@ References:
 - `src/chopdiff/docs/text_doc.py:436`
 - `src/chopdiff/docs/text_doc.py:447`
 
-Empty documents are representable (`TextDoc.from_text("")` returns zero paragraphs),
-but `as_wordtoks(bof_eof=True)` calls `first_index()` and `last_index()`, which assume
-at least one paragraph and one sentence. The result is `IndexError`.
+Empty documents are representable (`TextDoc.from_text("")` returns zero paragraphs), but
+`as_wordtoks(bof_eof=True)` calls `first_index()` and `last_index()`, which assume at
+least one paragraph and one sentence.
+The result is `IndexError`.
 
 Recommendation:
 
@@ -420,8 +426,8 @@ References:
 nchanges = len(self.diff.changes())
 ```
 
-That is the number of non-equal diff operations, not the number of changed tokens. A
-complete replacement of 50 tokens by 50 unrelated tokens can be one `REPLACE` op and
+That is the number of non-equal diff operations, not the number of changed tokens.
+A complete replacement of 50 tokens by 50 unrelated tokens can be one `REPLACE` op and
 pass a `max_diff_frac=0.4` gate.
 
 Recommendation:
@@ -439,9 +445,10 @@ References:
 - `src/chopdiff/docs/token_diffs.py:135`
 - `src/chopdiff/docs/token_diffs.py:140`
 
-`apply_to()` checks only that the input length matches the diff left size. It does not
-verify that each `op.left` segment matches the corresponding source tokens. Applying a
-diff to a different same-length token list can silently produce invalid output.
+`apply_to()` checks only that the input length matches the diff left size.
+It does not verify that each `op.left` segment matches the corresponding source tokens.
+Applying a diff to a different same-length token list can silently produce invalid
+output.
 
 Recommendation:
 
@@ -477,13 +484,14 @@ References:
 - `src/chopdiff/html/html_in_md.py:194`
 - `src/chopdiff/html/html_in_md.py:220`
 
-Values are escaped, but tag names and attribute names are interpolated directly. For
-example, `tag_with_attrs("span onmouseover=alert(1)", "x")` produces executable-looking
-markup. `attrs={"bad attr": "y"}` produces invalid markup.
+Values are escaped, but tag names and attribute names are interpolated directly.
+For example, `tag_with_attrs("span onmouseover=alert(1)", "x")` produces
+executable-looking markup.
+`attrs={"bad attr": "y"}` produces invalid markup.
 
 This is not necessarily exploitable if tag and attribute names are always constants, but
-the public helper API does not enforce that. For downstream consumers, this should be
-hardened.
+the public helper API does not enforce that.
+For downstream consumers, this should be hardened.
 
 Recommendation:
 
@@ -500,8 +508,8 @@ References:
 - `src/chopdiff/docs/wordtoks.py:223`
 - `src/chopdiff/docs/wordtoks.py:225`
 
-`parse_tag()` only captures double-quoted attributes with `\w+` names. It misses common
-HTML forms:
+`parse_tag()` only captures double-quoted attributes with `\w+` names.
+It misses common HTML forms:
 
 - Single-quoted attributes.
 - Unquoted attributes.
@@ -525,8 +533,8 @@ References:
 - `src/chopdiff/divs/text_node.py:129`
 
 `CLASS_NAME_PATTERN` only handles double-quoted `class="..."`, stores the full class
-attribute as one string, and `children_by_class_names()` checks exact equality. A div
-with `class="chunk selected"` will not match `children_by_class_names("chunk")`.
+attribute as one string, and `children_by_class_names()` checks exact equality.
+A div with `class="chunk selected"` will not match `children_by_class_names("chunk")`.
 
 Recommendation:
 
@@ -541,9 +549,9 @@ References:
 - `src/chopdiff/html/html_tags.py:165`
 - `src/chopdiff/html/html_tags.py:213`
 
-The function catches all exceptions from `selectolax` and silently skips the match. That
-is okay for best-effort extraction, but it conflicts with the error-handling guideline
-when callers depend on complete rewriting.
+The function catches all exceptions from `selectolax` and silently skips the match.
+That is okay for best-effort extraction, but it conflicts with the error-handling
+guideline when callers depend on complete rewriting.
 
 Recommendation:
 
@@ -559,8 +567,8 @@ References:
 - `src/chopdiff/html/html_tags.py:238`
 - `src/chopdiff/html/html_tags.py:240`
 
-The extractor returns a value only if it is truthy. An explicitly empty attribute value
-returns `None`, the same as a missing attribute.
+The extractor returns a value only if it is truthy.
+An explicitly empty attribute value returns `None`, the same as a missing attribute.
 
 Recommendation:
 
@@ -575,8 +583,9 @@ References:
 - `src/chopdiff/html/timestamps.py:56`
 
 The method catches `KeyError` and raises `ContentNotFound` without `from e`. This loses
-the exception chain. The project currently disables Ruff `B904`, but the error-handling
-guideline still recommends preserving cause when wrapping failures.
+the exception chain.
+The project currently disables Ruff `B904`, but the error-handling guideline still
+recommends preserving cause when wrapping failures.
 
 Recommendation:
 
@@ -635,9 +644,9 @@ References:
 - `src/chopdiff/html/__init__.py:35`
 - `src/chopdiff/transforms/__init__.py:39`
 
-The subpackage APIs have explicit exports, but `import chopdiff` exposes nothing. That
-is fine if intentional, but most downstream consumers will expect either a documented
-root API or no root-level examples/scripts.
+The subpackage APIs have explicit exports, but `import chopdiff` exposes nothing.
+That is fine if intentional, but most downstream consumers will expect either a
+documented root API or no root-level examples/scripts.
 
 Recommendation:
 
@@ -655,8 +664,8 @@ Current surface includes:
 - `divs`, `html`, `transforms`.
 - `TextUnit` with `wordtoks` and `tiktokens`.
 
-The concepts are useful but not yet organized around stable consumer workflows. A
-downstream user has to learn internal nouns before understanding which API to use.
+The concepts are useful but not yet organized around stable consumer workflows.
+A downstream user has to learn internal nouns before understanding which API to use.
 
 Recommendation:
 
@@ -677,15 +686,15 @@ regex-only approach that would be inappropriate as a foundation.
 
 Recommendation:
 
-- Land PR #7 as a short-term release improvement if it first re-exports `BlockType`
-  from `chopdiff.docs`.
+- Land PR #7 as a short-term release improvement if it first re-exports `BlockType` from
+  `chopdiff.docs`.
 - Fix `TextDoc.filtered()` so it copies paragraph and sentence objects rather than
   returning a new `TextDoc` that aliases the original mutable objects.
 - Document `Paragraph.block_type` as a coarse paragraph-level classifier, not a precise
   Markdown AST block API.
-- Keep the fuller parser-backed block segmentation plan separate. It should still own
-  source spans, list-item blocks, section rollups, offset-backed tallies, and analytics
-  filtered by block kind or category.
+- Keep the fuller parser-backed block segmentation plan separate.
+  It should still own source spans, list-item blocks, section rollups, offset-backed
+  tallies, and analytics filtered by block kind or category.
 
 ### Examples do not fully follow project Python guidelines
 
@@ -708,7 +717,8 @@ Recommendation:
 ### Test output is noisy in normal pytest runs
 
 Many tests use `print()` and `pprint()`. That is sometimes useful with `pytest -s`, but
-pytest captures output by default. It is not a blocker.
+pytest captures output by default.
+It is not a blocker.
 
 Recommendation:
 
@@ -753,9 +763,9 @@ Strengths:
 Risks:
 
 - Broken console script is release-blocking if the script remains in metadata.
-- Publish workflow computes `UV_EXCLUDE_NEWER` at runtime and uses `uv sync --all-extras`
-  without `--locked`, while CI uses `uv sync --all-extras --locked`. This weakens
-  consistency between CI and release.
+- Publish workflow computes `UV_EXCLUDE_NEWER` at runtime and uses
+  `uv sync --all-extras` without `--locked`, while CI uses
+  `uv sync --all-extras --locked`. This weakens consistency between CI and release.
 - CI only runs Ubuntu despite `Operating System :: OS Independent`.
 
 Recommendations:
@@ -773,8 +783,8 @@ Relevant external references:
   console scripts refer to importable object references, and wrappers call the
   referenced function.
 - [uv `exclude-newer` setting](https://docs.astral.sh/uv/reference/settings/#exclude-newer):
-  the resolver limits candidate artifacts by upload time and accepts RFC 3339
-  timestamps or durations.
+  the resolver limits candidate artifacts by upload time and accepts RFC 3339 timestamps
+  or durations.
 - [uv package publishing guide](https://docs.astral.sh/uv/guides/package/#publishing-your-package):
   trusted publishing from GitHub Actions does not require credentials once configured
   with PyPI.
@@ -815,8 +825,8 @@ Strengths:
 
 Risks:
 
-- Token values normalize whitespace, while offsets point into the original text. This is
-  useful but should be documented as a lossy token value with source offsets.
+- Token values normalize whitespace, while offsets point into the original text.
+  This is useful but should be documented as a lossy token value with source offsets.
 - `Tag.attrs` parsing is incomplete.
 - The sentinel tokens are plain strings that could collide with user content.
 
@@ -843,8 +853,8 @@ Risks:
 - `TokenMapping` validation currently underestimates large replacements.
 - Diff application does not verify token identity.
 - Lemmatization depends on optional `simplemma` but filters import lemmatize helpers
-  unconditionally. This is okay until the lemmatizing filters are called, but docs
-  should make that lazy optional behavior explicit.
+  unconditionally. This is okay until the lemmatizing filters are called, but docs should
+  make that lazy optional behavior explicit.
 
 Recommendations:
 
@@ -871,8 +881,8 @@ Risks:
 
 Recommendations:
 
-- Separate "HTML snippet generation" from "surgical HTML source rewrite" in docs and
-  API naming.
+- Separate “HTML snippet generation” from “surgical HTML source rewrite” in docs and API
+  naming.
 - Harden name validation.
 - Add strict mode for rewrite/extraction.
 - Consider representing rewrite results as `{text, replacements, skipped, warnings}`.
@@ -986,7 +996,7 @@ Fix release blockers and high-risk correctness bugs:
   `TextDoc.filtered()` copy-semantics fixes.
 - Fix `sliding_para_window` to include full paragraphs.
 - Fix div child chunking.
-- Prevent word-window transforms from mutating the caller's document.
+- Prevent word-window transforms from mutating the caller’s document.
 - Fix absolute sentence offsets or update the public contract.
 - Add regression tests for all of the above.
 
@@ -1023,23 +1033,23 @@ The dependency setup is modern and comparatively strong:
 - `pip-audit` runs in CI and passed locally.
 - Active cool-off exceptions are documented.
 
-No dependency upgrade is currently recommended from this review. The higher-value work
-is correctness and API contract hardening. I did not bypass the 14-day cool-off policy
-to inspect newer-than-cutoff releases.
+No dependency upgrade is currently recommended from this review.
+The higher-value work is correctness and API contract hardening.
+I did not bypass the 14-day cool-off policy to inspect newer-than-cutoff releases.
 
 One release workflow concern remains:
 
-- `.github/workflows/publish.yml` uses a runtime `UV_EXCLUDE_NEWER` and `uv sync
-  --all-extras`, while CI uses the committed lockfile with `uv sync --all-extras
-  --locked`.
+- `.github/workflows/publish.yml` uses a runtime `UV_EXCLUDE_NEWER` and
+  `uv sync --all-extras`, while CI uses the committed lockfile with
+  `uv sync --all-extras --locked`.
 
 For release reproducibility, publish should install the same locked environment CI
 validated unless there is an explicit reason to re-resolve at release time.
 
 ## Documentation Improvements
 
-The README is useful, but it currently overpromises exact preservation. The docs should
-be updated after contract fixes to clarify:
+The README is useful, but it currently overpromises exact preservation.
+The docs should be updated after contract fixes to clarify:
 
 - Whether `TextDoc.from_text()` preserves or normalizes input.
 - Whether token whitespace values are normalized.
@@ -1053,7 +1063,7 @@ be updated after contract fixes to clarify:
 
 The package is promising and already useful for constrained text transforms, but it is
 not yet robust enough to treat its current API contracts as stable for broad downstream
-use. The next engineering step should not be adding more features. It should be a
-focused hardening release that fixes the P1 correctness issues, writes regression tests
-for boundary cases, and clarifies the central design contracts: preservation,
-mutability, offsets, filtering, and failure behavior.
+use. The next engineering step should not be adding more features.
+It should be a focused hardening release that fixes the P1 correctness issues, writes
+regression tests for boundary cases, and clarifies the central design contracts:
+preservation, mutability, offsets, filtering, and failure behavior.

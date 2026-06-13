@@ -212,7 +212,7 @@ chopdiff carries no Markdown block-detection regex of its own.
 
 ### Full Changelog
 
-https://github.com/jlevy/chopdiff/compare/v0.3.0...v0.3.1
+[https://github.com/jlevy/chopdiff/compare/v0.3.0 … v0.3.1](https://github.com/jlevy/chopdiff/compare/v0.3.0...v0.3.1)
 
 ## v0.3.0
 
@@ -274,4 +274,4 @@ It contains several intentional breaking changes for a cleaner API.
 
 ### Full Changelog
 
-https://github.com/jlevy/chopdiff/compare/v0.2.6...v0.3.0
+[https://github.com/jlevy/chopdiff/compare/v0.2.6 … v0.3.0](https://github.com/jlevy/chopdiff/compare/v0.2.6...v0.3.0)

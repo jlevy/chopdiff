@@ -121,9 +121,10 @@ Follow this checklist for each new release.
 5. **Update the changelog:**
 
    Add a section for the new version to [`CHANGELOG.md`](../CHANGELOG.md), grouped into
-   Breaking changes / New features / Infrastructure (see existing entries). The GitHub
-   release notes for the version should mirror this section. Commit the changelog (via a
-   short "prepare release" PR) so it is on `main` at the tagged commit.
+   Breaking changes / New features / Infrastructure (see existing entries).
+   The GitHub release notes for the version should mirror this section.
+   Commit the changelog (via a short “prepare release” PR) so it is on `main` at the
+   tagged commit.
 
 #### Create the Release
 
