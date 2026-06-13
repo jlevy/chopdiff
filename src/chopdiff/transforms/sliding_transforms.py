@@ -8,24 +8,25 @@ from collections.abc import Callable
 from math import ceil
 from typing import Any, TypeAlias
 
+from flexdoc import FlexDoc
+from flexdoc.docs import Paragraph
+from flexdoc.docs.sizes import TextUnit
+from flexdoc.docs.token_diffs import DIFF_FILTER_NONE, DiffFilter, diff_docs, find_best_alignment
+from flexdoc.docs.wordtoks import join_wordtoks
 from flowmark import fill_markdown
 from prettyfmt.prettyfmt import fmt_lines
 
 from chopdiff.transforms.sliding_windows import sliding_para_window, sliding_word_window
 from chopdiff.transforms.window_settings import WINDOW_BR, WindowSettings
-from flexdoc.docs.sizes import TextUnit
-from flexdoc.docs.text_doc import Paragraph, TextDoc
-from flexdoc.docs.token_diffs import DIFF_FILTER_NONE, DiffFilter, diff_docs, find_best_alignment
-from flexdoc.docs.wordtoks import join_wordtoks
 
 log = logging.getLogger(__name__)
 
-TextDocTransform: TypeAlias = Callable[[TextDoc], TextDoc]
+FlexDocTransform: TypeAlias = Callable[[FlexDoc], FlexDoc]
 
 SaveFunc: TypeAlias = Callable[[str, str, Any], None]
 
 
-def remove_window_br(doc: TextDoc):
+def remove_window_br(doc: FlexDoc):
     """
     Remove `<!--window-br-->` markers in a document.
     """
@@ -33,12 +34,12 @@ def remove_window_br(doc: TextDoc):
 
 
 def filtered_transform(
-    doc: TextDoc,
-    transform_func: TextDocTransform,
+    doc: FlexDoc,
+    transform_func: FlexDocTransform,
     windowing: WindowSettings | None,
     diff_filter: DiffFilter | None = None,
     debug_save: SaveFunc | None = None,
-) -> TextDoc:
+) -> FlexDoc:
     """
     Apply a transform with sliding window across the input doc, enforcing the changes it's
     allowed to make with `diff_filter`.
@@ -54,7 +55,7 @@ def filtered_transform(
         transformed_doc = transform_func(doc)
         return _enforce_diff_filter(doc, transformed_doc, diff_filter, debug_save)
 
-    def transform_and_check_diff(input_doc: TextDoc) -> TextDoc:
+    def transform_and_check_diff(input_doc: FlexDoc) -> FlexDoc:
         # Avoid having window breaks build up after multiple transforms.
         remove_window_br(input_doc)
         transformed_doc = transform_func(input_doc)
@@ -64,11 +65,11 @@ def filtered_transform(
 
 
 def _enforce_diff_filter(
-    input_doc: TextDoc,
-    transformed_doc: TextDoc,
+    input_doc: FlexDoc,
+    transformed_doc: FlexDoc,
     diff_filter: DiffFilter | None,
     debug_save: SaveFunc | None = None,
-) -> TextDoc:
+) -> FlexDoc:
     """
     Apply `diff_filter` to the change between `input_doc` and `transformed_doc`, returning a
     document with only the accepted changes. Used by both the whole-document and windowed
@@ -104,7 +105,7 @@ def _enforce_diff_filter(
             )
 
         # Apply only the accepted changes.
-        final_doc = TextDoc.from_wordtoks(accepted_diff.apply_to(list(input_doc.as_wordtoks())))
+        final_doc = FlexDoc.from_wordtoks(accepted_diff.apply_to(list(input_doc.as_wordtoks())))
         log.info(
             "Word token changes:\n%s",
             fmt_lines(
@@ -134,11 +135,11 @@ def _enforce_diff_filter(
 
 
 def sliding_window_transform(
-    doc: TextDoc,
-    transform_func: TextDocTransform,
+    doc: FlexDoc,
+    transform_func: FlexDocTransform,
     settings: WindowSettings,
     on_alignment_failure: str = "raise",
-) -> TextDoc:
+) -> FlexDoc:
     if settings.unit == TextUnit.wordtoks:
         return sliding_wordtok_window_transform(doc, transform_func, settings, on_alignment_failure)
     elif settings.unit == TextUnit.paragraphs:
@@ -148,13 +149,13 @@ def sliding_window_transform(
 
 
 def sliding_wordtok_window_transform(
-    doc: TextDoc,
-    transform_func: TextDocTransform,
+    doc: FlexDoc,
+    transform_func: FlexDocTransform,
     settings: WindowSettings,
     on_alignment_failure: str = "raise",
-) -> TextDoc:
+) -> FlexDoc:
     """
-    Apply a transformation function to each TextDoc in a sliding window over the given document,
+    Apply a transformation function to each FlexDoc in a sliding window over the given document,
     stepping through wordtoks, then reassemble the transformed document. Stitches the results
     together by searching for the best alignment (minimum wordtok edit distance) of each
     transformed window.
@@ -237,19 +238,19 @@ def sliding_wordtok_window_transform(
 
     # An alternate approach would be to accumulate the document sentences instead of wordtoks to
     # avoid re-parsing, but this is probably a little simpler.
-    output_doc = TextDoc.from_text(join_wordtoks(output_wordtoks))
+    output_doc = FlexDoc.from_text(join_wordtoks(output_wordtoks))
 
     return output_doc
 
 
 def sliding_para_window_transform(
-    doc: TextDoc,
-    transform_func: TextDocTransform,
+    doc: FlexDoc,
+    transform_func: FlexDocTransform,
     settings: WindowSettings,
     normalizer: Callable[[str], str] = fill_markdown,
-) -> TextDoc:
+) -> FlexDoc:
     """
-    Apply a transformation function to each TextDoc, stepping through paragraphs `settings.size`
+    Apply a transformation function to each FlexDoc, stepping through paragraphs `settings.size`
     at a time, then reassemble the transformed document.
     """
     if settings.unit != TextUnit.paragraphs:
@@ -288,11 +289,11 @@ def sliding_para_window_transform(
         transformed_paras.extend(new_doc.paragraphs)
 
     transformed_text = "\n\n".join(para.reassemble() for para in transformed_paras)
-    new_text_doc = TextDoc.from_text(transformed_text)
+    new_flex_doc = FlexDoc.from_text(transformed_text)
 
     log.info(
         "Sliding paragraph transform: Done, output total %s",
-        new_text_doc.size_summary(),
+        new_flex_doc.size_summary(),
     )
 
-    return new_text_doc
+    return new_flex_doc

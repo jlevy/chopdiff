@@ -104,10 +104,8 @@ jobs:
       - name: Audit dependencies for known vulnerabilities
         run: uv run --locked --all-extras --group audit pip-audit --ignore-vuln PYSEC-2026-196
 
-  # Packaging check: the single chopdiff wheel must ship BOTH import roots (flexdoc and
-  # chopdiff) and import cleanly from an isolated install — not just from the source tree.
-  # This guards the two-import-root layout (one wheel, two packages) introduced by the
-  # FlexDoc extraction. See plan-2026-06-11-flexdoc-extraction.md.
+  # Packaging check: the chopdiff wheel must import cleanly from an isolated install —
+  # not just from the source tree. flexdoc arrives as a normal PyPI dependency.
   wheel-smoke:
     runs-on: ubuntu-latest
     steps:
@@ -126,9 +124,9 @@ jobs:
       - name: Build the wheel
         run: uv build --wheel
 
-      - name: Install the wheel in an isolated venv and import both packages
+      - name: Install the wheel in an isolated venv and import chopdiff
         run: |
           uv venv /tmp/wheelsmoke
           VENV_PY=/tmp/wheelsmoke/bin/python
           uv pip install --python "$VENV_PY" dist/*.whl
-          "$VENV_PY" -c "import flexdoc, chopdiff; from flexdoc.docs import TextDoc; from chopdiff.transforms import sliding_para_window; print('wheel imports OK:', flexdoc.__name__, chopdiff.__name__, TextDoc.__name__)"
+          "$VENV_PY" -c "import chopdiff; from chopdiff.transforms import sliding_para_window; from flexdoc import FlexDoc; print('wheel imports OK:', chopdiff.__name__, FlexDoc.__name__)"

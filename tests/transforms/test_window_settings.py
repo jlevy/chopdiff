@@ -1,7 +1,8 @@
 from collections.abc import Callable
 
-from chopdiff.transforms.window_settings import WINDOW_NONE, WindowSettings
 from flexdoc.docs.sizes import TextUnit
+
+from chopdiff.transforms.window_settings import WINDOW_NONE, WindowSettings
 
 
 def _raises(fn: Callable[[], object]) -> bool:

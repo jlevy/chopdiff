@@ -8,7 +8,15 @@ from rich import print as rprint
 
 # Update as needed.
 SRC_PATHS = ["src", "tests", "devtools", "examples"]
-DOC_PATHS = ["README.md"]
+DOC_PATHS = [
+    "README.md",
+    "CHANGELOG.md",
+    "SUPPLY-CHAIN-SECURITY.md",
+    "docs/development.md",
+    "docs/installation.md",
+    "docs/publishing.md",
+    "docs/textdoc-spec.md",
+]
 
 
 reconfigure(emoji=not get_console().options.legacy_windows)  # No emojis on legacy windows.

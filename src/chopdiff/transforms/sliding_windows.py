@@ -5,19 +5,18 @@ Sliding windows of text on a text doc.
 import logging
 from collections.abc import Callable, Generator
 
-from flowmark import fill_markdown
-
+from flexdoc import FlexDoc
 from flexdoc.docs.sizes import TextUnit
-from flexdoc.docs.text_doc import TextDoc
+from flowmark import fill_markdown
 
 log = logging.getLogger(__name__)
 
 
 def sliding_word_window(
-    doc: TextDoc, window_size: int, window_shift: int, unit: TextUnit
-) -> Generator[TextDoc, None, None]:
+    doc: FlexDoc, window_size: int, window_shift: int, unit: TextUnit
+) -> Generator[FlexDoc, None, None]:
     """
-    Generate TextDoc sub-documents in a sliding window over the given document.
+    Generate FlexDoc sub-documents in a sliding window over the given document.
     """
     total_size = doc.size(unit)
     start_offset = 0
@@ -45,10 +44,10 @@ def sliding_word_window(
 
 
 def sliding_para_window(
-    doc: TextDoc, nparas: int, normalizer: Callable[[str], str] = fill_markdown
-) -> Generator[TextDoc, None, None]:
+    doc: FlexDoc, nparas: int, normalizer: Callable[[str], str] = fill_markdown
+) -> Generator[FlexDoc, None, None]:
     """
-    Generate TextDoc sub-documents taking `nparas` paragraphs at a time.
+    Generate FlexDoc sub-documents taking `nparas` paragraphs at a time.
     """
     for i in range(0, len(doc.paragraphs), nparas):
         end_index = min(i + nparas - 1, len(doc.paragraphs) - 1)
@@ -58,6 +57,6 @@ def sliding_para_window(
 
         # XXX It's important we re-normalize especially because LLMs can output itemized lists with just
         # one newline, but for Markdown we want separate paragraphs for each list item.
-        formatted_sub_doc = TextDoc.from_text(normalizer(sub_doc.reassemble()))
+        formatted_sub_doc = FlexDoc.from_text(normalizer(sub_doc.reassemble()))
 
         yield formatted_sub_doc

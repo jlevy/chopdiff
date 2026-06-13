@@ -1,12 +1,13 @@
 from textwrap import dedent
 
+from flexdoc import FlexDoc
+from flexdoc.docs.sizes import TextUnit
+
 from chopdiff.transforms.sliding_transforms import (
     sliding_para_window_transform,
     sliding_window_transform,
 )
 from chopdiff.transforms.window_settings import WINDOW_BR_SEP, WindowSettings
-from flexdoc.docs.sizes import TextUnit
-from flexdoc.docs.text_doc import TextDoc
 
 _example_text = dedent(
     """
@@ -21,12 +22,12 @@ _example_text = dedent(
 
 def test_sliding_word_window_transform():
     long_text = (_example_text + "\n\n") * 2
-    doc = TextDoc.from_text(long_text)
+    doc = FlexDoc.from_text(long_text)
 
     # Simple transformation that converts all text to uppercase.
-    def transform_func(window: TextDoc) -> TextDoc:
+    def transform_func(window: FlexDoc) -> FlexDoc:
         transformed_text = window.reassemble().upper()
-        return TextDoc.from_text(transformed_text)
+        return FlexDoc.from_text(transformed_text)
 
     transformed_doc = sliding_window_transform(
         doc,
@@ -39,7 +40,7 @@ def test_sliding_word_window_transform():
     assert transformed_doc.reassemble().count("|") == 2
 
     long_text = (_example_text + "\n\n") * 20
-    doc = TextDoc.from_text(long_text)
+    doc = FlexDoc.from_text(long_text)
     transformed_doc = sliding_window_transform(
         doc, transform_func, WindowSettings(TextUnit.wordtoks, 80, 60, min_overlap=5)
     )
@@ -47,12 +48,12 @@ def test_sliding_word_window_transform():
 
 
 def test_sliding_para_window_transform():
-    def transform_func(window: TextDoc) -> TextDoc:
+    def transform_func(window: FlexDoc) -> FlexDoc:
         transformed_text = window.reassemble().upper()
-        return TextDoc.from_text(transformed_text)
+        return FlexDoc.from_text(transformed_text)
 
     text = "\n\n".join(f"Paragraph {i}." for i in range(7))
-    doc = TextDoc.from_text(text)
+    doc = FlexDoc.from_text(text)
 
     transformed_doc = sliding_para_window_transform(
         doc,

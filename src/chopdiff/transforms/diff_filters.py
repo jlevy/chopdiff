@@ -1,9 +1,6 @@
 from collections.abc import Callable
 from typing import TypeAlias
 
-from typing_extensions import override
-
-from chopdiff.util.lemmatize import lemmatize, lemmatized_equal
 from flexdoc.docs.token_diffs import DiffFilter, DiffOp, OpType
 from flexdoc.docs.wordtoks import (
     is_break_or_space,
@@ -12,6 +9,9 @@ from flexdoc.docs.wordtoks import (
     is_whitespace_or_punct,
     is_word,
 )
+from typing_extensions import override
+
+from chopdiff.util.lemmatize import lemmatize, lemmatized_equal
 
 
 class WildcardToken:

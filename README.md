@@ -1,35 +1,40 @@
 # chopdiff
 
-`chopdiff` is a small library of tools I've developed to make it easier to do fairly
+`chopdiff` is a small library of tools I’ve developed to make it easier to do fairly
 complex transformations of text documents, especially for LLM applications, where you
 want to manipulate text, Markdown, and HTML documents in a clean way.
 
 Basically, it lets you parse, diff, and transform text at the level of words, sentences,
-paragraphs, and "chunks" (paragraphs grouped in an HTML tag like a `<div>`). It aims to
+paragraphs, and “chunks” (paragraphs grouped in an HTML tag like a `<div>`). It aims to
 have minimal dependencies.
 
-At its core is `TextDoc`, an in-memory data structure that consolidates several views of
-a document:
+At its core is `FlexDoc`, an in-memory data structure that consolidates several views of
+a document. The document model lives in the separately published
+[**flexdoc**](https://github.com/jlevy/flexdoc) package
+([PyPI](https://pypi.org/project/flexdoc/)), which chopdiff builds on:
 
 - **Markdown block structure:** headings, lists, tables, code, blockquotes, …
 - **Markdown inline structure:** links and other inline elements
 - **Language structure:** paragraphs, sentences, words, and the spacing between them
 - **Document structure:** section hierarchy and TOC
 
-Every unit is anchored back to the original text by exact character offset, so nothing is
-copied and nothing drifts. Markdown parsers give you a block/inline tree but not
-sentences, sizes, or rollups; NLP tools give you sentences but not Markdown structure or
-exact source mapping. `TextDoc` is both: good for **textual analysis of a fixed
-document** (spans, sizes, sections, link rollups) and as an **editable model** you can
-modify in place and then reassemble into a clean, normalized new document.
+Every unit is anchored back to the original text by exact character offset, so nothing
+is copied and nothing drifts.
+Markdown parsers give you a block/inline tree but not sentences, sizes, or rollups; NLP
+tools give you sentences but not Markdown structure or exact source mapping.
+`FlexDoc` is both: good for **textual analysis of a fixed document** (spans, sizes,
+sections, link rollups) and as an **editable model** you can modify in place and then
+reassemble into a clean, normalized new document.
 
-See [docs/textdoc-spec.md](docs/textdoc-spec.md) for the definitive `TextDoc` design.
+See
+[flexdoc’s docs/flexdoc-spec.md](https://github.com/jlevy/flexdoc/blob/main/docs/flexdoc-spec.md)
+for the definitive `FlexDoc` design.
 
 Example use cases:
 
 - **Filter diffs:** Diff two documents and only accept changes that fit a specific
   filter. For example, you can ask an LLM to edit a transcript, only inserting paragraph
-  breaks but enforcing that the LLM can't do anything except insert whitespace.
+  breaks but enforcing that the LLM can’t do anything except insert whitespace.
   Or let it only edit punctuation, whitespace, and lemma variants of words.
   Or only change one word at a time (e.g. for spell checking).
 
@@ -39,12 +44,12 @@ Example use cases:
   You can then backfill timestamps of each paragraph into the edited text.
 
 - **Windowed transforms:** Walk through a large document N paragraphs, N sentences, or N
-  tokens at a time, processing the results with an LLM call, then "stitching together"
+  tokens at a time, processing the results with an LLM call, then “stitching together”
   the results, even if the chunks overlap.
 
 ## Installation
 
-Drop the `extras` if you don't want the dependency on `simplemma` (it's about 70MB).
+Drop the `extras` if you don’t want the dependency on `simplemma` (it’s about 70MB).
 
 Full deps:
 
@@ -79,10 +84,11 @@ On the other end of the spectrum, there are NLP libraries (like
 parsing and sentence segmentation.
 
 This is a lightweight alternative to those approaches when you are just focusing on
-processing text, don't want a big dependency (like a full XML parser or NLP toolkit) and
-also want source-referenced text analysis. Parsed blocks and sentences carry offsets back
-to the input text, while `reassemble()` produces a normalized editable text form rather
-than a byte-for-byte copy of every original blank line and leading/trailing space.
+processing text, don’t want a big dependency (like a full XML parser or NLP toolkit) and
+also want source-referenced text analysis.
+Parsed blocks and sentences carry offsets back to the input text, while `reassemble()`
+produces a normalized editable text form rather than a byte-for-byte copy of every
+original blank line and leading/trailing space.
 
 Note you may wish to also use this in conjunction with a Markdown parser or
 auto-formatter, as it can make documents and diffs more readable.
@@ -91,44 +97,43 @@ chopdiff.
 
 ## Overview
 
-More on what's here:
+More on what’s here:
 
-- The [`TextDoc`](src/flexdoc/docs/text_doc.py) class allows parsing of documents into
-  sentences and paragraphs.
+- The [`FlexDoc`](https://github.com/jlevy/flexdoc) class (from the flexdoc package)
+  allows parsing of documents into sentences and paragraphs.
   By default, this uses only regex heuristics for speed and simplicity, but optionally
   you can use a sentence splitter of your choice, like Spacy.
 
-- Tokenization using ["wordtoks"](src/flexdoc/docs/wordtoks.py) that lets you measure
-  size and extract subdocs via arbitrary units of paragraphs, sentences, words, chars,
-  or tokens, with mappings between each, e.g. mapping sentence 3 of paragraph 2 to its
+- Tokenization using “wordtoks” (`flexdoc.docs.wordtoks`) that lets you measure size and
+  extract subdocs via arbitrary units of paragraphs, sentences, words, chars, or tokens,
+  with mappings between each, e.g. mapping sentence 3 of paragraph 2 to its
   corresponding character or token offset.
   The tokenization is simple but flexible, including whitespace (sentence or paragraph
   breaks) and HTML tags as single tokens.
   It also maintains exact offsets of each token in the original document text.
 
-- [Word-level diffs](src/flexdoc/docs/token_diffs.py) that don't work at the line level
-  (like usual git-style diffs) but rather treat whitespace, sentence, and paragraph
-  breaks as individual tokens.
-  It performs LCS-style token-based diffs with
+- Word-level diffs (`flexdoc.docs.token_diffs`) that don’t work at the line level (like
+  usual git-style diffs) but rather treat whitespace, sentence, and paragraph breaks as
+  individual tokens. It performs LCS-style token-based diffs with
   [cydifflib](https://github.com/rapidfuzz/cydifflib), which is significantly faster
-  than Python's built-in [difflib](https://docs.python.org/3.10/library/difflib.html).
+  than Python’s built-in [difflib](https://docs.python.org/3.10/library/difflib.html).
 
 - [Filtering](src/chopdiff/transforms/diff_filters.py) of these text-based diffs based
   on specific criteria.
   For example, only adding or removing words, only changing whitespace, only changing
   word lemmas, etc.
 
-- The [`TokenMapping`](src/flexdoc/docs/token_mapping.py) class offers word-based
-  mappings between docs, allowing you to find what part of a doc corresponds with
-  another doc as a token index mappings.
+- The `TokenMapping` class (`flexdoc.docs`) offers word-based mappings between docs,
+  allowing you to find what part of a doc corresponds with another doc as a token index
+  mappings.
 
-- [`search_tokens`](src/flexdoc/docs/search_tokens.py) gives simple way to search back
-  and forth among the tokens of a document.
+- `search_tokens` (`flexdoc.docs`) gives simple way to search back and forth among the
+  tokens of a document.
   That is, you can seek forward or backward to any desired token (HTML tag, word,
   punctuation, or sentence or paragraph break matching a predicate) from any given
   position.
 
-- Lightweight "chunking" of documents by wrapping paragraphs in `<div>`s to indicate
+- Lightweight “chunking” of documents by wrapping paragraphs in `<div>`s to indicate
   chunks. [`TextNode`](src/chopdiff/divs/text_node.py) offers simple recursive parsing
   around `<div>` tags.
   This is not a general HTML parser, but rather a way to chunk documents into named
@@ -167,7 +172,7 @@ from textwrap import dedent
 import openai
 from flowmark import fill_text
 
-from flexdoc.docs import TextDoc
+from flexdoc import FlexDoc
 from chopdiff.transforms import changes_whitespace, filtered_transform, WINDOW_2K_WORDTOKS
 
 def llm_insert_para_breaks(input_text: str) -> str:
@@ -204,15 +209,15 @@ def llm_insert_para_breaks(input_text: str) -> str:
 
 
 def insert_paragraph_breaks(text: str) -> str:
-    # Create a TextDoc from the input text
-    doc = TextDoc.from_text(text)
+    # Create a FlexDoc from the input text
+    doc = FlexDoc.from_text(text)
     print(f"Input document: {doc.size_summary()}")
 
     # Define the transformation function.
     # Note in this case we run the LLM on strings, but you could also work directly
-    # on the TextDoc if appropriate.
-    def transform(doc: TextDoc) -> TextDoc:
-        return TextDoc.from_text(llm_insert_para_breaks(doc.reassemble()))
+    # on the FlexDoc if appropriate.
+    def transform(doc: FlexDoc) -> FlexDoc:
+        return FlexDoc.from_text(llm_insert_para_breaks(doc.reassemble()))
 
     # Apply the transformation with windowing and filtering.
     #
@@ -239,7 +244,7 @@ def insert_paragraph_breaks(text: str) -> str:
 ```
 
 Running this shows how it works.
-Note GPT-4o-mini makes a typo correction, even though it wasn't requested.
+Note GPT-4o-mini makes a typo correction, even though it wasn’t requested.
 But the diff filter enforces that the output exactly contains only paragraph breaks:
 
 ```
@@ -324,8 +329,10 @@ $
 ### Backfilling Timestamps
 
 Here is an example of backfilling data from one text file to another similar but not
-identical text file (see [backfill_timestamps.py](examples/backfill_timestamps.py) for
-code). As you can see, the text is aligned by mapping the words and then the timestamps
+identical text file (see
+[backfill_timestamps.py](https://github.com/jlevy/flexdoc/blob/main/examples/backfill_timestamps.py),
+which now ships with flexdoc).
+As you can see, the text is aligned by mapping the words and then the timestamps
 inserted at the end of each paragraph based on the first sentence of each paragraph:
 
 ```
@@ -459,8 +466,9 @@ $
 
 ## Project Docs
 
-For the definitive design of the `TextDoc` data structure, see
-[textdoc-spec.md](docs/textdoc-spec.md).
+For the definitive design of the `FlexDoc` data structure, see
+[flexdoc’s docs/flexdoc-spec.md](https://github.com/jlevy/flexdoc/blob/main/docs/flexdoc-spec.md)
+(`docs/textdoc-spec.md` here is a pointer to it).
 
 For how to install uv and Python, see [installation.md](docs/installation.md).
 
@@ -470,7 +478,8 @@ For instructions on publishing to PyPI, see [publishing.md](docs/publishing.md).
 
 * * *
 
-*This document follows the tbd [writing style guidelines](https://github.com/jlevy/tbd).*
+*This document follows the tbd
+[writing style guidelines](https://github.com/jlevy/tbd).*
 
 *This project was built from
 [simple-modern-uv](https://github.com/jlevy/simple-modern-uv).*

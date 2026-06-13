@@ -1,8 +1,7 @@
 from dataclasses import dataclass
 
-from typing_extensions import override
-
 from flexdoc.docs.sizes import TextUnit
+from typing_extensions import override
 
 WINDOW_BR = "<!--window-br-->"
 """Marker inserted into result documents to show where window breaks have occurred."""
