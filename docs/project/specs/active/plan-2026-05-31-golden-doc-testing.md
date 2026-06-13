@@ -17,12 +17,12 @@ source documents, each converted by the model and serialized several ways, with 
 serializations committed as golden artifacts and compared on every run.
 
 The serializer is built as a **reusable developer tool**, not test-only glue: a public
-`flexdoc.docs.debug` dumper that can take any document and emit its model views in
-clean standard formats.
-Source documents are **Markdown with YAML frontmatter** (the frontmatter carries the
-test’s options); golden outputs are **pure, deterministic YAML**. We reuse
-`frontmatter-format` (first-party `jlevy` package, like `strif`/`flowmark`) for both the
-frontmatter I/O and the clean YAML formatting rather than reinventing either.
+`flexdoc.docs.debug` dumper that can take any document and emit its model views in clean
+standard formats. Source documents are **Markdown with YAML frontmatter** (the
+frontmatter carries the test’s options); golden outputs are **pure, deterministic
+YAML**. We reuse `frontmatter-format` (first-party `jlevy` package, like
+`strif`/`flowmark`) for both the frontmatter I/O and the clean YAML formatting rather
+than reinventing either.
 
 The approach follows the golden-testing guideline’s transparent-box principle (capture
 broad state, not narrow asserts) plus layered invariant assertions for the model’s hard

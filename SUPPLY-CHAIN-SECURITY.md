@@ -141,6 +141,26 @@ It does not change dependency resolution or the cool-off.
   cutoff advances past pip 26.1.2’s release (it then resolves normally and the advisory
   clears).
 
+## Dev Hook Tooling
+
+Two dev-time tools run via `uvx` (outside the project environment, so they never enter
+`uv.lock` and are independent of the project’s `exclude-newer` cool-off):
+
+- **`flowmark-rs@0.3.1`** — the Markdown formatter (`make format`), wired into the
+  `lefthook` pre-commit hook so commits are auto-formatted.
+  CI does **not** gate on doc formatting.
+  flowmark-rs is first-party (`github.com/jlevy/flowmark`, same maintainer), so the
+  `Makefile` invokes it with a surgical, per-package
+  `uvx --exclude-newer-package 'flowmark-rs=2026-06-02'` override: this admits the
+  pinned version even when a contributor’s global uv cutoff would reject it, and never
+  relaxes the cool-off for any other package (0.3.1 published 2026-05-30; the override
+  cutoff 2026-06-02 admits it).
+  Bump the pin deliberately.
+  Reviewed-by: Joshua Levy.
+- **`lefthook@2.1.9`** — the git hook manager (`make hooks-install`). Third-party but
+  pinned and aged past the 14-day window (published 2026-05-29); run via `uvx`, so no
+  npm dependency is added to this repo.
+
 ## Untrusted Repositories
 
 Treat any freshly cloned third-party repo as untrusted.
