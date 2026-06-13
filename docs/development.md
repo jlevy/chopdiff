@@ -6,9 +6,8 @@ This project is set up to use [uv](https://docs.astral.sh/uv/) to manage Python 
 dependencies. First, be sure you
 [have uv installed](https://docs.astral.sh/uv/getting-started/installation/).
 
-Then
-[fork the jlevy/chopdiff repo](https://github.com/jlevy/chopdiff/fork)
-(having your own fork will make it easier to contribute) and
+Then [fork the jlevy/chopdiff repo](https://github.com/jlevy/chopdiff/fork) (having your
+own fork will make it easier to contribute) and
 [clone it](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository).
 
 ## Basic Developer Workflows
@@ -22,6 +21,10 @@ The `Makefile` simply offers shortcuts to `uv` commands for developer convenienc
 # including dev dependencies and optional dependencies.
 make install
 
+# One-time: install the git hooks (lefthook) that auto-format Markdown and
+# Python on commit, so trivial formatting never reaches CI.
+make hooks-install
+
 # Run uv sync, lint, and test:
 make
 
@@ -33,6 +36,10 @@ make lint
 
 # Linting in check-only mode, matching CI (fails on issues, does not modify files):
 make lint-check
+
+# Auto-format all Markdown docs with flowmark (the lefthook pre-commit hook runs
+# this automatically; run it by hand if you skipped hooks or want a manual pass):
+make format
 
 # Run tests:
 make test
@@ -83,14 +90,16 @@ extensions:
 
 ## Supply Chain Hardening
 
-Dependencies are an attack surface. Before adding or upgrading any dependency, follow
+Dependencies are an attack surface.
+Before adding or upgrading any dependency, follow
 [**supply-chain-hardening**](https://github.com/jlevy/supply-chain-hardening), a concise
-cross-ecosystem guide on installing dependencies safely. Its key defaults:
+cross-ecosystem guide on installing dependencies safely.
+Its key defaults:
 
-- **Cool-off period:** Don't install or upgrade to a release less than 14 days old
-  (absent a documented exception)—most malicious publishes are caught within days. This
-  project pins the cutoff in `[tool.uv] exclude-newer` in `pyproject.toml` (uv takes a
-  date, not a duration), so `uv lock`, `uv sync`, and `uv run` all honor it.
+- **Cool-off period:** Don’t install or upgrade to a release less than 14 days old
+  (absent a documented exception)—most malicious publishes are caught within days.
+  This project pins the cutoff in `[tool.uv] exclude-newer` in `pyproject.toml` (uv
+  takes a date, not a duration), so `uv lock`, `uv sync`, and `uv run` all honor it.
 
 - **Vet before adding:** Confirm the package is actually needed and its name is spelled
   correctly (typosquats are common), and prefer a little first-party code over a new
@@ -105,8 +114,8 @@ documented in [`SUPPLY-CHAIN-SECURITY.md`](../SUPPLY-CHAIN-SECURITY.md).
 
 ## Dependencies
 
-chopdiff keeps a deliberately small dependency surface. Each direct dependency and why
-it is here:
+chopdiff keeps a deliberately small dependency surface.
+Each direct dependency and why it is here:
 
 **Runtime:**
 
@@ -132,12 +141,15 @@ it is here:
 
 **Dev and tooling:**
 
-- [pytest](https://docs.pytest.org/) and [pytest-sugar](https://github.com/Teemu/pytest-sugar): Test runner
+- [pytest](https://docs.pytest.org/) and
+  [pytest-sugar](https://github.com/Teemu/pytest-sugar): Test runner
 - [ruff](https://docs.astral.sh/ruff/): Linter and formatter
 - [basedpyright](https://docs.basedpyright.com/): Type checker
-- [codespell](https://github.com/codespell-project/codespell): Spell checker for code and docs
+- [codespell](https://github.com/codespell-project/codespell): Spell checker for code
+  and docs
 - [rich](https://github.com/Textualize/rich): Console output for the lint script
-- [pip-audit](https://github.com/pypa/pip-audit): Vulnerability audit (`audit` group; run in CI)
+- [pip-audit](https://github.com/pypa/pip-audit): Vulnerability audit (`audit` group;
+  run in CI)
 
 ## Publishing Releases
 

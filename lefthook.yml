@@ -1,0 +1,31 @@
+# Git hooks managed by lefthook (https://lefthook.dev).
+# Install once: `make hooks-install` (runs `uvx lefthook@<pin> install`).
+# Bypass for an emergency commit: `git commit --no-verify` (avoid in PRs).
+#
+# These hooks auto-format on commit so trivial formatting (a smart quote, a
+# rewrapped line) never reaches CI. CI does not gate on doc formatting.
+
+# Sequential: the staging steps below each `git add` fixups, and concurrent
+# `git add` contends on .git/index.lock. The cost is negligible.
+pre-commit:
+  parallel: false
+  commands:
+    # Markdown formatting. `make format` is the single source of truth (the same
+    # command developers run): the pinned `flowmark-rs --auto .` at the repo root,
+    # which traverses the tree and honors .flowmarkignore. Whole-repo (not
+    # {staged_files}) is required — flowmark-rs only reads .flowmarkignore relative
+    # to its target arg, so passing globs would bypass the exclusion list.
+    format-markdown:
+      glob: "*.md"
+      run: make format
+      stage_fixed: true
+
+    ruff-format:
+      glob: "*.py"
+      run: uv run ruff format {staged_files}
+      stage_fixed: true
+
+    ruff-check:
+      glob: "*.py"
+      run: uv run ruff check --fix {staged_files}
+      stage_fixed: true
