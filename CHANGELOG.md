@@ -6,7 +6,7 @@ changes bump the **minor** version (see `docs/publishing.md`).
 
 ## Unreleased
 
-This is chopdiff's intended breaking release: the document model now lives in the
+This is chopdiff’s intended breaking release: the document model now lives in the
 separately published [flexdoc](https://github.com/jlevy/flexdoc) package
 ([PyPI](https://pypi.org/project/flexdoc/)), and chopdiff depends on `flexdoc>=0.1.0`.
 chopdiff keeps the diff/transform layer (`chopdiff.transforms`, `chopdiff.divs`,
@@ -19,42 +19,42 @@ Migration for downstream users, in one pass:
 - **The document model moved to the `flexdoc` package on PyPI.** Imports move:
   `chopdiff.docs.TextDoc` becomes `flexdoc.FlexDoc` (the class is renamed; prefer the
   root import `from flexdoc import FlexDoc`), and `chopdiff.docs|html|util.*` becomes
-  `flexdoc.docs|html|util.*` (`chopdiff.util.lemmatize` stays in chopdiff). The
-  chopdiff wheel no longer ships a `flexdoc` import root; it arrives as a normal
+  `flexdoc.docs|html|util.*` (`chopdiff.util.lemmatize` stays in chopdiff).
+  The chopdiff wheel no longer ships a `flexdoc` import root; it arrives as a normal
   dependency.
 - **`TextDoc` is renamed `FlexDoc`** (module `flexdoc.docs.flex_doc`, was `text_doc`).
-- **`collect()` is keyword-only** and the `scope`/`contains` parameter aliases are
-  gone: use `collect(subtree_of=, within=)`.
+- **`collect()` is keyword-only** and the `scope`/`contains` parameter aliases are gone:
+  use `collect(subtree_of=, within=)`.
 - **Editing-view method renames:** `block_at_offset` is now `paragraph_at_offset`,
   `iter_blocks` is now `iter_paragraphs`, and `Section.own_blocks`/`subtree_blocks` are
   now `own_paragraphs`/`subtree_paragraphs`.
-- **`TextDoc.block_type_counts()` and `Section.block_type_counts()` removed**, superseded
-  by `collect()`. Migrate to standard Python over `blocks()`:
+- **`TextDoc.block_type_counts()` and `Section.block_type_counts()` removed**,
+  superseded by `collect()`. Migrate to standard Python over `blocks()`:
   `Counter(b.type for b in doc.blocks())` (per-section: `section.blocks()`), or
   `Counter(n.kind for n in collect(doc.node_table(), layer={Layer.markdown}, recursive=True))`.
 
-See flexdoc's CHANGELOG for the full list of document-model changes. Document-model
-features developed in this repo since v0.3.1 (typed per-block metadata,
-`NodeKind.footnote_ref`, `format_read_time`, frontmatter isolation) ship in
-flexdoc 0.1.0 rather than in this chopdiff release.
+See flexdoc’s CHANGELOG for the full list of document-model changes.
+Document-model features developed in this repo since v0.3.1 (typed per-block metadata,
+`NodeKind.footnote_ref`, `format_read_time`, frontmatter isolation) ship in flexdoc
+0.1.0 rather than in this chopdiff release.
 
 ## v0.3.1
 
 Versioned as a patch despite the breaking changes below: they touch only the block-type
-and sentence-splitting surface introduced in v0.3.0, which is very new and not yet relied
-upon. (The pre-1.0 policy otherwise bumps the minor version for breaking changes.)
+and sentence-splitting surface introduced in v0.3.0, which is very new and not yet
+relied upon.
+(The pre-1.0 policy otherwise bumps the minor version for breaking changes.)
 
 Makes `TextDoc` block-aware end to end and adds the DocGraph node model on top of it.
 The block-aware layer gives an exact-span structural block tree, a section hierarchy
-with rolled-up stats, inline-link rollups, and link-aware sentence spans. The DocGraph
-layer then adds a recursive, layer-tagged node table, the `base_blocks()` sequential
-partition, the `collect()` query primitive, the `SpanRef` span-reference type, and the
-`DocGraph` Pydantic projection (schema “DocGraph/v0.1”).
-The source text and its offset space are canonical; every view (the structural block
-tree, sections, block-type slices, tallies, and the node table) is a projection over
-that substrate: no stored counts.
-Block boundaries and spans now come straight from flowmark’s parser, so chopdiff carries
-no Markdown block-detection regex of its own.
+with rolled-up stats, inline-link rollups, and link-aware sentence spans.
+The DocGraph layer then adds a recursive, layer-tagged node table, the `base_blocks()`
+sequential partition, the `collect()` query primitive, the `SpanRef` span-reference
+type, and the `DocGraph` Pydantic projection (schema “DocGraph/v0.1”). The source text
+and its offset space are canonical; every view (the structural block tree, sections,
+block-type slices, tallies, and the node table) is a projection over that substrate: no
+stored counts. Block boundaries and spans now come straight from flowmark’s parser, so
+chopdiff carries no Markdown block-detection regex of its own.
 
 ### Breaking Changes
 
@@ -119,7 +119,7 @@ no Markdown block-detection regex of its own.
   block scope, superseding `block_type_counts()` convenience accessors.
   The `layer=` filter scopes a query to one or more parse layers (default: all layers),
   since the same span can appear as nodes in several layers.
-  Two relation families select candidates: the tree relation `subtree_of=` (a node's
+  Two relation families select candidates: the tree relation `subtree_of=` (a node’s
   within-layer subtree) and the cross-layer interval relations `within=` /`overlaps=`
   (each takes a node id or a span), so `within=section_id` gathers everything inside a
   section without `recursive=True`. (`scope=`/`contains=` remain as deprecated aliases.)
@@ -150,19 +150,21 @@ no Markdown block-detection regex of its own.
 - **Sections built from structural headings.** `sections()`/`toc()` now derive headings
   from the structural parse (top-level `heading` blocks) instead of the blank-line
   paragraph view, so a `#`-prefixed line isolated from inside a fenced code block is no
-  longer mistaken for a section heading. Behavior change: such phantom sections no longer
-  appear (e.g. the `malformed` golden loses one).
+  longer mistaken for a section heading.
+  Behavior change: such phantom sections no longer appear (e.g. the `malformed` golden
+  loses one).
 - **Linear node-table assembly.** Inline-element attribution (containing block, section,
   and sentence) now goes through a per-layer `IntervalIndex` instead of scanning the
   whole table per inline element, so `build_node_table` is linear rather than
   `O(inline × nodes)` on link-heavy or large documents.
 - **Single shared parse with thread-safe caching.** `blocks()`, `links()`, and
-  `base_blocks()` now derive from one cached marko parse of `source_text` instead of each
-  re-parsing the whole document, roughly halving `node_table()` build time (one full
-  parse instead of two). Document-level derivations are memoized under a per-instance
-  reentrant lock, so concurrent reads compute each cache at most once and observe the
-  same value; reads are otherwise side-effect-free and deterministic. See the `TextDoc`
-  read-time-caching contract.
+  `base_blocks()` now derive from one cached marko parse of `source_text` instead of
+  each re-parsing the whole document, roughly halving `node_table()` build time (one
+  full parse instead of two).
+  Document-level derivations are memoized under a per-instance reentrant lock, so
+  concurrent reads compute each cache at most once and observe the same value; reads are
+  otherwise side-effect-free and deterministic.
+  See the `TextDoc` read-time-caching contract.
 
 ### Internal
 
