@@ -4,22 +4,24 @@ All notable changes to chopdiff are documented here.
 This project uses [semantic versioning](https://semver.org/); while pre-1.0, breaking
 changes bump the **minor** version (see `docs/publishing.md`).
 
-## Unreleased
+## v0.4.0
 
-This is chopdiff’s intended breaking release: the document model now lives in the
-separately published [flexdoc](https://github.com/jlevy/flexdoc) package
-([PyPI](https://pypi.org/project/flexdoc/)), and chopdiff depends on `flexdoc>=0.1.0`.
-chopdiff keeps the diff/transform layer (`chopdiff.transforms`, `chopdiff.divs`,
-`chopdiff.util.lemmatize`) and is built on flexdoc.
+This is chopdiff’s intended breaking release.
+The document model now lives in the separately published
+[flexdoc](https://github.com/jlevy/flexdoc) package
+([PyPI](https://pypi.org/project/flexdoc/)), and chopdiff depends on
+`flexdoc>=0.3.0,<0.4.0`. chopdiff remains focused on diff filtering, windowed
+transforms, div chunking, and optional lemmatization, built on FlexDoc.
 
 ### Breaking Changes
 
 Migration for downstream users, in one pass:
 
 - **The document model moved to the `flexdoc` package on PyPI.** Imports move:
-  `chopdiff.docs.TextDoc` becomes `flexdoc.FlexDoc` (the class is renamed; prefer the
-  root import `from flexdoc import FlexDoc`), and `chopdiff.docs|html|util.*` becomes
-  `flexdoc.docs|html|util.*` (`chopdiff.util.lemmatize` stays in chopdiff).
+  `chopdiff.docs.TextDoc` becomes `flexdoc.FlexDoc` (prefer the root import
+  `from flexdoc import FlexDoc`), while `chopdiff.docs.*`, `chopdiff.html.*`, and most
+  document utilities under `chopdiff.util.*` move to their corresponding `flexdoc.*`
+  modules. `chopdiff.util.lemmatize` stays in chopdiff.
   The chopdiff wheel no longer ships a `flexdoc` import root; it arrives as a normal
   dependency.
 - **`TextDoc` is renamed `FlexDoc`** (module `flexdoc.docs.flex_doc`, was `text_doc`).
@@ -33,10 +35,35 @@ Migration for downstream users, in one pass:
   `Counter(b.type for b in doc.blocks())` (per-section: `section.blocks()`), or
   `Counter(n.kind for n in collect(doc.node_table(), layer={Layer.markdown}, recursive=True))`.
 
-See flexdoc’s CHANGELOG for the full list of document-model changes.
-Document-model features developed in this repo since v0.3.1 (typed per-block metadata,
-`NodeKind.footnote_ref`, `format_read_time`, frontmatter isolation) ship in flexdoc
-0.1.0 rather than in this chopdiff release.
+See [flexdoc’s CHANGELOG](https://github.com/jlevy/flexdoc/blob/main/CHANGELOG.md) for
+the full list of document-model changes.
+Document-model features developed in this repo since v0.3.1, including typed block
+metadata, footnote-reference nodes, read-time formatting, and frontmatter isolation,
+ship in FlexDoc rather than chopdiff.
+
+### Fixes
+
+- **Token filters now enforce their contracts.** Ignore strings match one exact token;
+  collections and predicate matchers are handled consistently; and word/lemma removal
+  filters preserve token multiplicity instead of collapsing duplicates into sets.
+- **Sliding windows honor their requested offsets.** Word windows now compute each
+  starting offset independently when the shift differs from the window size.
+  Word windows reject non-positive sizes or shifts; paragraph windows reject
+  non-positive sizes and retain the full final paragraph.
+- **Exact div reassembly preserves original markup.** `TextNode.reassemble(padding="")`
+  retains the original opening and closing markers, attributes, classes, and whitespace
+  while incorporating edited child content.
+
+### Packaging
+
+- Source and wheel artifacts contain only the chopdiff package; FlexDoc is installed as
+  its declared dependency.
+- Release validation now inspects both artifacts, installs the wheel in an isolated
+  environment, audits dependencies, and verifies imports before publishing.
+
+### Full Changelog
+
+[Compare v0.3.1 … v0.4.0](https://github.com/jlevy/chopdiff/compare/v0.3.1...v0.4.0)
 
 ## v0.3.1
 
