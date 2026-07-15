@@ -114,12 +114,7 @@ jobs:
         run: uv build --no-sources
 
       - name: Validate the source distribution manifest
-        run: |
-          SDIST=$(find dist -maxdepth 1 -name '*.tar.gz' -print -quit)
-          if tar -tzf "$SDIST" | grep -Eq '/(\.agents|\.claude|\.github|\.tbd|docs|examples|tests)/'; then
-            echo "Source distribution contains repository-only files"
-            exit 1
-          fi
+        run: uv run --locked python devtools/validate_sdist.py
 
       - name: Install the wheel in an isolated venv and import chopdiff
         run: |
