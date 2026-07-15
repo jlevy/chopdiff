@@ -93,8 +93,8 @@ jobs:
       - name: Audit dependencies for known vulnerabilities
         run: uv run --locked --all-extras --group audit pip-audit
 
-  # Packaging check: the chopdiff wheel must import cleanly from an isolated install —
-  # not just from the source tree. flexdoc arrives as a normal PyPI dependency.
+  # Packaging check: release artifacts must stay minimal and the wheel must import
+  # cleanly from an isolated install, with flexdoc arriving as a PyPI dependency.
   wheel-smoke:
     runs-on: ubuntu-latest
     steps:
@@ -110,8 +110,16 @@ jobs:
           version: "0.11.25"
           enable-cache: true
 
-      - name: Build the wheel
-        run: uv build --wheel --no-sources
+      - name: Build release artifacts
+        run: uv build --no-sources
+
+      - name: Validate the source distribution manifest
+        run: |
+          SDIST=$(find dist -maxdepth 1 -name '*.tar.gz' -print -quit)
+          if tar -tzf "$SDIST" | grep -Eq '/(\.agents|\.claude|\.github|\.tbd|docs|examples|tests)/'; then
+            echo "Source distribution contains repository-only files"
+            exit 1
+          fi
 
       - name: Install the wheel in an isolated venv and import chopdiff
         run: |

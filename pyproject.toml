@@ -91,6 +91,10 @@ bump = true
 # The source location for the package.
 packages = ["src/chopdiff"]
 
+[tool.hatch.build.targets.sdist]
+# Metadata files are always included by Hatch; keep generated caches and repository
+# automation out of the published source archive.
+only-include = ["src/chopdiff"]
 
 # ---- Settings ----
 
@@ -194,4 +198,3 @@ testpaths = [
 ]
 norecursedirs = []
 filterwarnings = []
-
