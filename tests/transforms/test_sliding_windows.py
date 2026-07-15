@@ -31,7 +31,6 @@ def test_sliding_window():
 
     assert sentence_windows == [
         [["This is the first paragraph.", "It has multiple sentences."]],
-        [["It has multiple sentences."], ["This is the second paragraph."]],
         [
             [
                 "This is the second paragraph.",
@@ -43,6 +42,7 @@ def test_sliding_window():
             ["And it continues."],
             ["Here is the third paragraph.", "More sentences follow."],
         ],
+        [["More sentences follow.", "And here is another one."]],
     ]
 
     for sub_doc in windows:
@@ -54,3 +54,25 @@ def test_sliding_window():
         assert size(sub_text, TextUnit.bytes) <= window_size
 
         assert sub_text in doc.reassemble()
+
+
+def test_sliding_word_window_rejects_zero_shift():
+    doc = FlexDoc.from_text(_example_text)
+
+    try:
+        next(sliding_word_window(doc, 80, 0, TextUnit.bytes))
+    except ValueError as exc:
+        assert str(exc) == "Window shift must be positive, got 0"
+    else:
+        raise AssertionError("Expected a non-positive window shift to be rejected")
+
+
+def test_sliding_word_window_rejects_zero_size():
+    doc = FlexDoc.from_text(_example_text)
+
+    try:
+        next(sliding_word_window(doc, 0, 60, TextUnit.bytes))
+    except ValueError as exc:
+        assert str(exc) == "Window size must be positive, got 0"
+    else:
+        raise AssertionError("Expected a non-positive window size to be rejected")

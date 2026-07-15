@@ -123,12 +123,12 @@ More on what’s here:
   For example, only adding or removing words, only changing whitespace, only changing
   word lemmas, etc.
 
-- The `TokenMapping` class (`flexdoc.docs`) offers word-based mappings between docs,
-  allowing you to find what part of a doc corresponds with another doc as a token index
-  mappings.
+- The `TokenMapping` class (`flexdoc.docs.token_mapping`) offers word-based mappings
+  between docs, allowing you to find what part of one doc corresponds with another as
+  token-index mappings.
 
-- `search_tokens` (`flexdoc.docs`) gives simple way to search back and forth among the
-  tokens of a document.
+- `search_tokens` (`flexdoc.docs.search_tokens`) provides a simple way to search back
+  and forth among the tokens of a document.
   That is, you can seek forward or backward to any desired token (HTML tag, word,
   punctuation, or sentence or paragraph break matching a predicate) from any given
   position.

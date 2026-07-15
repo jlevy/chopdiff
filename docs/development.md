@@ -14,10 +14,14 @@ own fork will make it easier to contribute) and
 
 The `Makefile` simply offers shortcuts to `uv` commands for developer convenience.
 (For clarity, GitHub Actions don’t use the Makefile and just call `uv` directly.)
+Both pass the explicit `.uv-policy.toml` config so user-level uv settings cannot alter
+the repository’s cool-off policy.
+For direct uv commands, first run `export UV_CONFIG_FILE=.uv-policy.toml` in the
+repository root.
 
 ```shell
 # First, install all dependencies and set up your virtual environment.
-# This simply runs `uv sync --all-extras` to install all packages,
+# This runs `uv sync --locked --all-extras` to install the exact locked packages,
 # including dev dependencies and optional dependencies.
 make install
 
@@ -51,8 +55,8 @@ make clean
 make upgrade
 
 # To run tests by hand:
-uv run pytest   # all tests
-uv run pytest -s src/module/some_file.py  # one test, showing outputs
+uv run --locked pytest   # all tests
+uv run --locked pytest -s src/module/some_file.py  # one test, showing outputs
 
 # Build and install current dev executables, to let you use your dev copies
 # as local tools:
@@ -119,21 +123,18 @@ Each direct dependency and why it is here:
 
 **Runtime:**
 
-- [strif](https://github.com/jlevy/strif): Zero-dependency string and file utilities
-  (atomic writes, hashing, `replace_multiple`)
-- [flowmark](https://github.com/jlevy/flowmark): Markdown line-wrapping,
-  auto-formatting, atomic spans, and Markdown AST helpers
-- [marko](https://github.com/frostming/marko): CommonMark/GFM parser used for Markdown
-  block classification
-- [prettyfmt](https://github.com/jlevy/prettyfmt): Human-friendly object and value
-  formatting (used in `__repr__`s)
-- [funlog](https://github.com/jlevy/funlog): Logging and timing decorators
-- [cydifflib](https://github.com/rapidfuzz/CyDifflib): Fast drop-in replacement for the
-  standard library `difflib`, used for token-level diffing
-- [regex](https://github.com/mrabarnett/mrab-regex): Regex engine with Unicode features
-  beyond the standard library `re`
-- [selectolax](https://github.com/rushter/selectolax): Fast HTML parser (lexbor), used
-  for HTML-aware chunking
+- [flexdoc](https://github.com/jlevy/flexdoc): Document model, tokenization, token
+  diffs, source mappings, and Markdown/HTML helpers
+- [flowmark](https://github.com/jlevy/flowmark): Markdown normalization for sliding
+  paragraph windows
+- [prettyfmt](https://github.com/jlevy/prettyfmt): Human-readable structural summaries
+- [typing-extensions](https://github.com/python/typing_extensions): Python 3.11 support
+  for newer typing features such as `@override`
+
+FlexDoc owns its document-layer dependencies, including `cydifflib`, `marko`, `regex`,
+`selectolax`, and the first-party `frontmatter-format`, `funlog`, and `strif` packages.
+They should not become direct chopdiff dependencies unless chopdiff imports them
+directly.
 
 **Optional (`extras`):**
 

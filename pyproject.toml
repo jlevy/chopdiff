@@ -39,9 +39,9 @@ classifiers = [
 # ---- Main dependencies ----
 
 dependencies = [
-    "flexdoc>=0.1.0",
+    "flexdoc>=0.3.0,<0.4.0",
     "prettyfmt>=0.3.0",
-    "flowmark>=0.7.1",
+    "flowmark>=0.7.2",
     "typing-extensions>=4.12.0",
 ]
 
@@ -91,6 +91,10 @@ bump = true
 # The source location for the package.
 packages = ["src/chopdiff"]
 
+[tool.hatch.build.targets.sdist]
+# Metadata files are always included by Hatch; keep generated caches and repository
+# automation out of the published source archive.
+only-include = ["src/chopdiff"]
 
 # ---- Settings ----
 
@@ -100,18 +104,11 @@ packages = ["src/chopdiff"]
 # See SUPPLY-CHAIN-SECURITY.md. To upgrade, bump this to (today - 14 days) and
 # re-run `make upgrade`.
 [tool.uv]
-exclude-newer = "2026-05-11T00:00:00Z"
+exclude-newer = "2026-06-30T00:00:00Z"
 
-# Cool-off exceptions (reviewed and recorded in SUPPLY-CHAIN-SECURITY.md):
-# - strif 3.1.0: first-party, zero-dependency package, full source diff reviewed.
-# - idna 3.15: fixes CVE-2026-45409 reported against the in-window 3.14.
-# - flowmark 0.7.1: first-party package (maintainer-reviewed), block-span API.
-# - flexdoc 0.1.0: first-party package extracted from this repo (maintainer-directed).
+# Cool-off exception reviewed and recorded in SUPPLY-CHAIN-SECURITY.md.
 [tool.uv.exclude-newer-package]
-strif = "2026-05-24T00:00:00Z"
-idna = "2026-05-13T00:00:00Z"
-flowmark = "2026-05-30T00:00:00Z"
-flexdoc = "2026-06-13T00:00:00Z"
+flexdoc = "2026-07-12T00:00:00Z"
 
 [tool.ruff]
 # Set as desired, typically 88 (black standard) or 100 (wide).
@@ -201,5 +198,3 @@ testpaths = [
 ]
 norecursedirs = []
 filterwarnings = []
-
-

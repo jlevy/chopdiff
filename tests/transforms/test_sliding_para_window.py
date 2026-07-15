@@ -18,3 +18,14 @@ def test_sliding_para_window_keeps_all_sentences():
     assert len(windows) == 2
     assert "Alpha alpha alpha." in windows[0] and "Beta beta beta." in windows[0]
     assert "Gamma gamma gamma." in windows[1] and "Delta delta delta." in windows[1]
+
+
+def test_sliding_para_window_rejects_negative_size():
+    doc = FlexDoc.from_text("Alpha alpha alpha.")
+
+    try:
+        next(sliding_para_window(doc, -1, normalizer=_identity_norm))
+    except ValueError as exc:
+        assert str(exc) == "Paragraph window size must be positive, got -1"
+    else:
+        raise AssertionError("Expected a non-positive paragraph window size to be rejected")

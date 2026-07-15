@@ -1,4 +1,5 @@
-from collections.abc import Callable
+from collections import Counter
+from collections.abc import Callable, Collection
 from typing import TypeAlias
 
 from flexdoc.docs.token_diffs import DiffFilter, DiffOp, OpType
@@ -26,7 +27,7 @@ class WildcardToken:
 
 WILDCARD_TOK = WildcardToken()
 
-TokenMatcher: TypeAlias = list[str] | Callable[[str], bool]
+TokenMatcher: TypeAlias = Collection[str] | Callable[[str], bool]
 
 TokenPattern: TypeAlias = str | Callable[[str], bool] | WildcardToken
 
@@ -80,6 +81,8 @@ def make_token_sequence_filter(
     takes a token and returns a bool (True if the token matches).
     The '*' in the pattern list matches any number of tokens (including zero).
     If `action` is specified, only `DiffOps` with that action are considered.
+    `ignore` may be a collection of exact tokens or a predicate for tokens to remove
+    before matching.
     """
 
     def filter_fn(diff_op: DiffOp) -> bool:
@@ -87,10 +90,12 @@ def make_token_sequence_filter(
             return False
 
         tokens = diff_op.all_changed()
-        if ignore and isinstance(ignore, str):
-            tokens = [tok for tok in tokens if tok not in ignore]
-        elif ignore and callable(ignore):
-            tokens = [tok for tok in tokens if not ignore(tok)]
+        if ignore:
+            if callable(ignore):
+                tokens = [tok for tok in tokens if not ignore(tok)]
+            else:
+                ignored_tokens = {ignore} if isinstance(ignore, str) else ignore
+                tokens = [tok for tok in tokens if tok not in ignored_tokens]
 
         return _matches_pattern(tokens, pattern)
 
@@ -135,7 +140,8 @@ def removes_words(diff_op: DiffOp) -> bool:
     if diff_op.action == OpType.DELETE or diff_op.action == OpType.EQUAL:
         return True
     elif diff_op.action == OpType.REPLACE or diff_op.action == OpType.INSERT:
-        return all(is_whitespace_or_punct(tok) for tok in set(diff_op.right) - set(diff_op.left))
+        inserted = Counter(diff_op.right) - Counter(diff_op.left)
+        return all(is_whitespace_or_punct(tok) for tok in inserted.elements())
     else:
         return False
 
@@ -154,7 +160,7 @@ def removes_word_lemmas(diff_op: DiffOp) -> bool:
         left_lemmas = [lemmatize(word) for word in left_words]
         right_lemmas = [lemmatize(word) for word in right_words]
 
-        return set(right_lemmas).issubset(set(left_lemmas))
+        return not (Counter(right_lemmas) - Counter(left_lemmas))
     else:
         return False
 
