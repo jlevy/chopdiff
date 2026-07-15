@@ -20,8 +20,8 @@ The full cross-ecosystem policy lives in the
    versions and nothing silently pulls a just-published release.
 2. **Commit the lockfile; install frozen.** `uv.lock` is committed.
    Routine Make targets and CI use `--locked`, which fails if the lock and
-   `pyproject.toml` have drifted. Never re-resolve without reviewing the lockfile diff
-   like a code diff.
+   `pyproject.toml` have drifted.
+   Never re-resolve without reviewing the lockfile diff like a code diff.
 3. **Prefer wheels; review build code.** Building an sdist runs arbitrary code.
    Prefer prebuilt wheels (`uv` does by default) and treat any source build as code to
    review.
@@ -83,12 +83,13 @@ caught up), remove the override and re-lock.
 ### Active Exceptions
 
 - **flexdoc 0.3.0** (published 2026-07-11, inside the window).
-  First-party package authored and maintained by the same maintainer. The release fixes
-  CRLF offset corruption, frontmatter parse leakage, ambiguous span resolution, and
-  mutation of cached structural views, and it settles several pre-1.0 APIs.
-  chopdiff already imports token and diff helpers from their owning modules, so the 0.3
-  export cleanup does not require compatibility shims here. The dependency is bounded
-  to `<0.4.0` because FlexDoc documents breaking pre-1.0 changes at each minor version.
+  First-party package authored and maintained by the same maintainer.
+  The release fixes CRLF offset corruption, frontmatter parse leakage, ambiguous span
+  resolution, and mutation of cached structural views, and it settles several pre-1.0
+  APIs. chopdiff already imports token and diff helpers from their owning modules, so the
+  0.3 export cleanup does not require compatibility shims here.
+  The dependency is bounded to `<0.4.0` because FlexDoc documents breaking pre-1.0
+  changes at each minor version.
   The maintainer explicitly authorized first-party cool-off exemptions for this upgrade
   on 2026-07-14. Remove the override after 0.3.0 clears the normal cutoff.
 
@@ -106,7 +107,8 @@ Two dev-time tools run via `uvx` (outside the project environment, so they never
   `lefthook` pre-commit hook so commits are auto-formatted.
   CI does **not** gate on doc formatting.
   flowmark-rs is first-party (`github.com/jlevy/flowmark`, same maintainer) and 0.3.1 is
-  older than the current project cutoff. Bump the pin deliberately.
+  older than the current project cutoff.
+  Bump the pin deliberately.
   Reviewed-by: Joshua Levy.
 - **`lefthook@2.1.9`** — the git hook manager (`make hooks-install`). Third-party but
   pinned and aged past the 14-day window (published 2026-05-29); run via `uvx`, so no

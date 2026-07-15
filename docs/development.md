@@ -119,21 +119,18 @@ Each direct dependency and why it is here:
 
 **Runtime:**
 
-- [strif](https://github.com/jlevy/strif): Zero-dependency string and file utilities
-  (atomic writes, hashing, `replace_multiple`)
-- [flowmark](https://github.com/jlevy/flowmark): Markdown line-wrapping,
-  auto-formatting, atomic spans, and Markdown AST helpers
-- [marko](https://github.com/frostming/marko): CommonMark/GFM parser used for Markdown
-  block classification
-- [prettyfmt](https://github.com/jlevy/prettyfmt): Human-friendly object and value
-  formatting (used in `__repr__`s)
-- [funlog](https://github.com/jlevy/funlog): Logging and timing decorators
-- [cydifflib](https://github.com/rapidfuzz/CyDifflib): Fast drop-in replacement for the
-  standard library `difflib`, used for token-level diffing
-- [regex](https://github.com/mrabarnett/mrab-regex): Regex engine with Unicode features
-  beyond the standard library `re`
-- [selectolax](https://github.com/rushter/selectolax): Fast HTML parser (lexbor), used
-  for HTML-aware chunking
+- [flexdoc](https://github.com/jlevy/flexdoc): Document model, tokenization, token
+  diffs, source mappings, and Markdown/HTML helpers
+- [flowmark](https://github.com/jlevy/flowmark): Markdown normalization for sliding
+  paragraph windows
+- [prettyfmt](https://github.com/jlevy/prettyfmt): Human-readable structural summaries
+- [typing-extensions](https://github.com/python/typing_extensions): Python 3.11 support
+  for newer typing features such as `@override`
+
+FlexDoc owns its document-layer dependencies, including `cydifflib`, `marko`, `regex`,
+`selectolax`, and the first-party `frontmatter-format`, `funlog`, and `strif` packages.
+They should not become direct chopdiff dependencies unless chopdiff imports them
+directly.
 
 **Optional (`extras`):**
 

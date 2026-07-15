@@ -1,10 +1,16 @@
-# Feature: FlexDoc Package Extraction (Staged)
+# Feature: FlexDoc Package Extraction (Historical Staged Plan)
 
-**Date:** 2026-06-11 (last updated 2026-06-11)
+**Date:** 2026-06-11 (last updated 2026-07-14)
 
 **Author:** Joshua Levy
 
-**Status:** Draft
+**Status:** Implemented through Stage 3; Stage 4 belongs to the FlexDoc roadmap
+
+> This file preserves the original staged design and therefore describes repository
+> state as it existed in June 2026. FlexDoc is now a separate package and repository,
+> and chopdiff depends on its published API. Follow the
+> [FlexDoc repository](https://github.com/jlevy/flexdoc) for current document-model
+> design and Stage 4 work.
 
 ## Overview
 
