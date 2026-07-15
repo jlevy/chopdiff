@@ -99,6 +99,13 @@ def test_token_sequence_filter_with_predicate():
     assert not ignore_whitespace_filter_fn(replace_op)
     assert not ignore_whitespace_filter_fn(equal_op)
 
+    ignore_tokens_filter_fn = make_token_sequence_filter(
+        ["<h1>", WILDCARD_TOK, "</h1>"],
+        action=OpType.INSERT,
+        ignore=[" ", SENT_BR_TOK, PARA_BR_TOK],
+    )
+    assert ignore_tokens_filter_fn(insert_op_with_whitespace)
+
 
 def test_no_word_changes_lemmatized():
     assert not no_word_lemma_changes(DiffOp(OpType.INSERT, [], ["the"]))
@@ -122,6 +129,8 @@ def test_no_word_changes_lemmatized():
 def test_removes_words():
     assert removes_words(DiffOp(OpType.DELETE, ["Hello", " "], []))
     assert removes_words(DiffOp(OpType.REPLACE, ["Hello", " ", "world"], ["world"]))
+    assert not removes_words(DiffOp(OpType.REPLACE, ["cat"], ["cat", "cat"]))
+    assert not removes_word_lemmas(DiffOp(OpType.REPLACE, ["cat"], ["cat", "cats"]))
     assert not removes_words(DiffOp(OpType.REPLACE, ["Hello", " ", "world"], ["World"]))
     assert removes_word_lemmas(DiffOp(OpType.REPLACE, ["Hello", " ", "world"], ["World"]))
 
