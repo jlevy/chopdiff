@@ -5,7 +5,7 @@ title: Implement prioritized engineering fixes from the review
 kind: task
 status: closed
 priority: 1
-version: 10
+version: 13
 labels:
   - maintenance
 dependencies:
@@ -20,9 +20,14 @@ child_order_hints:
   - is-01kxhhmwfywta03vfgk3cq8pev
   - is-01kxhhmx0eegc8jvxwf7rw4aab
   - is-01kxhhmxgmd5a24vxj23jvvh24
+  - is-01kxhk31wxk6543tq60b88c2vf
 created_at: 2026-07-14T23:58:00.436Z
-updated_at: 2026-07-15T00:30:10.928Z
-closed_at: 2026-07-15T00:30:10.927Z
-close_reason: Implemented and verified all seven prioritized findings from the July 2026 engineering review
+updated_at: 2026-07-15T00:35:55.916Z
+closed_at: 2026-07-15T00:35:55.916Z
+close_reason: Isolated Make and CI with a tested project policy mirror; ordinary make now passes despite conflicting user uv settings
 ---
 Create child beads for actionable review findings, implement non-breaking fixes and meaningful improvements, and add focused behavioral coverage.
+
+## Notes
+
+Reopened: Final validation reproduced user-level uv config contamination in routine commands

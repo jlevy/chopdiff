@@ -3,14 +3,14 @@ type: is
 id: is-01kxhh1th1pw92hzk06zdfpbhn
 title: Run end-to-end release validation and finalize the review
 kind: task
-status: open
+status: in_progress
 priority: 1
-version: 1
+version: 2
 labels:
   - validation
 dependencies: []
 parent_id: is-01kxhh1rsgzfj5r2t4ndw58x1v
 created_at: 2026-07-14T23:58:00.736Z
-updated_at: 2026-07-14T23:58:00.736Z
+updated_at: 2026-07-15T00:30:29.119Z
 ---
 Validate lint, types, tests, audit, build metadata, wheel installation and imports in isolation, supported Python versions where available, docs and examples, then perform a final diff review and confirm pull-request CI.
