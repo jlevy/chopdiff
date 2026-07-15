@@ -5,7 +5,7 @@ title: Implement prioritized engineering fixes from the review
 kind: task
 status: closed
 priority: 1
-version: 13
+version: 16
 labels:
   - maintenance
 dependencies:
@@ -21,13 +21,16 @@ child_order_hints:
   - is-01kxhhmx0eegc8jvxwf7rw4aab
   - is-01kxhhmxgmd5a24vxj23jvvh24
   - is-01kxhk31wxk6543tq60b88c2vf
+  - is-01kxhk9nx5zqw1eejbbv58zcqj
 created_at: 2026-07-14T23:58:00.436Z
-updated_at: 2026-07-15T00:35:55.916Z
-closed_at: 2026-07-15T00:35:55.916Z
-close_reason: Isolated Make and CI with a tested project policy mirror; ordinary make now passes despite conflicting user uv settings
+updated_at: 2026-07-15T00:38:12.787Z
+closed_at: 2026-07-15T00:38:12.787Z
+close_reason: Restricted the sdist to package source and required metadata, added a CI manifest gate, and verified wheel-from-sdist plus isolated install
 ---
 Create child beads for actionable review findings, implement non-breaking fixes and meaningful improvements, and add focused behavioral coverage.
 
 ## Notes
 
 Reopened: Final validation reproduced user-level uv config contamination in routine commands
+
+Reopened: Release artifact inspection found generated tbd cache and automation files in the sdist
