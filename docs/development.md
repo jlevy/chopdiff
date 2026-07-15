@@ -21,8 +21,8 @@ repository root.
 
 ```shell
 # First, install all dependencies and set up your virtual environment.
-# This runs `uv sync --locked --all-extras` to install the exact locked packages,
-# including dev dependencies and optional dependencies.
+# This runs `uv sync --locked --all-extras --all-groups` to install the exact locked
+# runtime, development, optional, audit, and build dependencies.
 make install
 
 # One-time: install the git hooks (lefthook) that auto-format Markdown and
@@ -71,8 +71,6 @@ uv add --dev package_name
 uv sync --upgrade
 # Update a specific package:
 uv lock --upgrade-package package_name
-# Update dependencies on a package:
-uv add package_name@latest
 
 # Run a shell within the Python environment:
 uv venv
@@ -102,8 +100,8 @@ Its key defaults:
 
 - **Cool-off period:** Don’t install or upgrade to a release less than 14 days old
   (absent a documented exception)—most malicious publishes are caught within days.
-  This project pins the cutoff in `[tool.uv] exclude-newer` in `pyproject.toml` (uv
-  takes a date, not a duration), so `uv lock`, `uv sync`, and `uv run` all honor it.
+  This project pins the cutoff in `[tool.uv] exclude-newer` in `pyproject.toml` (uv uses
+  a reviewed timestamp), so `uv lock`, `uv sync`, and `uv run` all honor it.
 
 - **Vet before adding:** Confirm the package is actually needed and its name is spelled
   correctly (typosquats are common), and prefer a little first-party code over a new
@@ -151,6 +149,9 @@ directly.
 - [rich](https://github.com/Textualize/rich): Console output for the lint script
 - [pip-audit](https://github.com/pypa/pip-audit): Vulnerability audit (`audit` group;
   run in CI)
+- [hatchling](https://hatch.pypa.io/) and
+  [uv-dynamic-versioning](https://github.com/ninoseki/uv-dynamic-versioning): Exactly
+  pinned build backends installed from the lockfile before non-isolated builds
 
 ## Publishing Releases
 
@@ -166,3 +167,7 @@ See [publishing.md](publishing.md) for instructions on publishing to PyPI.
 
 *This file was built with
 [simple-modern-uv](https://github.com/jlevy/simple-modern-uv).*
+
+<!-- This document follows common-doc-guidelines.md.
+See github.com/jlevy/practical-prose and review guidelines before editing.
+-->

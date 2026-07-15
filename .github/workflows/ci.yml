@@ -35,10 +35,13 @@ jobs:
       # https://docs.astral.sh/uv/guides/integration/github/
 
       - name: Checkout (official GitHub action)
+        # Pinned to a full commit SHA (see supply-chain notes in
+        # docs/development.md); bump deliberately when updating.
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           # Important for versioning plugins:
           fetch-depth: 0
+          persist-credentials: false
 
       # From debugging the cydifflib build failure.
       # Confirmed we have version 3.31.6 installed.
@@ -46,9 +49,12 @@ jobs:
         run: cmake --version
 
       - name: Install uv (official Astral action)
+        # Pinned to a full commit SHA. Bump the action, uv version, and checksums
+        # together when updating.
         uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
         with:
           version: "0.11.25"
+          checksum: ${{ runner.os == 'Linux' && '1db18b5e76fa645a7f3865773139bdec8e2d46adbdbb35e7410b34fa8015ccd2' || runner.arch == 'ARM64' && '5fc334bb25d19806262efd1f6e7d380155c7e817d89bf426df4ba7ae873c9471' || '65ff85b33212f75d34d7c0f0724aba9a742c74f62559f67dc0d6c543dc2fc52f' }}
           enable-cache: true
           python-version: ${{ matrix.python-version }}
 
@@ -56,8 +62,9 @@ jobs:
         run: uv python install
 
       # Alternately can use the official Python action:
+      # Pin a reviewed full commit SHA before enabling it.
       # - name: Set up Python (using actions/setup-python)
-      #   uses: actions/setup-python@v5
+      #   uses: actions/setup-python@FULL_COMMIT_SHA # reviewed version
       #   with:
       #     python-version: ${{ matrix.python-version }}
 
@@ -66,7 +73,7 @@ jobs:
       # in [tool.uv] exclude-newer in pyproject.toml, so it applies at lock, sync, and
       # run time without a separate CI step. See SUPPLY-CHAIN-SECURITY.md.
       - name: Install all dependencies
-        run: uv sync --all-extras --locked
+        run: uv sync --all-extras --all-groups --locked
 
       - name: Run linting
         # Check-only mode so CI fails on unformatted code instead of fixing it.
@@ -83,12 +90,17 @@ jobs:
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Install uv (official Astral action)
         uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
         with:
           version: "0.11.25"
+          checksum: "1db18b5e76fa645a7f3865773139bdec8e2d46adbdbb35e7410b34fa8015ccd2"
           enable-cache: true
+
+      - name: Install all dependencies
+        run: uv sync --all-extras --all-groups --locked
 
       - name: Audit dependencies for known vulnerabilities
         run: uv run --locked --all-extras --group audit pip-audit
@@ -103,15 +115,20 @@ jobs:
         with:
           # Needed for the dynamic-versioning build backend (reads git tags).
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Install uv (official Astral action)
         uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
         with:
           version: "0.11.25"
+          checksum: "1db18b5e76fa645a7f3865773139bdec8e2d46adbdbb35e7410b34fa8015ccd2"
           enable-cache: true
 
+      - name: Install all dependencies
+        run: uv sync --all-extras --all-groups --locked
+
       - name: Build release artifacts
-        run: uv build --no-sources
+        run: uv build --python .venv/bin/python --no-build-isolation --no-sources
 
       - name: Validate the source distribution manifest
         run: uv run --locked python devtools/validate_sdist.py

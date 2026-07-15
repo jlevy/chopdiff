@@ -51,13 +51,17 @@ extras = [
 ]
 
 [dependency-groups]
+build = [
+    "hatchling==1.30.1",
+    "uv-dynamic-versioning==0.14.0",
+]
 dev = [
-    "pytest>=9.0.3",
+    "pytest>=9.1.1",
     "pytest-sugar>=1.1.1",
-    "ruff>=0.15.12",
+    "ruff>=0.15.20",
     "codespell>=2.4.2",
     "rich>=15.0.0",
-    "basedpyright>=1.39.3",
+    "basedpyright>=1.39.9",
     "funlog>=0.2.1",
 ]
 # Supply-chain audit tooling, kept out of the default dev install. CI runs it via
@@ -73,7 +77,7 @@ audit = [
 # https://github.com/ninoseki/uv-dynamic-versioning/
 
 [build-system]
-requires = ["hatchling", "uv-dynamic-versioning"]
+requires = ["hatchling==1.30.1", "uv-dynamic-versioning==0.14.0"]
 build-backend = "hatchling.build"
 
 [tool.hatch.version]
@@ -104,6 +108,7 @@ only-include = ["src/chopdiff"]
 # See SUPPLY-CHAIN-SECURITY.md. To upgrade, bump this to (today - 14 days) and
 # re-run `make upgrade`.
 [tool.uv]
+required-version = ">=0.9"
 exclude-newer = "2026-06-30T00:00:00Z"
 
 # Cool-off exception reviewed and recorded in SUPPLY-CHAIN-SECURITY.md.

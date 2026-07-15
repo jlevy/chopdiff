@@ -1,5 +1,6 @@
 # Mirrors `[tool.uv]` in pyproject.toml for commands that must ignore user-level uv
 # configuration. `tests/test_supply_chain.py` prevents the two copies from drifting.
+required-version = ">=0.9"
 exclude-newer = "2026-06-30T00:00:00Z"
 
 [exclude-newer-package]

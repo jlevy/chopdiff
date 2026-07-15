@@ -64,7 +64,7 @@ NEW_CUTOFF="$(date -u -d '14 days ago' +%Y-%m-%dT00:00:00Z)"   # GNU date (Linux
 # macOS: NEW_CUTOFF="$(date -u -v-14d +%Y-%m-%dT00:00:00Z)"
 sed -i "s|^exclude-newer = .*|exclude-newer = \"$NEW_CUTOFF\"|" pyproject.toml
 
-make upgrade   # uv sync --upgrade --all-extras --dev
+make upgrade   # uv sync --upgrade --all-extras --all-groups
 make lint test
 ```
 
