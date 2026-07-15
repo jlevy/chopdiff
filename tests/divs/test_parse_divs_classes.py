@@ -8,3 +8,13 @@ def test_parsed_div_multi_class_matching():
     root = parse_divs(text)
     matched = root.children_by_class_names("chunk")
     assert len(matched) == 2
+
+
+def test_reassemble_without_padding_preserves_original_div_tags():
+    text = (
+        '<div id="outer" class="chunk selected" data-kind="demo">'
+        "<div class='content'>one</div>"
+        "</div>"
+    )
+
+    assert parse_divs(text, skip_whitespace=False).reassemble(padding="") == text

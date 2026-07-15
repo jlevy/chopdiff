@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from collections.abc import Callable
 from copy import copy
 from dataclasses import dataclass, field
 
@@ -164,20 +163,25 @@ class TextNode:
         Reassemble as string. If padding is provided (not ""), then strip, skip whitespace,
         and insert our own padding.
         """
-        strip_fn: Callable[[str], str] = lambda s: s.strip() if padding else s
-        skip_whitespace = bool(padding)
+        if not padding:
+            content = (
+                "".join(child.reassemble(padding) for child in self.children)
+                if self.children
+                else self.contents
+            )
+            if not self.tag_name:
+                return content
+            return f"{self.begin_marker or ''}{content}{self.end_marker or ''}"
 
         if not self.children:
             if not self.tag_name:
-                return strip_fn(self.contents)
+                return self.contents.strip()
             else:
                 wrap = div_wrapper(self.class_name, padding=padding)
-                return wrap(strip_fn(self.contents))
+                return wrap(self.contents.strip())
         else:
-            padded_children = (padding or "").join(
-                child.reassemble(padding)
-                for child in self.children
-                if (not skip_whitespace or not child.is_whitespace())
+            padded_children = padding.join(
+                child.reassemble(padding) for child in self.children if not child.is_whitespace()
             )
             if not self.tag_name:
                 return padded_children
@@ -186,7 +190,7 @@ class TextNode:
                 return wrap(padded_children)
 
     @override
-    def __str__(self):
+    def __str__(self) -> str:
         """
         Return a recursive, formatted string representation of the node and its children.
         """
