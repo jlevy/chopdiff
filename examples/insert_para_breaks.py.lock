@@ -10,7 +10,7 @@ flexdoc = "2026-07-12T00:00:00Z"
 
 [manifest]
 requirements = [
-    { name = "chopdiff", specifier = "==0.3.1" },
+    { name = "chopdiff", editable = "../" },
     { name = "flexdoc", specifier = "==0.3.0" },
     { name = "flowmark", specifier = "==0.7.2" },
     { name = "openai", specifier = "==2.44.0" },
@@ -50,23 +50,34 @@ wheels = [
 
 [[package]]
 name = "chopdiff"
-version = "0.3.1"
-source = { registry = "https://pypi.org/simple" }
+source = { editable = "../" }
 dependencies = [
-    { name = "cydifflib" },
+    { name = "flexdoc" },
     { name = "flowmark" },
-    { name = "frontmatter-format" },
-    { name = "funlog" },
-    { name = "marko" },
     { name = "prettyfmt" },
-    { name = "pydantic" },
-    { name = "regex" },
-    { name = "selectolax" },
-    { name = "strif" },
+    { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/39/93/b0ad75c2397311dfdaeff52ddcf7fb6a2319ba196cb10e0827f5f1a77349/chopdiff-0.3.1.tar.gz", hash = "sha256:8b2d6306e32f10419ba89429c596377295cbfe69133998f5b3de907f5226417c", size = 365378, upload-time = "2026-06-02T22:48:14.189Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/c7/c9/22a4087c49323b661c2700ba12b5bf38d3d3d216ec2450ce8b3331dafcff/chopdiff-0.3.1-py3-none-any.whl", hash = "sha256:08be5817e3fce5552cc4cf34f404acef3e70d8c095b771bb1ddf439be5ce8210", size = 88921, upload-time = "2026-06-02T22:48:12.858Z" },
+
+[package.metadata]
+requires-dist = [
+    { name = "flexdoc", specifier = ">=0.3.0,<0.4.0" },
+    { name = "flowmark", specifier = ">=0.7.2" },
+    { name = "prettyfmt", specifier = ">=0.3.0" },
+    { name = "simplemma", marker = "extra == 'extras'", specifier = ">=1.1.2" },
+    { name = "typing-extensions", specifier = ">=4.12.0" },
+]
+provides-extras = ["extras"]
+
+[package.metadata.requires-dev]
+audit = [{ name = "pip-audit", specifier = ">=2.7.0" }]
+dev = [
+    { name = "basedpyright", specifier = ">=1.39.3" },
+    { name = "codespell", specifier = ">=2.4.2" },
+    { name = "funlog", specifier = ">=0.2.1" },
+    { name = "pytest", specifier = ">=9.0.3" },
+    { name = "pytest-sugar", specifier = ">=1.1.1" },
+    { name = "rich", specifier = ">=15.0.0" },
+    { name = "ruff", specifier = ">=0.15.12" },
 ]
 
 [[package]]

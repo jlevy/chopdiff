@@ -153,8 +153,9 @@ The PEP 723 script runs three unpinned packages, bypassing the project’s commi
 and cool-off. It also lacks complete return annotations and uses `Path.write_text()` for
 the requested output even though the repository’s file-writing convention is atomic.
 
-**Fix:** Pin the standalone script’s exact package versions under the same cutoff or
-first-party exception policy, add full annotations, and use a script-declared `strif`
+**Fix:** Pin the standalone script’s external package versions under the same cutoff or
+first-party exception policy, bind chopdiff to the current repository checkout until a
+compatible release exists, add full annotations, and use a script-declared `strif`
 atomic write helper.
 Keep OpenAI out of chopdiff’s runtime dependency set.
 
@@ -299,7 +300,7 @@ where automation is meaningful.
 | R4 | Resolved | Collection and predicate token ignores both work. |
 | R5 | Resolved | Routine commands are locked; actions are SHA-pinned; release gates are complete. |
 | R6 | Resolved | Maintained docs now reflect standalone FlexDoc ownership and current APIs. |
-| R7 | Resolved | The standalone script is annotated, atomic, exact-pinned, and transitively locked. |
+| R7 | Resolved | The standalone script is annotated and atomic; external packages are exact-pinned, chopdiff uses the current checkout, and the environment is transitively locked. |
 | R8 | Resolved | Explicit uv policy prevents user configuration from changing project resolution. |
 | R9 | Resolved | The sdist contains only package source and mandatory build metadata. |
 

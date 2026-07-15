@@ -105,7 +105,26 @@ def test_workflow_sync_and_run_commands_use_the_lockfile() -> None:
     assert not unlocked
 
 
-def test_standalone_script_dependencies_are_exactly_pinned() -> None:
+def test_flexdoc_example_uses_the_current_chopdiff_checkout() -> None:
+    script = _REPO_ROOT / "examples" / "insert_para_breaks.py"
+    lines = script.read_text().splitlines()
+    start = lines.index("# /// script") + 1
+    end = lines.index("# ///", start)
+    metadata = tomllib.loads("\n".join(line.removeprefix("# ") for line in lines[start:end]))
+
+    assert "chopdiff" in metadata["dependencies"]
+    assert metadata["tool"]["uv"]["sources"]["chopdiff"] == {
+        "path": "..",
+        "editable": True,
+    }
+
+    lock = tomllib.loads(script.with_name(f"{script.name}.lock").read_text())
+    locked_chopdiff = next(package for package in lock["package"] if package["name"] == "chopdiff")
+    assert locked_chopdiff["source"] == {"editable": "../"}
+    assert {"name": "flexdoc"} in locked_chopdiff["dependencies"]
+
+
+def test_standalone_script_dependencies_are_reproducibly_locked() -> None:
     unpinned: list[str] = []
     for script in sorted((_REPO_ROOT / "examples").glob("*.py")):
         lines = script.read_text().splitlines()
@@ -115,8 +134,12 @@ def test_standalone_script_dependencies_are_exactly_pinned() -> None:
         end = lines.index("# ///", start)
         metadata = tomllib.loads("\n".join(line.removeprefix("# ") for line in lines[start:end]))
         dependencies = metadata.get("dependencies", [])
+        sources = metadata.get("tool", {}).get("uv", {}).get("sources", {})
         for dependency in dependencies:
-            if "==" not in dependency:
+            if "==" not in dependency and sources.get(dependency) != {
+                "path": "..",
+                "editable": True,
+            }:
                 unpinned.append(f"{script.name}: {dependency}")
 
         lock_path = script.with_name(f"{script.name}.lock")
@@ -124,10 +147,14 @@ def test_standalone_script_dependencies_are_exactly_pinned() -> None:
             unpinned.append(f"{script.name}: missing script lockfile")
             continue
         lock = tomllib.loads(lock_path.read_text())
-        locked_requirements = {
-            f"{requirement['name']}{requirement['specifier']}"
-            for requirement in lock["manifest"]["requirements"]
-        }
+        locked_requirements: set[str] = set()
+        for requirement in lock["manifest"]["requirements"]:
+            if specifier := requirement.get("specifier"):
+                locked_requirements.add(f"{requirement['name']}{specifier}")
+            elif requirement.get("editable") == "../":
+                locked_requirements.add(requirement["name"])
+            else:
+                unpinned.append(f"{script.name}: invalid lock requirement: {requirement}")
         for dependency in dependencies:
             if dependency not in locked_requirements:
                 unpinned.append(f"{script.name}: not in script lockfile: {dependency}")
