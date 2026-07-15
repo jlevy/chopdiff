@@ -86,3 +86,40 @@ def test_workflow_sync_and_run_commands_use_the_lockfile() -> None:
                 unlocked.append(f"{workflow.name}:{line_number}: {command}")
 
     assert not unlocked
+
+
+def test_standalone_script_dependencies_are_exactly_pinned() -> None:
+    unpinned: list[str] = []
+    for script in sorted((_REPO_ROOT / "examples").glob("*.py")):
+        lines = script.read_text().splitlines()
+        if "# /// script" not in lines:
+            continue
+        start = lines.index("# /// script") + 1
+        end = lines.index("# ///", start)
+        metadata = tomllib.loads("\n".join(line.removeprefix("# ") for line in lines[start:end]))
+        dependencies = metadata.get("dependencies", [])
+        for dependency in dependencies:
+            if "==" not in dependency:
+                unpinned.append(f"{script.name}: {dependency}")
+
+        lock_path = script.with_name(f"{script.name}.lock")
+        if not lock_path.exists():
+            unpinned.append(f"{script.name}: missing script lockfile")
+            continue
+        lock = tomllib.loads(lock_path.read_text())
+        locked_requirements = {
+            f"{requirement['name']}{requirement['specifier']}"
+            for requirement in lock["manifest"]["requirements"]
+        }
+        for dependency in dependencies:
+            if dependency not in locked_requirements:
+                unpinned.append(f"{script.name}: not in script lockfile: {dependency}")
+
+        project_uv = _uv_config()
+        script_uv = metadata.get("tool", {}).get("uv", {})
+        if script_uv.get("exclude-newer") != project_uv.get("exclude-newer"):
+            unpinned.append(f"{script.name}: project cutoff mismatch")
+        if script_uv.get("exclude-newer-package") != project_uv.get("exclude-newer-package"):
+            unpinned.append(f"{script.name}: package exception mismatch")
+
+    assert not unpinned

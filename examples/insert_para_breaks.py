@@ -1,19 +1,28 @@
 # /// script
-# requires-python = ">=3.13"
+# requires-python = ">=3.11"
 # dependencies = [
-#     "chopdiff",
-#     "flowmark",
-#     "openai",
+#     "chopdiff==0.3.1",
+#     "flexdoc==0.3.0",
+#     "flowmark==0.7.2",
+#     "openai==2.44.0",
+#     "strif==3.1.0",
 # ]
+# [tool.uv]
+# exclude-newer = "2026-06-30T00:00:00Z"
+# [tool.uv.exclude-newer-package]
+# flexdoc = "2026-07-12T00:00:00Z"
 # ///
+from __future__ import annotations
+
 import argparse
 import logging
 from pathlib import Path
 from textwrap import dedent
 
-import openai  # pyright: ignore  # Not a project dep.
+import openai  # pyright: ignore[reportMissingImports]  # Standalone script dependency.
 from flexdoc import FlexDoc
 from flowmark import fill_text
+from strif import atomic_output_file
 
 from chopdiff.transforms import WINDOW_2K_WORDTOKS, changes_whitespace, filtered_transform
 
@@ -22,7 +31,7 @@ log = logging.getLogger(__name__)
 log.setLevel(logging.INFO)
 
 
-def heading(text: str):
+def heading(text: str) -> str:
     return "\n--- " + text + " " + "-" * (70 - len(text)) + "\n"
 
 
@@ -97,7 +106,7 @@ def llm_insert_para_breaks(input_text: str) -> str:
     return response.choices[0].message.content or ""
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(
         description="Insert paragraph breaks in text files, making no other changes of any kind to a document."
     )
@@ -113,8 +122,10 @@ def main():
     formatted = fill_text(result)
 
     if args.output:
-        Path(args.output).write_text(formatted, encoding="utf-8")
-        print(f"Wrote paragraph-broken text to {args.output}")
+        output_path = Path(args.output)
+        with atomic_output_file(output_path) as temp_path:
+            temp_path.write_text(formatted, encoding="utf-8")
+        print(f"Wrote paragraph-broken text to {output_path}")
     else:
         print(heading("Original"))
         print(fill_text(input_text))
