@@ -18,11 +18,16 @@ def sliding_word_window(
     """
     Generate FlexDoc sub-documents in a sliding window over the given document.
     """
+    if window_size <= 0:
+        raise ValueError(f"Window size must be positive, got {window_size}")
+    if window_shift <= 0:
+        raise ValueError(f"Window shift must be positive, got {window_shift}")
+
     total_size = doc.size(unit)
     start_offset = 0
-    start_index, _ = doc.seek_to_sent(start_offset, unit)
 
     while start_offset < total_size:
+        start_index, _ = doc.seek_to_sent(start_offset, unit)
         end_offset = start_offset + window_size
         end_index, _ = doc.seek_to_sent(end_offset, unit)
 
@@ -40,7 +45,6 @@ def sliding_word_window(
         yield sub_doc
 
         start_offset += window_shift
-        start_index = end_index
 
 
 def sliding_para_window(
@@ -49,6 +53,9 @@ def sliding_para_window(
     """
     Generate FlexDoc sub-documents taking `nparas` paragraphs at a time.
     """
+    if nparas <= 0:
+        raise ValueError(f"Paragraph window size must be positive, got {nparas}")
+
     for i in range(0, len(doc.paragraphs), nparas):
         end_index = min(i + nparas - 1, len(doc.paragraphs) - 1)
         # Use whole-paragraph slicing so every sentence of the ending paragraph is kept
