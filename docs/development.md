@@ -17,7 +17,7 @@ The `Makefile` simply offers shortcuts to `uv` commands for developer convenienc
 
 ```shell
 # First, install all dependencies and set up your virtual environment.
-# This simply runs `uv sync --all-extras` to install all packages,
+# This runs `uv sync --locked --all-extras` to install the exact locked packages,
 # including dev dependencies and optional dependencies.
 make install
 
@@ -51,8 +51,8 @@ make clean
 make upgrade
 
 # To run tests by hand:
-uv run pytest   # all tests
-uv run pytest -s src/module/some_file.py  # one test, showing outputs
+uv run --locked pytest   # all tests
+uv run --locked pytest -s src/module/some_file.py  # one test, showing outputs
 
 # Build and install current dev executables, to let you use your dev copies
 # as local tools:

@@ -13,16 +13,15 @@ jobs:
       contents: read
     steps:
       - name: Checkout (official GitHub action)
-        uses: actions/checkout@v6
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           # Important for versioning plugins:
           fetch-depth: 0
 
       - name: Install uv (official Astral action)
-        # Pinned to a full, immutable version tag (see note in ci.yml).
-        uses: astral-sh/setup-uv@v8.1.0
+        uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
         with:
-          version: "0.11.12"
+          version: "0.11.25"
           enable-cache: true
           python-version: "3.12"
 
@@ -34,11 +33,17 @@ jobs:
         # against the exact vetted versions (the pyproject cool-off governs upgrades).
         run: uv sync --all-extras --locked
 
+      - name: Run linting
+        run: uv run --locked python devtools/lint.py --check
+
       - name: Run tests
-        run: uv run pytest
+        run: uv run --locked pytest
+
+      - name: Audit dependencies for known vulnerabilities
+        run: uv run --locked --all-extras --group audit pip-audit
 
       - name: Build package
-        run: uv build
+        run: uv build --no-sources
 
       - name: Publish to PyPI
         run: uv publish --trusted-publishing always

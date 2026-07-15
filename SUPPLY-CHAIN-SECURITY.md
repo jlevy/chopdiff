@@ -19,8 +19,9 @@ The full cross-ecosystem policy lives in the
    `uv lock`, `uv sync`, and `uv run` all honor it: dev and CI install the same vetted
    versions and nothing silently pulls a just-published release.
 2. **Commit the lockfile; install frozen.** `uv.lock` is committed.
-   CI installs with `uv sync --locked`, which fails if the lock and `pyproject.toml`
-   have drifted. Never re-resolve without reviewing the lockfile diff like a code diff.
+   Routine Make targets and CI use `--locked`, which fails if the lock and
+   `pyproject.toml` have drifted. Never re-resolve without reviewing the lockfile diff
+   like a code diff.
 3. **Prefer wheels; review build code.** Building an sdist runs arbitrary code.
    Prefer prebuilt wheels (`uv` does by default) and treat any source build as code to
    review.
@@ -37,7 +38,7 @@ in this field):
 
 ```toml
 [tool.uv]
-exclude-newer = "2026-05-11T00:00:00Z"
+exclude-newer = "2026-06-30T00:00:00Z"
 ```
 
 uv records this cutoff inside `uv.lock`. If the cutoff in config and lock disagree (for
@@ -81,81 +82,31 @@ caught up), remove the override and re-lock.
 
 ### Active Exceptions
 
-- **idna 3.15** (published 2026-05-12, inside the window).
-  Fixes CVE-2026-45409, reported against the in-window 3.14 by `pip-audit`. idna is a
-  widely used, pure-Python package.
-  The fix is ~13 days old, one day short of the floor.
-  Approved by the maintainer, 2026-05-25. Remove this override once 3.15 clears the
-  14-day window.
-
-- **strif 3.1.0** (published 2026-05-23, inside the window).
-  First-party, zero-dependency package.
-  Its full `3.0.1 → 3.1.0` source diff was reviewed before the override was added: bug
-  fixes (backup-path check, file-descriptor leak), an atomic `Path.replace`, new
-  `atomic_write_text`/`atomic_write_bytes` helpers, and `Insertion`/`Replacement`
-  changed from tuple type aliases to `NamedTuple`s. No new dependencies, build hooks,
-  network calls, or install scripts.
-  Reviewed and approved by the maintainer, 2026-05-25.
-
-- **flowmark 0.7.1** (published 2026-05-29, inside the window).
-  First-party package, authored and maintained by the same maintainer.
-  Adopted for the authoritative block spans added in
-  [jlevy/flowmark#52](https://github.com/jlevy/flowmark/pull/52):
-  `flowmark_markdown().parse(text)` now attaches `element.span = (start, end)` to every
-  block element at every nesting level, read straight from marko’s own `Source.pos`, and
-  `flowmark.markdown_ast.block_span` / `walk_elements` expose it.
-  chopdiff adopts this to drop its own regex block scanner (Phase 5). The full
-  `0.7.0 → 0.7.1` source diff was reviewed: the span-recording overrides in
-  `formats/flowmark_markdown.py` (`CustomListItem`, `parse_source`, `parse`), the
-  `block_span` helper in `markdown_ast.py`, and CLI/skill-install changes
-  (`--surfaces`). No dependency changes (`Requires-Dist` identical to 0.7.0), no build
-  hooks, no network calls, no install scripts.
-  Reviewed and approved by the maintainer, 2026-05-29. Remove this override once 0.7.1
-  clears the 14-day window.
-
-- **flexdoc 0.1.0** (published 2026-06-12, inside the window).
-  First-party package, authored and maintained by the same maintainer: the document
-  model extracted from this repo’s own `src/flexdoc/` (Stage 1 of the flexdoc extraction
-  plan), refined and published from jlevy/flexdoc.
-  Parse behavior is identical to the in-repo copy (golden fixtures byte-for-byte); only
-  Python surfaces changed (`TextDoc` renamed `FlexDoc`, editing-view method renames,
-  keyword-only `collect()`). The maintainer directed this migration in
-  [chopdiff#27](https://github.com/jlevy/chopdiff/issues/27), which is the sign-off.
-  Remove this override once 0.1.0 clears the 14-day window.
+- **flexdoc 0.3.0** (published 2026-07-11, inside the window).
+  First-party package authored and maintained by the same maintainer. The release fixes
+  CRLF offset corruption, frontmatter parse leakage, ambiguous span resolution, and
+  mutation of cached structural views, and it settles several pre-1.0 APIs.
+  chopdiff already imports token and diff helpers from their owning modules, so the 0.3
+  export cleanup does not require compatibility shims here. The dependency is bounded
+  to `<0.4.0` because FlexDoc documents breaking pre-1.0 changes at each minor version.
+  The maintainer explicitly authorized first-party cool-off exemptions for this upgrade
+  on 2026-07-14. Remove the override after 0.3.0 clears the normal cutoff.
 
 ### Audit-Gate Ignores
 
-Distinct from the cool-off overrides above: `pip-audit --ignore-vuln <ID>` suppresses a
-specific advisory at the audit gate (`.github/workflows/ci.yml`). Use it only for a
-finding in a **tool dependency that chopdiff does not ship** and that has no fix
-available within the cool-off window.
-It does not change dependency resolution or the cool-off.
-
-- **PYSEC-2026-196 in `pip`.** `pip` is only present as a transitive dependency of the
-  `pip-audit` tool (audit group); it is not a chopdiff runtime/dev dependency and is
-  never shipped in the chopdiff wheel.
-  The fix (`pip` 26.1.2) is newer than the `exclude-newer` cutoff (2026-05-11), so there
-  is no within-policy bump.
-  Ignored at the audit gate to keep CI green; applied at the maintainer’s direction and
-  **pending explicit ratification**. Remove the `--ignore-vuln PYSEC-2026-196` once the
-  cutoff advances past pip 26.1.2’s release (it then resolves normally and the advisory
-  clears).
+None. The June 30 cutoff admits fixed `pip` and `msgpack` versions, so the audit runs
+without suppressed advisories.
 
 ## Dev Hook Tooling
 
 Two dev-time tools run via `uvx` (outside the project environment, so they never enter
-`uv.lock` and are independent of the project’s `exclude-newer` cool-off):
+`uv.lock`). Both are pinned and deliberately upgraded:
 
 - **`flowmark-rs@0.3.1`** — the Markdown formatter (`make format`), wired into the
   `lefthook` pre-commit hook so commits are auto-formatted.
   CI does **not** gate on doc formatting.
-  flowmark-rs is first-party (`github.com/jlevy/flowmark`, same maintainer), so the
-  `Makefile` invokes it with a surgical, per-package
-  `uvx --exclude-newer-package 'flowmark-rs=2026-06-02'` override: this admits the
-  pinned version even when a contributor’s global uv cutoff would reject it, and never
-  relaxes the cool-off for any other package (0.3.1 published 2026-05-30; the override
-  cutoff 2026-06-02 admits it).
-  Bump the pin deliberately.
+  flowmark-rs is first-party (`github.com/jlevy/flowmark`, same maintainer) and 0.3.1 is
+  older than the current project cutoff. Bump the pin deliberately.
   Reviewed-by: Joshua Levy.
 - **`lefthook@2.1.9`** — the git hook manager (`make hooks-install`). Third-party but
   pinned and aged past the 14-day window (published 2026-05-29); run via `uvx`, so no

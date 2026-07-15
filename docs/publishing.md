@@ -86,9 +86,12 @@ Follow this checklist for each new release.
 2. **Run linting and tests locally:**
 
    ```shell
-   make lint
-   make test
+   make
+   uv run --locked --all-extras --group audit pip-audit
    ```
+
+   The release workflow independently repeats locked installation, check-only linting,
+   tests, and the vulnerability audit before it builds or publishes an artifact.
 
 3. **Confirm CI is passing:**
 
