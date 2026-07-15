@@ -78,5 +78,6 @@ def test_release_workflows_validate_sdist_before_using_artifacts() -> None:
     for workflow_name, artifact_consumer in artifact_consumers.items():
         workflow = (_WORKFLOWS / workflow_name).read_text()
         assert validation_command in workflow
-        assert workflow.index("uv build --no-sources") < workflow.index(validation_command)
+        build_command = "uv build --python .venv/bin/python --no-build-isolation --no-sources"
+        assert workflow.index(build_command) < workflow.index(validation_command)
         assert workflow.index(validation_command) < workflow.index(artifact_consumer)

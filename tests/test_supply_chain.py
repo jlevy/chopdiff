@@ -96,13 +96,57 @@ def test_routine_make_targets_use_the_lockfile() -> None:
 
 def test_workflow_sync_and_run_commands_use_the_lockfile() -> None:
     unlocked: list[str] = []
+    incomplete_syncs: list[str] = []
     for workflow in sorted([*_WORKFLOWS.glob("*.yml"), *_WORKFLOWS.glob("*.yaml")]):
         for line_number, line in enumerate(workflow.read_text().splitlines(), start=1):
             command = line.partition("run:")[2].strip()
             if command.startswith(("uv sync ", "uv run ")) and "--locked" not in command:
                 unlocked.append(f"{workflow.name}:{line_number}: {command}")
+            if command.startswith("uv sync ") and "--all-groups" not in command:
+                incomplete_syncs.append(f"{workflow.name}:{line_number}: {command}")
 
     assert not unlocked
+    assert not incomplete_syncs
+
+
+def test_build_dependencies_are_locked_and_builds_are_non_isolated() -> None:
+    project = tomllib.loads(_PYPROJECT.read_text())
+    build_requirements = project["build-system"]["requires"]
+    assert build_requirements == project["dependency-groups"]["build"]
+    assert all("==" in requirement for requirement in build_requirements)
+
+    makefile = _MAKEFILE.read_text()
+    assert "build: install" in makefile
+    assert "$(UV) build --python .venv/bin/python --no-build-isolation --no-sources" in makefile
+
+    for workflow in sorted([*_WORKFLOWS.glob("*.yml"), *_WORKFLOWS.glob("*.yaml")]):
+        for line_number, line in enumerate(workflow.read_text().splitlines(), start=1):
+            command = line.partition("run:")[2].strip()
+            if command.startswith("uv build "):
+                assert "--python .venv/bin/python" in command, f"{workflow.name}:{line_number}"
+                assert "--no-build-isolation" in command, f"{workflow.name}:{line_number}"
+
+
+def test_github_actions_disable_persisted_credentials_and_verify_uv() -> None:
+    for workflow in sorted([*_WORKFLOWS.glob("*.yml"), *_WORKFLOWS.glob("*.yaml")]):
+        steps: list[list[str]] = []
+        current_step: list[str] = []
+        for line in workflow.read_text().splitlines():
+            if line.lstrip().startswith("- name:"):
+                if current_step:
+                    steps.append(current_step)
+                current_step = [line]
+            elif current_step:
+                current_step.append(line)
+        if current_step:
+            steps.append(current_step)
+
+        for step in steps:
+            step_text = "\n".join(step)
+            if "uses: actions/checkout@" in step_text:
+                assert "persist-credentials: false" in step_text
+            if "uses: astral-sh/setup-uv@" in step_text:
+                assert "checksum:" in step_text
 
 
 def test_flexdoc_example_uses_the_current_chopdiff_checkout() -> None:

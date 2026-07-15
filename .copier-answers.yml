@@ -1,10 +1,12 @@
 # Changes here will be overwritten by Copier. Do not edit manually.
-_commit: v0.2.26
+_commit: v0.4.0
 _src_path: gh:jlevy/simple-modern-uv
 package_author_email: joshua@cal.berkeley.edu
 package_author_name: Joshua Levy
-package_description: Simple tools for parsing/diffing/processing text to support LLM
-    applications
+package_description: Chunking, diff filtering, and windowed transforms of text to
+    support LLM applications
 package_github_org: jlevy
+package_license: MIT
 package_module: chopdiff
 package_name: chopdiff
+publish_to_pypi: true

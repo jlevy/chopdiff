@@ -22,7 +22,7 @@ LEFTHOOK := $(UV) tool run lefthook@2.1.9
 default: install lint test
 
 install:
-	$(UV) sync --locked --all-extras
+	$(UV) sync --locked --all-extras --all-groups
 
 # One-time: install the git hooks that auto-format on commit (see lefthook.yml).
 hooks-install:
@@ -45,15 +45,16 @@ test:
 	$(UV) run --locked pytest
 
 upgrade:
-	$(UV) sync --upgrade --all-extras --dev
+	$(UV) sync --upgrade --all-extras --all-groups
 
-build:
-	$(UV) build --no-sources
+build: install
+	$(UV) build --python .venv/bin/python --no-build-isolation --no-sources
 
 clean:
 	-rm -rf dist/
 	-rm -rf *.egg-info/
 	-rm -rf .pytest_cache/
+	-rm -rf .ruff_cache/
 	-rm -rf .mypy_cache/
 	-rm -rf .venv/
 	-find . -type d -name "__pycache__" -exec rm -rf {} +
