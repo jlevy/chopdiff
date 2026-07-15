@@ -46,6 +46,13 @@ example, if you set `UV_EXCLUDE_NEWER` to a different value), uv treats the lock
 stale and silently re-resolves **without** the cool-off, so keep the cutoff in
 `pyproject.toml` rather than passing it only on the command line.
 
+uv also merges user-level configuration into projects.
+Make and CI therefore pass the explicit `.uv-policy.toml` mirror, which prevents
+unrelated user settings from changing the project policy.
+A supply-chain test requires that mirror to remain identical to `[tool.uv]` in
+`pyproject.toml`. Set `UV_CONFIG_FILE=.uv-policy.toml` when running uv directly in this
+repository.
+
 ## Upgrading Dependencies
 
 Bumping the cutoff date is the upgrade action.
@@ -100,8 +107,8 @@ without suppressed advisories.
 
 ## Dev Hook Tooling
 
-Two dev-time tools run via `uvx` (outside the project environment, so they never enter
-`uv.lock`). Both are pinned and deliberately upgraded:
+Two dev-time tools run via `uv tool run` (outside the project environment, so they never
+enter `uv.lock`). Both are pinned and deliberately upgraded:
 
 - **`flowmark-rs@0.3.1`** — the Markdown formatter (`make format`), wired into the
   `lefthook` pre-commit hook so commits are auto-formatted.
@@ -111,8 +118,8 @@ Two dev-time tools run via `uvx` (outside the project environment, so they never
   Bump the pin deliberately.
   Reviewed-by: Joshua Levy.
 - **`lefthook@2.1.9`** — the git hook manager (`make hooks-install`). Third-party but
-  pinned and aged past the 14-day window (published 2026-05-29); run via `uvx`, so no
-  npm dependency is added to this repo.
+  pinned and aged past the 14-day window (published 2026-05-29); `uv tool run` keeps it
+  out of the project environment and adds no npm dependency.
 
 ## Untrusted Repositories
 

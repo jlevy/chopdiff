@@ -21,6 +21,7 @@ _PYPROJECT = _REPO_ROOT / "pyproject.toml"
 _LOCK = _REPO_ROOT / "uv.lock"
 _MAKEFILE = _REPO_ROOT / "Makefile"
 _MARKER = _REPO_ROOT / "SUPPLY-CHAIN-SECURITY.md"
+_POLICY_CONFIG = _REPO_ROOT / ".uv-policy.toml"
 _WORKFLOWS = _REPO_ROOT / ".github" / "workflows"
 
 
@@ -32,6 +33,14 @@ def test_cool_off_cutoff_matches_lockfile() -> None:
     config_cutoff = _uv_config()["exclude-newer"]
     lock_cutoff = tomllib.loads(_LOCK.read_text())["options"]["exclude-newer"]
     assert config_cutoff == lock_cutoff
+
+
+def test_explicit_uv_policy_matches_project_config() -> None:
+    assert tomllib.loads(_POLICY_CONFIG.read_text()) == _uv_config()
+    for workflow in sorted([*_WORKFLOWS.glob("*.yml"), *_WORKFLOWS.glob("*.yaml")]):
+        workflow_text = workflow.read_text()
+        if "run: uv " in workflow_text:
+            assert "UV_CONFIG_FILE: .uv-policy.toml" in workflow_text
 
 
 def test_cool_off_exceptions_are_documented() -> None:
@@ -65,16 +74,23 @@ def test_github_actions_are_pinned_to_commit_shas() -> None:
 def test_routine_make_targets_use_the_lockfile() -> None:
     routine_targets = {"install", "lint", "lint-check", "test"}
     current_target: str | None = None
+    checked_targets: set[str] = set()
     unlocked: list[str] = []
 
     for line in _MAKEFILE.read_text().splitlines():
         if line and not line[0].isspace() and ":" in line:
             current_target = line.partition(":")[0]
-        elif current_target in routine_targets and line.startswith("\tuv "):
-            if (" sync " in line or " run " in line) and "--locked" not in line:
-                unlocked.append(f"{current_target}: {line.strip()}")
+        elif current_target in routine_targets and line.startswith("\t"):
+            command = line.strip()
+            if command.startswith(("uv ", "$(UV) ")) and (
+                " sync " in command or " run " in command
+            ):
+                checked_targets.add(current_target)
+                if "--locked" not in command:
+                    unlocked.append(f"{current_target}: {command}")
 
     assert not unlocked
+    assert checked_targets == routine_targets
 
 
 def test_workflow_sync_and_run_commands_use_the_lockfile() -> None:

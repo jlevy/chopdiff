@@ -14,6 +14,10 @@ own fork will make it easier to contribute) and
 
 The `Makefile` simply offers shortcuts to `uv` commands for developer convenience.
 (For clarity, GitHub Actions don’t use the Makefile and just call `uv` directly.)
+Both pass the explicit `.uv-policy.toml` config so user-level uv settings cannot alter
+the repository’s cool-off policy.
+For direct uv commands, first run `export UV_CONFIG_FILE=.uv-policy.toml` in the
+repository root.
 
 ```shell
 # First, install all dependencies and set up your virtual environment.

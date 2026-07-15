@@ -43,6 +43,9 @@ Before adding or upgrading ANY dependency, read `SUPPLY-CHAIN-SECURITY.md` in th
 This repo enforces a 14-day cool-off on dependency resolution (via `exclude-newer` in
 `pyproject.toml`), commits its lockfile, and installs frozen in CI. Do not bypass the
 cool-off or self-approve an exception.
+Use the Make targets when available. For direct uv commands, set
+`UV_CONFIG_FILE=.uv-policy.toml` so unrelated user-level uv settings are not merged into
+the project policy.
 
 # General Coding Guidelines
 

@@ -5,6 +5,9 @@ on:
     types: [published]
   workflow_dispatch: # Enable manual trigger.
 
+env:
+  UV_CONFIG_FILE: .uv-policy.toml
+
 jobs:
   build-and-publish:
     runs-on: ubuntu-latest

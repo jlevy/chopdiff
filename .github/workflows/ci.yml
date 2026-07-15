@@ -14,6 +14,9 @@ on:
 permissions:
   contents: read
 
+env:
+  UV_CONFIG_FILE: .uv-policy.toml
+
 jobs:
   build:
     strategy:

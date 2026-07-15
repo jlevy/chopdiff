@@ -6,30 +6,34 @@
 
 .PHONY: default install hooks-install lint lint-check format test upgrade build clean
 
-# Markdown formatter, pinned for reproducibility. Run via uvx (outside the
-# project env), so it is independent of the project's cool-off pin. The
+# An explicit config file prevents unrelated user-level uv settings from changing the
+# project resolution policy. Its values mirror [tool.uv] in pyproject.toml.
+UV := uv --config-file $(CURDIR)/.uv-policy.toml
+
+# Markdown formatter, pinned for reproducibility. Run in an isolated uv tool
+# environment, so it is independent of the project environment. The
 # Excluded paths live in .flowmarkignore.
 FLOWMARK_VERSION := 0.3.1
-FLOWMARK := uvx flowmark-rs@$(FLOWMARK_VERSION)
+FLOWMARK := $(UV) tool run flowmark-rs@$(FLOWMARK_VERSION)
 
-# Git hook manager, pinned. Installed and run via uvx (no npm dependency).
-LEFTHOOK := uvx lefthook@2.1.9
+# Git hook manager, pinned. Installed and run in an isolated uv tool environment.
+LEFTHOOK := $(UV) tool run lefthook@2.1.9
 
 default: install lint test
 
 install:
-	uv sync --locked --all-extras
+	$(UV) sync --locked --all-extras
 
 # One-time: install the git hooks that auto-format on commit (see lefthook.yml).
 hooks-install:
 	$(LEFTHOOK) install
 
 lint:
-	uv run --locked python devtools/lint.py
+	$(UV) run --locked python devtools/lint.py
 
 # Check-only lint, matching CI (does not modify files).
 lint-check:
-	uv run --locked python devtools/lint.py --check
+	$(UV) run --locked python devtools/lint.py --check
 
 # Auto-format all Markdown in place. The lefthook pre-commit hook delegates here,
 # so commits are formatted before they ever reach CI. Pass `.` as the sole target
@@ -38,13 +42,13 @@ format:
 	$(FLOWMARK) --auto .
 
 test:
-	uv run --locked pytest
+	$(UV) run --locked pytest
 
 upgrade:
-	uv sync --upgrade --all-extras --dev
+	$(UV) sync --upgrade --all-extras --dev
 
 build:
-	uv build --no-sources
+	$(UV) build --no-sources
 
 clean:
 	-rm -rf dist/
