@@ -285,7 +285,8 @@ record.
 
 ## Final Disposition
 
-**Final verdict:** Locally release-ready; pull-request CI pending.
+**Final verdict:** Release-ready; [PR #30](https://github.com/jlevy/chopdiff/pull/30) CI
+passed.
 
 All findings were reproduced, tracked as beads, fixed, and covered by regression checks
 where automation is meaningful.
@@ -316,3 +317,5 @@ where automation is meaningful.
 - The standalone OpenAI script’s isolated `--help` path passed without making an API
   request. A live OpenAI transformation was intentionally not run because it requires
   credentials and incurs external cost.
+- PR #30 passed audit, wheel/sdist smoke, Python 3.11-3.14 on Ubuntu, Python 3.13 on
+  macOS, and Cursor Bugbot.
