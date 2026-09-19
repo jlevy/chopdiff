@@ -94,11 +94,16 @@ caught up), remove the override and re-lock.
   The dependency is `flexdoc[diff]>=0.4.1,<0.5` (0.4.0 changed `TextUnit.words` to
   logical metrics; 0.4.1 keeps `cydifflib>=1.2.0` on the `diff` extra).
   Locked from PyPI `flexdoc==0.4.1`.
+- **pip** (`2026-08-12`). Needed so the lock can take `pip==26.2.1`, which fixes
+  [PYSEC-2026-3721](https://osv.dev/vulnerability/PYSEC-2026-3721). 26.2 was published
+  2026-07-29 (more than 14 days ago); the project cutoff of 2026-06-30 still pinned
+  26.1.2. This is a version upgrade, not an audit ignore.
 
 ### Audit-Gate Ignores
 
-None. The June 30 cutoff admits fixed `pip` and `msgpack` versions, so the audit runs
-without suppressed advisories.
+None.
+`pip==26.2.1` remediates PYSEC-2026-3721. The June 30 cutoff still admits the fixed
+`msgpack` version.
 
 ## Dev Hook Tooling
 

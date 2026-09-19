@@ -115,6 +115,8 @@ exclude-newer = "2026-06-30T00:00:00Z"
 # First-party exemption: jlevy packages have no 14-day restriction.
 [tool.uv.exclude-newer-package]
 flexdoc = "2099-12-31T00:00:00Z"
+# pip 26.2 (PYSEC-2026-3721) published 2026-07-29; 14-day cool-off elapsed.
+pip = "2026-08-12T00:00:00Z"
 
 [tool.ruff]
 # Set as desired, typically 88 (black standard) or 100 (wide).
