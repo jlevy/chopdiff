@@ -99,11 +99,11 @@ jobs:
           checksum: "1db18b5e76fa645a7f3865773139bdec8e2d46adbdbb35e7410b34fa8015ccd2"
           enable-cache: true
 
-      - name: Install all dependencies
-        run: uv sync --all-extras --all-groups --locked
+      - name: Export locked dependencies
+        run: uv export --locked --all-extras --all-groups --no-emit-project -o /tmp/chopdiff-audit-requirements.txt
 
       - name: Audit dependencies for known vulnerabilities
-        run: uv run --locked --all-extras --group audit pip-audit
+        run: uvx pip-audit@2.10.1 -r /tmp/chopdiff-audit-requirements.txt
 
   # Packaging check: release artifacts must stay minimal and the wheel must import
   # cleanly from an isolated install, with flexdoc arriving as a PyPI dependency.

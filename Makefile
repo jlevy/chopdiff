@@ -4,7 +4,7 @@
 
 .DEFAULT_GOAL := default
 
-.PHONY: default install hooks-install lint lint-check format test upgrade build clean
+.PHONY: default install hooks-install lint lint-check format test audit upgrade build clean
 
 # An explicit config file prevents unrelated user-level uv settings from changing the
 # project resolution policy. Its values mirror [tool.uv] in pyproject.toml.
@@ -18,6 +18,12 @@ FLOWMARK := $(UV) tool run flowmark-rs@$(FLOWMARK_VERSION)
 
 # Git hook manager, pinned. Installed and run in an isolated uv tool environment.
 LEFTHOOK := $(UV) tool run lefthook@2.1.9
+
+# Vulnerability auditor, pinned. Isolated so pip-audit (and pip) never enter uv.lock.
+# 2.10.1 published 2026-06-10; older than the project cutoff. Bump deliberately.
+PIP_AUDIT_VERSION := 2.10.1
+PIP_AUDIT := $(UV) tool run pip-audit@$(PIP_AUDIT_VERSION)
+AUDIT_REQS := /tmp/chopdiff-audit-requirements.txt
 
 default: install lint test
 
@@ -43,6 +49,12 @@ format:
 
 test:
 	$(UV) run --locked pytest
+
+# Audit locked runtime, extras, and dev/build deps. Does not install pip-audit
+# into the project environment; see SUPPLY-CHAIN-SECURITY.md.
+audit:
+	$(UV) export --locked --all-extras --all-groups --no-emit-project -o $(AUDIT_REQS)
+	$(PIP_AUDIT) -r $(AUDIT_REQS)
 
 upgrade:
 	$(UV) sync --upgrade --all-extras --all-groups

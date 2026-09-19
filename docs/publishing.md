@@ -93,7 +93,7 @@ Follow this checklist for each new release.
 
    ```shell
    make
-   uv run --locked --all-extras --group audit pip-audit
+   make audit
    ```
 
    The release workflow independently repeats locked installation, check-only linting,

@@ -46,6 +46,15 @@ def test_explicit_uv_policy_matches_project_config() -> None:
             assert "UV_CONFIG_FILE: .uv-policy.toml" in workflow_text
 
 
+def test_auditor_is_not_a_locked_project_dependency() -> None:
+    project = tomllib.loads(_PYPROJECT.read_text())
+    assert "audit" not in project.get("dependency-groups", {})
+    locked_names = {package["name"] for package in tomllib.loads(_LOCK.read_text())["package"]}
+    assert "pip" not in locked_names
+    assert "pip-api" not in locked_names
+    assert "pip-audit" not in locked_names
+
+
 def test_cool_off_exceptions_are_documented() -> None:
     exceptions = _uv_config().get("exclude-newer-package", {})
     assert isinstance(exceptions, dict)
@@ -102,7 +111,10 @@ def test_workflow_sync_and_run_commands_use_the_lockfile() -> None:
     for workflow in sorted([*_WORKFLOWS.glob("*.yml"), *_WORKFLOWS.glob("*.yaml")]):
         for line_number, line in enumerate(workflow.read_text().splitlines(), start=1):
             command = line.partition("run:")[2].strip()
-            if command.startswith(("uv sync ", "uv run ")) and "--locked" not in command:
+            if (
+                command.startswith(("uv sync ", "uv run ", "uv export "))
+                and "--locked" not in command
+            ):
                 unlocked.append(f"{workflow.name}:{line_number}: {command}")
             if command.startswith("uv sync ") and "--all-groups" not in command:
                 incomplete_syncs.append(f"{workflow.name}:{line_number}: {command}")

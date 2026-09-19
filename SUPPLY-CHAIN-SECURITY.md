@@ -25,8 +25,8 @@ The full cross-ecosystem policy lives in the
 3. **Prefer wheels; review build code.** Building an sdist runs arbitrary code.
    Prefer prebuilt wheels (`uv` does by default) and treat any source build as code to
    review.
-4. **Audit after changes.** Run `pip-audit` (CI runs it on every push) and address
-   findings before merging.
+4. **Audit after changes.** Run `make audit` (CI runs the same check on every push) and
+   address findings before merging.
 5. **Don’t upgrade for its own sake.** The safest upgrade is the one you skip: each bump
    is fresh attack surface.
    Bump for a concrete reason: a needed feature, a fix, or a CVE.
@@ -94,21 +94,18 @@ caught up), remove the override and re-lock.
   The dependency is `flexdoc[diff]>=0.4.1,<0.5` (0.4.0 changed `TextUnit.words` to
   logical metrics; 0.4.1 keeps `cydifflib>=1.2.0` on the `diff` extra).
   Locked from PyPI `flexdoc==0.4.1`.
-- **pip** (`2026-08-12`). Needed so the lock can take `pip==26.2.1`, which fixes
-  [PYSEC-2026-3721](https://osv.dev/vulnerability/PYSEC-2026-3721). 26.2 was published
-  2026-07-29 (more than 14 days ago); the project cutoff of 2026-06-30 still pinned
-  26.1.2. This is a version upgrade, not an audit ignore.
 
 ### Audit-Gate Ignores
 
-None.
-`pip==26.2.1` remediates PYSEC-2026-3721. The June 30 cutoff still admits the fixed
-`msgpack` version.
+None. The June 30 cutoff admits the fixed `msgpack` version.
+`pip-audit` runs via `uvx` / `uv tool run` against a `uv export` of runtime, extras, and
+the `dev`/`build` groups, so `pip` is not a project dependency and is not audited as
+one.
 
 ## Dev Hook Tooling
 
-Two dev-time tools run via `uv tool run` (outside the project environment, so they never
-enter `uv.lock`). Both are pinned and deliberately upgraded:
+Dev-time tools run via `uv tool run` (outside the project environment, so they never
+enter `uv.lock`). They are pinned and deliberately upgraded:
 
 - **`flowmark-rs@0.3.1`** — the Markdown formatter (`make format`), wired into the
   `lefthook` pre-commit hook so commits are auto-formatted.
@@ -120,6 +117,9 @@ enter `uv.lock`). Both are pinned and deliberately upgraded:
 - **`lefthook@2.1.9`** — the git hook manager (`make hooks-install`). Third-party but
   pinned and aged past the 14-day window (published 2026-05-29); `uv tool run` keeps it
   out of the project environment and adds no npm dependency.
+- **`pip-audit@2.10.1`** — the vulnerability auditor (`make audit` and the CI `audit`
+  job). Third-party; 2.10.1 published 2026-06-10, older than the project cutoff.
+  It is invoked against a frozen `uv export`, not installed into the project.
 
 ## Untrusted Repositories
 
