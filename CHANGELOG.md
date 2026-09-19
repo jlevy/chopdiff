@@ -4,6 +4,15 @@ All notable changes to chopdiff are documented here.
 This project uses [semantic versioning](https://semver.org/); while pre-1.0, breaking
 changes bump the **minor** version (see `docs/publishing.md`).
 
+## Unreleased
+
+### Changed
+
+- **Require `flexdoc>=0.4.1,<0.5`.** Adopts the 0.4 document model (including
+  logical `TextUnit.words`) and the 0.4.1 drop of `cydifflib`, which fails to
+  build on CPython 3.14. First-party cool-off for flexdoc is `2099-12-31`.
+  Do not tag this chopdiff release until flexdoc `v0.4.1` is on PyPI.
+
 ## v0.4.0
 
 This is chopdiff’s intended breaking release.

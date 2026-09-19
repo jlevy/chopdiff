@@ -89,16 +89,13 @@ caught up), remove the override and re-lock.
 
 ### Active Exceptions
 
-- **flexdoc 0.3.0** (published 2026-07-11, inside the window).
-  First-party package authored and maintained by the same maintainer.
-  The release fixes CRLF offset corruption, frontmatter parse leakage, ambiguous span
-  resolution, and mutation of cached structural views, and it settles several pre-1.0
-  APIs. chopdiff already imports token and diff helpers from their owning modules, so the
-  0.3 export cleanup does not require compatibility shims here.
-  The dependency is bounded to `<0.4.0` because FlexDoc documents breaking pre-1.0
-  changes at each minor version.
-  The maintainer explicitly authorized first-party cool-off exemptions for this upgrade
-  on 2026-07-14. Remove the override after 0.3.0 clears the normal cutoff.
+- **flexdoc** (`2099-12-31`). First-party package authored and maintained by the
+  same maintainer. jlevy first-party repos have no 14-day cool-off restriction.
+  The dependency is `flexdoc>=0.4.1,<0.5` (0.4.0 changed `TextUnit.words` to
+  logical metrics; 0.4.1 drops `cydifflib` so CPython 3.14 installs do not
+  compile a native extension). Until `v0.4.1` is on PyPI, the lock uses a git
+  source on `jlevy/flexdoc` branch `fix/drop-cydifflib-0.4.1`. Remove that
+  source and relock from the registry before tagging chopdiff.
 
 ### Audit-Gate Ignores
 

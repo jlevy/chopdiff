@@ -36,7 +36,9 @@ def test_cool_off_cutoff_matches_lockfile() -> None:
 
 
 def test_explicit_uv_policy_matches_project_config() -> None:
-    assert tomllib.loads(_POLICY_CONFIG.read_text()) == _uv_config()
+    # `sources` is project-only; uv rejects it in a uv.toml / --config-file.
+    project_uv = {key: value for key, value in _uv_config().items() if key != "sources"}
+    assert tomllib.loads(_POLICY_CONFIG.read_text()) == project_uv
     assert "UV := uv --config-file $(CURDIR)/.uv-policy.toml" in _MAKEFILE.read_text()
     for workflow in sorted([*_WORKFLOWS.glob("*.yml"), *_WORKFLOWS.glob("*.yaml")]):
         workflow_text = workflow.read_text()
