@@ -167,7 +167,27 @@ def test_flexdoc_example_uses_the_current_chopdiff_checkout() -> None:
     lock = tomllib.loads(script.with_name(f"{script.name}.lock").read_text())
     locked_chopdiff = next(package for package in lock["package"] if package["name"] == "chopdiff")
     assert locked_chopdiff["source"] == {"editable": "../"}
-    assert {"name": "flexdoc"} in locked_chopdiff["dependencies"]
+    assert any(dep.get("name") == "flexdoc" for dep in locked_chopdiff["dependencies"])
+
+
+def test_flexdoc_diff_extra_locks_cydifflib_from_pypi() -> None:
+    project = tomllib.loads(_PYPROJECT.read_text())
+    assert "flexdoc[diff]>=0.4.1,<0.5" in project["project"]["dependencies"]
+    assert "sources" not in project.get("tool", {}).get("uv", {})
+
+    lock = tomllib.loads(_LOCK.read_text())
+    packages = {package["name"]: package for package in lock["package"]}
+    flexdoc = packages["flexdoc"]
+    cydifflib = packages["cydifflib"]
+    assert flexdoc["version"] == "0.4.1"
+    assert flexdoc["source"] == {"registry": "https://pypi.org/simple"}
+    assert cydifflib["source"] == {"registry": "https://pypi.org/simple"}
+    assert cydifflib["version"] == "1.2.0"
+
+    chopdiff = next(package for package in lock["package"] if package["name"] == "chopdiff")
+    requires_dist = chopdiff["metadata"]["requires-dist"]
+    flexdoc_req = next(req for req in requires_dist if req["name"] == "flexdoc")
+    assert "diff" in flexdoc_req.get("extras", [])
 
 
 def test_standalone_script_dependencies_are_reproducibly_locked() -> None:

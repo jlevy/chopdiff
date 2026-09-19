@@ -39,7 +39,7 @@ classifiers = [
 # ---- Main dependencies ----
 
 dependencies = [
-    "flexdoc>=0.4.1,<0.5",
+    "flexdoc[diff]>=0.4.1,<0.5",
     "prettyfmt>=0.3.0",
     "flowmark>=0.7.2",
     "typing-extensions>=4.12.0",
@@ -115,11 +115,6 @@ exclude-newer = "2026-06-30T00:00:00Z"
 # First-party exemption: jlevy packages have no 14-day restriction.
 [tool.uv.exclude-newer-package]
 flexdoc = "2099-12-31T00:00:00Z"
-
-# Temporary: resolve flexdoc from the 0.4.1 PR until v0.4.1 is on PyPI.
-# Remove this source and relock from the registry before tagging chopdiff.
-[tool.uv.sources]
-flexdoc = { git = "https://github.com/jlevy/flexdoc", branch = "fix/drop-cydifflib-0.4.1" }
 
 [tool.ruff]
 # Set as desired, typically 88 (black standard) or 100 (wide).

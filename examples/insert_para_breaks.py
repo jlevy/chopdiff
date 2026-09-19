@@ -12,7 +12,6 @@
 # flexdoc = "2099-12-31T00:00:00Z"
 # [tool.uv.sources]
 # chopdiff = { path = "..", editable = true }
-# flexdoc = { git = "https://github.com/jlevy/flexdoc", branch = "fix/drop-cydifflib-0.4.1" }
 # ///
 from __future__ import annotations
 

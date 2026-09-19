@@ -121,8 +121,9 @@ Each direct dependency and why it is here:
 
 **Runtime:**
 
-- [flexdoc](https://github.com/jlevy/flexdoc): Document model, tokenization, token
-  diffs, source mappings, and Markdown/HTML helpers
+- [flexdoc](https://github.com/jlevy/flexdoc) (`flexdoc[diff]`): Document model,
+  tokenization, token diffs (via `cydifflib`), source mappings, and Markdown/HTML
+  helpers
 - [flowmark](https://github.com/jlevy/flowmark): Markdown normalization for sliding
   paragraph windows
 - [prettyfmt](https://github.com/jlevy/prettyfmt): Human-readable structural summaries

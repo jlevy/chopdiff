@@ -89,13 +89,11 @@ caught up), remove the override and re-lock.
 
 ### Active Exceptions
 
-- **flexdoc** (`2099-12-31`). First-party package authored and maintained by the
-  same maintainer. jlevy first-party repos have no 14-day cool-off restriction.
-  The dependency is `flexdoc>=0.4.1,<0.5` (0.4.0 changed `TextUnit.words` to
-  logical metrics; 0.4.1 drops `cydifflib` so CPython 3.14 installs do not
-  compile a native extension). Until `v0.4.1` is on PyPI, the lock uses a git
-  source on `jlevy/flexdoc` branch `fix/drop-cydifflib-0.4.1`. Remove that
-  source and relock from the registry before tagging chopdiff.
+- **flexdoc** (`2099-12-31`). First-party package authored and maintained by the same
+  maintainer. jlevy first-party repos have no 14-day cool-off restriction.
+  The dependency is `flexdoc[diff]>=0.4.1,<0.5` (0.4.0 changed `TextUnit.words` to
+  logical metrics; 0.4.1 keeps `cydifflib>=1.2.0` on the `diff` extra).
+  Locked from PyPI `flexdoc==0.4.1`.
 
 ### Audit-Gate Ignores
 
