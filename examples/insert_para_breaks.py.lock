@@ -6,12 +6,11 @@ requires-python = ">=3.11"
 exclude-newer = "2026-06-30T00:00:00Z"
 
 [options.exclude-newer-package]
-flexdoc = "2026-07-12T00:00:00Z"
+flexdoc = "2099-12-31T00:00:00Z"
 
 [manifest]
 requirements = [
     { name = "chopdiff", editable = "../" },
-    { name = "flexdoc", specifier = "==0.3.0" },
     { name = "flowmark", specifier = "==0.7.2" },
     { name = "openai", specifier = "==2.44.0" },
     { name = "strif", specifier = "==3.1.0" },
@@ -52,7 +51,7 @@ wheels = [
 name = "chopdiff"
 source = { editable = "../" }
 dependencies = [
-    { name = "flexdoc" },
+    { name = "flexdoc", extra = ["diff"] },
     { name = "flowmark" },
     { name = "prettyfmt" },
     { name = "typing-extensions" },
@@ -60,7 +59,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "flexdoc", specifier = ">=0.3.0,<0.4.0" },
+    { name = "flexdoc", extras = ["diff"], specifier = ">=0.4.1,<0.5" },
     { name = "flowmark", specifier = ">=0.7.2" },
     { name = "prettyfmt", specifier = ">=0.3.0" },
     { name = "simplemma", marker = "extra == 'extras'", specifier = ">=1.1.2" },
@@ -70,14 +69,18 @@ provides-extras = ["extras"]
 
 [package.metadata.requires-dev]
 audit = [{ name = "pip-audit", specifier = ">=2.7.0" }]
+build = [
+    { name = "hatchling", specifier = "==1.30.1" },
+    { name = "uv-dynamic-versioning", specifier = "==0.14.0" },
+]
 dev = [
-    { name = "basedpyright", specifier = ">=1.39.3" },
+    { name = "basedpyright", specifier = ">=1.39.9" },
     { name = "codespell", specifier = ">=2.4.2" },
     { name = "funlog", specifier = ">=0.2.1" },
-    { name = "pytest", specifier = ">=9.0.3" },
+    { name = "pytest", specifier = ">=9.1.1" },
     { name = "pytest-sugar", specifier = ">=1.1.1" },
     { name = "rich", specifier = ">=15.0.0" },
-    { name = "ruff", specifier = ">=0.15.12" },
+    { name = "ruff", specifier = ">=0.15.20" },
 ]
 
 [[package]]
@@ -159,10 +162,9 @@ wheels = [
 
 [[package]]
 name = "flexdoc"
-version = "0.3.0"
+version = "0.4.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "cydifflib" },
     { name = "flowmark" },
     { name = "frontmatter-format" },
     { name = "funlog" },
@@ -174,9 +176,14 @@ dependencies = [
     { name = "strif" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/fb/9e/689c7e6a82ac47fb36035081c89d629c412f07d68a74f2e8d4c8ffc5134c/flexdoc-0.3.0.tar.gz", hash = "sha256:95cdad1551376de53c191c0694a7a8d4a1eb972fc1a2e16b4b4e2452ecc0abaa", size = 418927, upload-time = "2026-07-11T02:00:46.462Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/3c/d3/e0c0be8597d4459623bebe68b0988e1f42ef2effc3acd3df4bfb808ad4b1/flexdoc-0.4.1.tar.gz", hash = "sha256:795d7d3f9a2d1abdfee88268a7e8df5eceb2d0c4cb9aef285f924be15f5d86cc", size = 531409, upload-time = "2026-09-19T01:41:09.28Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/a0/d0/9ae7b445da66b2c26a3a138377a0ed0dd973defe38696361081a97459307/flexdoc-0.3.0-py3-none-any.whl", hash = "sha256:a9688cbd74265982b961c85b43b509c89a033ec2a5dfadf6f5ee66841a6e5073", size = 90143, upload-time = "2026-07-11T02:00:45.169Z" },
+    { url = "https://files.pythonhosted.org/packages/de/21/5e79ea4dcf8dd7fb04110aa99447eaaded239eb01433020e73bf63a02281/flexdoc-0.4.1-py3-none-any.whl", hash = "sha256:122da17554e433750319a6a2d9ad92675a7905436999a61d1d95967ce2cbf89f", size = 114324, upload-time = "2026-09-19T01:41:10.502Z" },
+]
+
+[package.optional-dependencies]
+diff = [
+    { name = "cydifflib" },
 ]
 
 [[package]]

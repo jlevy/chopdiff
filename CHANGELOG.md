@@ -4,6 +4,19 @@ All notable changes to chopdiff are documented here.
 This project uses [semantic versioning](https://semver.org/); while pre-1.0, breaking
 changes bump the **minor** version (see `docs/publishing.md`).
 
+## v0.4.1
+
+### Changed
+
+- **Require `flexdoc[diff]>=0.4.1,<0.5`.** Adopts the 0.4 document model (including
+  logical `TextUnit.words`). Token diffs keep `cydifflib>=1.2.0` via the flexdoc `diff`
+  extra; there is no stdlib fallback.
+  First-party cool-off for flexdoc is `2099-12-31`. Locked from PyPI `flexdoc==0.4.1`.
+
+### Full Changelog
+
+[Compare v0.4.0 … v0.4.1](https://github.com/jlevy/chopdiff/compare/v0.4.0...v0.4.1)
+
 ## v0.4.0
 
 This is chopdiff’s intended breaking release.

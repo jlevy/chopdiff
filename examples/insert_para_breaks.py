@@ -2,7 +2,6 @@
 # requires-python = ">=3.11"
 # dependencies = [
 #     "chopdiff",
-#     "flexdoc==0.3.0",
 #     "flowmark==0.7.2",
 #     "openai==2.44.0",
 #     "strif==3.1.0",
@@ -10,7 +9,7 @@
 # [tool.uv]
 # exclude-newer = "2026-06-30T00:00:00Z"
 # [tool.uv.exclude-newer-package]
-# flexdoc = "2026-07-12T00:00:00Z"
+# flexdoc = "2099-12-31T00:00:00Z"
 # [tool.uv.sources]
 # chopdiff = { path = "..", editable = true }
 # ///
