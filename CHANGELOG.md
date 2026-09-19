@@ -4,6 +4,14 @@ All notable changes to chopdiff are documented here.
 This project uses [semantic versioning](https://semver.org/); while pre-1.0, breaking
 changes bump the **minor** version (see `docs/publishing.md`).
 
+## Unreleased
+
+### Infrastructure
+
+- **Stop locking `pip-audit`.** Vulnerability audits run via isolated `uvx pip-audit`
+  against a `uv export` of runtime, extras, and the `dev`/`build` groups, so `pip` is no
+  longer a project lockfile dependency.
+
 ## v0.4.1
 
 ### Changed

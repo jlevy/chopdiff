@@ -10,7 +10,6 @@
 # exclude-newer = "2026-06-30T00:00:00Z"
 # [tool.uv.exclude-newer-package]
 # flexdoc = "2099-12-31T00:00:00Z"
-# pip = "2026-08-12T00:00:00Z"
 # [tool.uv.sources]
 # chopdiff = { path = "..", editable = true }
 # ///

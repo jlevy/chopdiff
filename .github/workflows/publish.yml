@@ -48,8 +48,11 @@ jobs:
       - name: Run tests
         run: uv run --locked pytest
 
+      - name: Export locked dependencies
+        run: uv export --locked --all-extras --all-groups --no-emit-project -o /tmp/chopdiff-audit-requirements.txt
+
       - name: Audit dependencies for known vulnerabilities
-        run: uv run --locked --all-extras --group audit pip-audit
+        run: uvx pip-audit@2.10.1 -r /tmp/chopdiff-audit-requirements.txt
 
       - name: Build package
         run: uv build --python .venv/bin/python --no-build-isolation --no-sources

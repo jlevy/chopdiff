@@ -22,7 +22,7 @@ repository root.
 ```shell
 # First, install all dependencies and set up your virtual environment.
 # This runs `uv sync --locked --all-extras --all-groups` to install the exact locked
-# runtime, development, optional, audit, and build dependencies.
+# runtime, development, optional, and build dependencies.
 make install
 
 # One-time: install the git hooks (lefthook) that auto-format Markdown and
@@ -47,6 +47,9 @@ make format
 
 # Run tests:
 make test
+
+# Audit locked runtime, extras, and dev/build dependencies (isolated pip-audit):
+make audit
 
 # Delete all the build artifacts:
 make clean
@@ -109,7 +112,7 @@ Its key defaults:
 
 - **Pin, lock, and audit:** Commit your `uv.lock`, install frozen in CI
   (`uv sync --locked`), pin GitHub Actions to a commit SHA or immutable tag, and run a
-  vulnerability audit (`pip-audit`, run by the CI `audit` job) after changes.
+  vulnerability audit (`make audit`, also the CI `audit` job) after changes.
 
 The full project policy, the upgrade procedure, and the active cool-off exceptions are
 documented in [`SUPPLY-CHAIN-SECURITY.md`](../SUPPLY-CHAIN-SECURITY.md).
@@ -148,8 +151,6 @@ directly.
 - [codespell](https://github.com/codespell-project/codespell): Spell checker for code
   and docs
 - [rich](https://github.com/Textualize/rich): Console output for the lint script
-- [pip-audit](https://github.com/pypa/pip-audit): Vulnerability audit (`audit` group;
-  run in CI)
 - [hatchling](https://hatch.pypa.io/) and
   [uv-dynamic-versioning](https://github.com/ninoseki/uv-dynamic-versioning): Exactly
   pinned build backends installed from the lockfile before non-isolated builds
