@@ -12,6 +12,9 @@ changes bump the **minor** version (see `docs/publishing.md`).
   logical `TextUnit.words`). Token diffs keep `cydifflib>=1.2.0` via the flexdoc `diff`
   extra; there is no stdlib fallback.
   First-party cool-off for flexdoc is `2099-12-31`. Locked from PyPI `flexdoc==0.4.1`.
+- **Lock `pip==26.2.1`** so the release audit gate remediates PYSEC-2026-3721 (26.1.2).
+  The June 30 cutoff could not see 26.2 (published 2026-07-29); the per-package cool-off
+  for pip is `2026-08-12`.
 
 ### Full Changelog
 
