@@ -11,6 +11,9 @@ changes bump the **minor** version (see `docs/publishing.md`).
 - **Stop locking `pip-audit`.** Vulnerability audits run via isolated `uvx pip-audit`
   against a `uv export` of runtime, extras, and the `dev`/`build` groups, so `pip` is no
   longer a project lockfile dependency.
+- **Delete a passing test run’s temp files.** pytest now uses
+  `tmp_path_retention_policy = "failed"`, so a green run’s `tmp_path` tree is removed
+  when the session ends and a red run keeps only the failing tests’ directories.
 
 ## v0.4.1
 
